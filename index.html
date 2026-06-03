@@ -3,262 +3,368 @@
 
 <head>
   <meta charset="UTF-8">
-  <!-- viewport : interactive-widget=resizes-content évite le saut de layout
-       quand le clavier virtuel s'ouvre sur mobile -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
-  <title>Générateur de PDF</title>
-  <link rel="preload" href="dist/style.min.css" as="style">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Éditeur PDF/UA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+    rel="stylesheet">
+
   <link rel="stylesheet" href="dist/style.min.css">
 </head>
 
 <body>
 
   <a class="skip-link" href="#page-wrap">Aller à la zone d'édition</a>
-  <a class="skip-link" href="#tp-meta">Aller aux propriétés du document</a>
+  <a class="skip-link" href="#panel">Aller aux propriétés du document</a>
 
   <div id="app">
 
-    <!-- SIDEBAR -->
-    <nav id="sidebar" aria-label="Palette de blocs">
-      <h2 class="ptitle">Blocs — glisser ou taper sur la page</h2>
-      <ul id="bloc-list" aria-label="Types de blocs disponibles">
-        <li>
-          <div class="bsrc" draggable="true" data-t="h1" tabindex="0" role="button"
-            aria-label="Titre Hx — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico h" aria-hidden="true">H1</div>Titre Hx
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="p" tabindex="0" role="button"
-            aria-label="Paragraphe — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico p" aria-hidden="true">¶</div>Paragraphe
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="ul" tabindex="0" role="button"
-            aria-label="Liste à puces — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico l" aria-hidden="true">ul</div>Liste à puces
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="ol" tabindex="0" role="button"
-            aria-label="Liste numérotée — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico l" aria-hidden="true">ol</div>Liste numérotée
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="img" tabindex="0" role="button"
-            aria-label="Image — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico i" aria-hidden="true">Im</div>Image
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="link" tabindex="0" role="button"
-            aria-label="Lien hypertexte — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico k" aria-hidden="true">↗</div>Lien hypertexte
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="table" tabindex="0" role="button"
-            aria-label="Tableau — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico t" aria-hidden="true">▦</div>Tableau
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="chart" tabindex="0" role="button"
-            aria-label="Graphique — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico ch" aria-hidden="true">◕</div>Graphique
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="quote" tabindex="0" role="button"
-            aria-label="Citation — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico q" aria-hidden="true">❝</div>Citation
-          </div>
-        </li>
-        <!-- Note : insertion via barre latérale désactivée — utiliser le menu de mise en forme
-        <li>
-          <div class="bsrc" draggable="true" data-t="note" tabindex="0" role="button"
-            aria-label="Note de bas de page — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico n" aria-hidden="true">†</div>Note
-          </div>
-        </li>
-        -->
-        <li>
-          <div class="bsrc" draggable="true" data-t="hr" tabindex="0" role="button"
-            aria-label="Séparateur — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico sep" aria-hidden="true">─</div>Séparateur
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="aside" tabindex="0" role="button"
-            aria-label="Encadré — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico as" aria-hidden="true">▮</div>Encadré
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="code" tabindex="0" role="button"
-            aria-label="Bloc de code — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico cd" aria-hidden="true">&lt;/&gt;</div>Code
-          </div>
-        </li>
-      </ul>
+    <!-- ════════════════════════════════════════
+         TOPBAR
+    ════════════════════════════════════════ -->
+    <header id="topbar" role="banner">
 
-      <h2 class="ptitle">Formulaire</h2>
-      <ul id="form-list" aria-label="Champs de formulaire disponibles">
-        <li>
-          <div class="bsrc" draggable="true" data-t="form-text" tabindex="0" role="button"
-            aria-label="Champ texte — glisser sur la page ou appuyer sur Entrée pour ajouter">
-            <div class="ico" style="background:#eff6ff;color:#1d4ed8;font-size:11px" aria-hidden="true">Aa</div>Champ
-            texte
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="form-textarea" tabindex="0" role="button"
-            aria-label="Zone de texte multiligne — glisser sur la page ou appuyer sur Entrée pour ajouter">
-            <div class="ico" style="background:#eff6ff;color:#1d4ed8;font-size:10px" aria-hidden="true">¶¶</div>Zone
-            texte
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="form-checkbox" tabindex="0" role="button"
-            aria-label="Case à cocher — glisser sur la page ou appuyer sur Entrée pour ajouter">
-            <div class="ico" style="background:#f0fdf4;color:#166534;font-size:13px" aria-hidden="true">☑</div>Case à
-            cocher
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="form-radio" tabindex="0" role="button"
-            aria-label="Boutons radio — glisser sur la page ou appuyer sur Entrée pour ajouter">
-            <div class="ico" style="background:#fef3c7;color:#92400e;font-size:13px" aria-hidden="true">◉</div>Boutons
-            radio
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="form-select" tabindex="0" role="button"
-            aria-label="Liste déroulante — glisser sur la page ou appuyer sur Entrée pour ajouter">
-            <div class="ico" style="background:#fdf4ff;color:#7e22ce;font-size:11px" aria-hidden="true">▾</div>Liste
-            déroulante
-          </div>
-        </li>
-      </ul>
-
-      <h2 class="ptitle">Formes décoratives</h2>
-      <ul id="shape-list" aria-label="Formes décoratives disponibles">
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="circle" tabindex="0" role="button"
-            aria-label="Cercle décoratif — glisser sur la page ou appuyer sur Entrée pour ajouter au centre">
-            <div class="ico" style="background:#dbeafe;color:#1d4ed8;font-size:13px" aria-hidden="true">●</div>Cercle
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="halfcircle" tabindex="0" role="button"
-            aria-label="Demi-cercle décoratif">
-            <div class="ico" style="background:#ede9fe;color:#5b21b6;font-size:13px" aria-hidden="true">◑</div>
-            Demi-cercle
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="star" tabindex="0" role="button"
-            aria-label="Étoile décorative">
-            <div class="ico" style="background:#fef3c7;color:#92400e;font-size:13px" aria-hidden="true">★</div>Étoile
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="star6" tabindex="0" role="button"
-            aria-label="Étoile 6 points décorative">
-            <div class="ico" style="background:#fce7f3;color:#9d174d;font-size:13px" aria-hidden="true">✶</div>Étoile 6
-            pts
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="triangle" tabindex="0" role="button"
-            aria-label="Triangle décoratif">
-            <div class="ico" style="background:#dcfce7;color:#166534;font-size:13px" aria-hidden="true">▲</div>Triangle
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="diamond" tabindex="0" role="button"
-            aria-label="Losange décoratif">
-            <div class="ico" style="background:#f0fdf4;color:#065f46;font-size:13px" aria-hidden="true">◆</div>Losange
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="square" tabindex="0" role="button"
-            aria-label="Carré décoratif">
-            <div class="ico" style="background:#f3f4f6;color:#374151;font-size:13px" aria-hidden="true">■</div>Carré
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="cross" tabindex="0" role="button"
-            aria-label="Croix décorative">
-            <div class="ico" style="background:#fdf4ff;color:#7e22ce;font-size:13px" aria-hidden="true">✚</div>Croix
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="arrow" tabindex="0" role="button"
-            aria-label="Flèche décorative">
-            <div class="ico" style="background:#ecfdf5;color:#065f46;font-size:13px" aria-hidden="true">➤</div>Flèche
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" draggable="true" data-t="shape" data-shape="wave" tabindex="0" role="button"
-            aria-label="Vague décorative">
-            <div class="ico" style="background:#eff6ff;color:#1d4ed8;font-size:13px" aria-hidden="true">〜</div>Vague
-          </div>
-        </li>
-        <li>
-          <div class="bsrc" id="bsrc-freeform" draggable="false" data-t="freeform" tabindex="0" role="button"
-            aria-label="Forme libre — cliquer sur la page pour tracer des points, double-clic pour fermer">
-            <div class="ico" style="background:#fef9c3;color:#713f12;font-size:13px" aria-hidden="true">✏</div>Forme
-            libre
-          </div>
-        </li>
-      </ul>
-
-      <div class="hint" style="border: none;">
-        Glisser un bloc sur une page A4<br>
-        Barre grise = déplacer &nbsp;|&nbsp; Coin ↘ = redimensionner<br>
-        <kbd>Suppr</kbd> = supprimer &nbsp;|&nbsp; <kbd>Ctrl+D</kbd> = dupliquer
+      <div class="tb-brand">
+        <div class="tb-logo" aria-hidden="true">UA</div>
+        <h1 class="tb-title">Éditeur PDF/UA</h1>
       </div>
-      <button id="btn-add-page" type="button" onclick="addCanvasPage()"
-        style="margin:10px 12px;padding:7px;border:0.5px solid #93c5fd;border-radius:6px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:500;cursor:pointer;width:calc(100% - 24px)">
-        + Ajouter une page
+
+      <div class="tb-sep" role="separator"></div>
+
+      <!-- Zone d'actions rapides -->
+      <nav aria-labelledby="tb-actions-label">
+        <h2 id="tb-actions-label" class="sr-only">Actions rapides</h2>
+
+        <div class="tb-group" role="group" aria-label="Fichier">
+          <button class="tb-btn" type="button" onclick="saveProject()" title="Sauvegarder le projet (.pdfua)">
+            <span class="ico-sm" aria-hidden="true">↓</span> Sauvegarder
+          </button>
+          <button class="tb-btn" type="button" onclick="document.getElementById('open-project-input').click()"
+            title="Ouvrir un projet">
+            <span class="ico-sm" aria-hidden="true">↑</span> Ouvrir
+          </button>
+          <input type="file" id="open-project-input" accept=".pdfua" style="display:none" onchange="openProject(this)"
+            aria-label="Ouvrir un fichier projet .pdfua">
+        </div>
+
+        <div class="tb-sep" role="separator"></div>
+
+        <div class="tb-group" role="group" aria-label="Historique">
+          <button class="tb-btn" type="button" onclick="undoLast()" title="Annuler (Ctrl+Z)">
+            <span class="ico-sm" aria-hidden="true">↩</span> Annuler
+          </button>
+        </div>
+
+        <div class="tb-sep" role="separator"></div>
+
+        <div class="tb-group" role="group" aria-label="Export">
+          <button class="tb-btn primary" type="button" onclick="genPDF()" id="btn-gen" title="Générer le PDF/UA">
+            <span class="ico-sm" aria-hidden="true">⬇</span> Générer PDF
+          </button>
+          <button class="tb-btn" type="button" onclick="prevPDF()" id="btn-prev"
+            title="Prévisualiser dans le navigateur">
+            <span class="ico-sm" aria-hidden="true">◉</span> Aperçu
+          </button>
+          <button class="tb-btn" type="button" onclick="exportCode()" id="btn-exp" title="Exporter le code JS PDFKit">
+            <span class="ico-sm" aria-hidden="true">{}</span> Code JS
+          </button>
+        </div>
+
+      </nav>
+
+      <div class="tb-spacer"></div>
+
+      <!-- Badge statut conformité — ouvre la modale PDF/UA -->
+      <button id="tb-ua-status" type="button" onclick="document.getElementById('ua-modal').classList.toggle('open')">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="tb-ua-label">PDF/UA</span>
       </button>
+
+    </header>
+
+    <!-- ════════════════════════════════════════
+         SIDEBAR — palette de blocs
+    ════════════════════════════════════════ -->
+    <nav id="sidebar" aria-labelledby="sb-heading">
+      <h2 id="sb-heading" class="sr-only">Palette de blocs</h2>
+
+      <div class="sb-scroll">
+
+        <!-- Contenu textuel -->
+        <div class="sb-section">
+          <h3 class="sb-section-title">Contenu</h3>
+          <ul class="sb-grid" id="bloc-list" aria-label="Types de blocs disponibles" style="list-style:none">
+            <li>
+              <div class="bsrc" draggable="true" data-t="h1" tabindex="0" role="button"
+                aria-label="Titre Hx — glisser ou Entrée">
+                <div class="bsrc-ico t-h" aria-hidden="true">H</div>
+                Titre Hx
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="p" tabindex="0" role="button"
+                aria-label="Paragraphe — glisser ou Entrée">
+                <div class="bsrc-ico t-p" aria-hidden="true">¶</div>
+                Paragraphe
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="ul" tabindex="0" role="button"
+                aria-label="Liste à puces — glisser ou Entrée">
+                <div class="bsrc-ico t-ul" aria-hidden="true">ul</div>
+                Liste puces
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="ol" tabindex="0" role="button"
+                aria-label="Liste numérotée — glisser ou Entrée">
+                <div class="bsrc-ico t-ol" aria-hidden="true">ol</div>
+                Liste numéros
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="img" tabindex="0" role="button"
+                aria-label="Image — glisser ou Entrée">
+                <div class="bsrc-ico t-img" aria-hidden="true">Im</div>
+                Image
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="link" tabindex="0" role="button"
+                aria-label="Lien hypertexte — glisser ou Entrée">
+                <div class="bsrc-ico t-lnk" aria-hidden="true">↗</div>
+                Lien
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="table" tabindex="0" role="button"
+                aria-label="Tableau — glisser ou Entrée">
+                <div class="bsrc-ico t-tbl" aria-hidden="true">▦</div>
+                Tableau
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="chart" tabindex="0" role="button"
+                aria-label="Graphique — glisser ou Entrée">
+                <div class="bsrc-ico t-ch" aria-hidden="true">◕</div>
+                Graphique
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="quote" tabindex="0" role="button"
+                aria-label="Citation — glisser ou Entrée">
+                <div class="bsrc-ico t-qt" aria-hidden="true">❝</div>
+                Citation
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="hr" tabindex="0" role="button"
+                aria-label="Séparateur — glisser ou Entrée">
+                <div class="bsrc-ico t-hr" aria-hidden="true">─</div>
+                Séparateur
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="aside" tabindex="0" role="button"
+                aria-label="Encadré — glisser ou Entrée">
+                <div class="bsrc-ico t-as" aria-hidden="true">▮</div>
+                Encadré
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="code" tabindex="0" role="button"
+                aria-label="Code — glisser ou Entrée">
+                <div class="bsrc-ico t-cd" aria-hidden="true">&lt;/&gt;</div>
+                Code
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sb-divider"></div>
+
+        <!-- Formulaire -->
+        <div class="sb-section">
+          <h3 class="sb-section-title">Formulaire</h3>
+          <ul class="sb-grid" id="form-list" aria-label="Champs de formulaire disponibles" style="list-style:none">
+            <li>
+              <div class="bsrc" draggable="true" data-t="form-text" tabindex="0" role="button" aria-label="Champ texte">
+                <div class="bsrc-ico t-fm" aria-hidden="true">Aa</div>
+                Champ texte
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="form-textarea" tabindex="0" role="button"
+                aria-label="Zone de texte">
+                <div class="bsrc-ico t-fm" aria-hidden="true">¶¶</div>
+                Zone texte
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="form-checkbox" tabindex="0" role="button"
+                aria-label="Case à cocher">
+                <div class="bsrc-ico t-fm" aria-hidden="true">☑</div>
+                Case à cocher
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="form-radio" tabindex="0" role="button"
+                aria-label="Boutons radio">
+                <div class="bsrc-ico t-fm" aria-hidden="true">◉</div>
+                Radio
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="form-select" tabindex="0" role="button"
+                aria-label="Liste déroulante">
+                <div class="bsrc-ico t-fm" aria-hidden="true">▾</div>
+                Sélecteur
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="sb-divider"></div>
+
+        <!-- Formes décoratives -->
+        <div class="sb-section">
+          <h3 class="sb-section-title">Formes</h3>
+          <ul class="sb-grid" id="shape-list" aria-label="Formes décoratives" style="list-style:none">
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="circle" tabindex="0" role="button"
+                aria-label="Cercle décoratif">
+                <div class="bsrc-ico t-sh" aria-hidden="true">●</div>
+                Cercle
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="halfcircle" tabindex="0" role="button"
+                aria-label="Demi-cercle">
+                <div class="bsrc-ico t-sh" aria-hidden="true">◑</div>
+                Demi-cercle
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="star" tabindex="0" role="button"
+                aria-label="Étoile 5 branches">
+                <div class="bsrc-ico t-sh" aria-hidden="true">★</div>
+                Étoile 5
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="star6" tabindex="0" role="button"
+                aria-label="Étoile 6 branches">
+                <div class="bsrc-ico t-sh" aria-hidden="true">✶</div>
+                Étoile 6
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="triangle" tabindex="0" role="button"
+                aria-label="Triangle">
+                <div class="bsrc-ico t-sh" aria-hidden="true">▲</div>
+                Triangle
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="diamond" tabindex="0" role="button"
+                aria-label="Losange">
+                <div class="bsrc-ico t-sh" aria-hidden="true">◆</div>
+                Losange
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="square" tabindex="0" role="button"
+                aria-label="Carré">
+                <div class="bsrc-ico t-sh" aria-hidden="true">■</div>
+                Carré
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="cross" tabindex="0" role="button"
+                aria-label="Croix">
+                <div class="bsrc-ico t-sh" aria-hidden="true">✚</div>
+                Croix
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="arrow" tabindex="0" role="button"
+                aria-label="Flèche">
+                <div class="bsrc-ico t-sh" aria-hidden="true">➤</div>
+                Flèche
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" draggable="true" data-t="shape" data-shape="wave" tabindex="0" role="button"
+                aria-label="Vague">
+                <div class="bsrc-ico t-sh" aria-hidden="true">〜</div>
+                Vague
+              </div>
+            </li>
+            <li>
+              <div class="bsrc" id="bsrc-freeform" draggable="false" data-t="freeform" tabindex="0" role="button"
+                aria-label="Forme libre — cliquer pour tracer">
+                <div class="bsrc-ico t-sh" aria-hidden="true">✏</div>
+                Forme libre
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Aide rapide -->
+        <div class="sb-hint" aria-label="Aide clavier">
+          Glisser → page &nbsp;·&nbsp; <kbd>Suppr</kbd> suppr.
+          <br><kbd>Ctrl+D</kbd> dupliquer
+        </div>
+
+      </div><!-- /.sb-scroll -->
+
+      <!-- Bouton ajouter page -->
+      <div class="sb-footer">
+        <button id="btn-add-page" type="button" onclick="addCanvasPage()">
+          + Ajouter une page
+        </button>
+      </div>
+
     </nav>
 
-    <!-- CANVAS -->
+    <!-- ════════════════════════════════════════
+         Canvas A4
+    ════════════════════════════════════════ -->
     <main role="main" id="viewport" aria-label="Zone d'édition multi-pages">
       <div id="page-wrap">
-        <!-- Les pages A4 sont injectées ici par JS (addCanvasPage) -->
+        <!-- Pages A4 injectées par JS -->
       </div>
     </main>
 
-    <!-- PANNEAU DROIT -->
-    <aside id="right" aria-label="Panneau de propriétés">
+    <!-- ════════════════════════════════════════
+         PANNEAU DROIT
+    ════════════════════════════════════════ -->
+    <aside id="panel" aria-labelledby="panel-heading">
+      <!-- H2 sr-only : reflète l'onglet actif, mis à jour par blocks.js via switchTab -->
+      <h2 id="panel-heading" class="sr-only">Panneau — Document</h2>
 
-      <div class="rtabs" role="tablist" aria-label="Sections du panneau de propriétés">
-        <button class="rtab on" role="tab" id="tab-meta" aria-selected="true" aria-controls="tp-meta" tabindex="0"
-          data-tab="meta">Méta</button>
-        <button class="rtab" role="tab" id="tab-bloc" aria-selected="false" aria-controls="tp-bloc" tabindex="-1"
+      <!-- Onglets — .rtabs/.rtab/data-tab requis par blocks.js -->
+      <div class="ptabs rtabs" role="tablist" aria-label="Sections du panneau">
+        <button class="ptab rtab on" role="tab" id="tab-meta" aria-selected="true" aria-controls="tp-meta" tabindex="0"
+          data-tab="meta">Document</button>
+        <button class="ptab rtab" role="tab" id="tab-bloc" aria-selected="false" aria-controls="tp-bloc" tabindex="-1"
           data-tab="bloc">Bloc</button>
-        <button class="rtab" role="tab" id="tab-ua" aria-selected="false" aria-controls="tp-ua" tabindex="-1"
-          data-tab="ua">UA</button>
-        <button class="rtab" role="tab" id="tab-save" aria-selected="false" aria-controls="tp-save" tabindex="-1"
-          data-tab="save">Sauvegarde</button>
-        <button class="rtab" role="tab" id="tab-export" aria-selected="false" aria-controls="tp-export" tabindex="-1"
-          data-tab="export">Export</button>
+        <button class="ptab rtab" role="tab" id="tab-export" aria-selected="false" aria-controls="tp-export"
+          tabindex="-1" data-tab="export">Paramètres</button>
       </div>
 
-      <!-- Panneau Méta -->
-      <div class="rp on" id="tp-meta" role="tabpanel" aria-labelledby="tab-meta" tabindex="0">
-        <h3 class="panel-title">Métadonnées du document</h3>
-        <div class="sc">
-          <h4 class="sc-title">Identification</h4>
-          <label for="m-title">Titre du document <span aria-label="obligatoire">*</span></label>
+      <!-- ── Panneau Document ── -->
+      <div class="pane rp on" id="tp-meta" role="tabpanel" aria-labelledby="tab-meta" tabindex="0">
+
+        <div class="ps">
+          <h3 class="ps-title">Identification</h3>
+
+          <label for="m-title">Titre <span aria-label="obligatoire">*</span></label>
           <input id="m-title" type="text" placeholder="Mon document" autocomplete="off" aria-required="true"
             aria-describedby="m-title-hint" oninput="updUA()">
-          <p id="m-title-hint" class="field-hint">Requis pour la conformité PDF/UA</p>
+          <p id="m-title-hint" class="field-hint">Requis PDF/UA</p>
 
           <label for="m-lang">Langue <span aria-label="obligatoire">*</span></label>
           <select id="m-lang" aria-required="true" onchange="updUA()">
@@ -270,14 +376,12 @@
             <option value="es-ES" lang="es">Español (es-ES)</option>
           </select>
 
-          <label for="m-font">Police du document</label>
+          <label for="m-font">Police</label>
           <select id="m-font" aria-describedby="m-font-hint"
             onchange="window.loadFont(this.value).catch(err => console.error(err))">
-            <!-- Options injectées par fontLoader.js au chargement -->
           </select>
-          <p id="m-font-hint" class="field-hint">Appliquée au WYSIWYG et au PDF généré</p>
+          <p id="m-font-hint" class="field-hint">Appliquée au WYSIWYG et au PDF</p>
 
-          <h4 class="sc-title">Informations complémentaires</h4>
           <label for="m-author">Auteur</label>
           <input id="m-author" type="text" placeholder="Nom de l'auteur" autocomplete="name">
 
@@ -285,60 +389,51 @@
           <input id="m-subject" type="text" placeholder="Sujet du document">
         </div>
 
-
-        <h4 class="sc-title" style="padding:0 10px">Grille magnétique</h4>
-        <div class="sc" id="grid-panel">
-          <fieldset>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div class="grid-check-row">
+        <div class="ps">
+          <h3 class="ps-title">Grille magnétique</h3>
+          <div id="grid-panel">
+            <fieldset>
+              <div class="ck-row">
                 <input type="checkbox" id="grid-snap" onchange="toggleGrid(this.checked,undefined,undefined)">
                 <label for="grid-snap">Aimanter sur la grille</label>
               </div>
-              <div class="grid-check-row">
+              <div class="ck-row">
                 <input type="checkbox" id="grid-show" onchange="toggleGrid(undefined,this.checked,undefined)">
                 <label for="grid-show">Afficher la grille</label>
               </div>
-              <div>
-                <p style="font-size:10px;color:#9ca3af;margin-bottom:3px">Taille de cellule</p>
-                <select id="grid-size" onchange="toggleGrid(undefined,undefined,parseInt(this.value))"
-                  style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:5px">
-                  <option value="10">10 px — Fin</option>
-                  <option value="20" selected>20 px — Normal</option>
-                  <option value="40">40 px — Large</option>
-                  <option value="80">80 px — Très large</option>
-                </select>
-              </div>
-            </div>
-            <p class="field-hint" style="margin-top:6px">Le magnétisme s'applique au déplacement et au redimensionnement
-              des
-              blocs.</p>
-          </fieldset>
+              <label for="grid-size" style="margin-top:8px">Taille de cellule</label>
+              <select id="grid-size" onchange="toggleGrid(undefined,undefined,parseInt(this.value))">
+                <option value="10">10 px — Fin</option>
+                <option value="20" selected>20 px — Normal</option>
+                <option value="40">40 px — Large</option>
+                <option value="80">80 px — Très large</option>
+              </select>
+              <p class="field-hint" style="margin-top:6px">Le magnétisme s'applique au déplacement et au
+                redimensionnement.</p>
+            </fieldset>
+          </div>
         </div>
-      </div>
 
-      <!-- Panneau Bloc -->
-      <div class="rp" id="tp-bloc" role="tabpanel" aria-labelledby="tab-bloc" tabindex="0" hidden>
-        <h3 class="panel-title">Propriétés du bloc</h3>
-        <p class="sc muted" id="bp-none">Sélectionnez un bloc sur la page.</p>
+      </div><!-- /#pane-meta -->
+
+      <!-- ── Panneau Bloc ── -->
+      <div class="pane rp" id="tp-bloc" role="tabpanel" aria-labelledby="tab-bloc" tabindex="0" hidden>
+
+        <p class="muted ps" id="bp-none">Sélectionnez un bloc sur la page.</p>
+
         <div id="bp-fields" style="display:none">
 
-          <fieldset class="sc">
-            <legend>Position (px)</legend>
+          <div class="ps">
+            <h3 class="ps-title">Géométrie</h3>
             <div class="g2">
               <div>
-                <label for="bx">X</label>
+                <label for="bx">X (px)</label>
                 <input type="number" id="bx" min="0" oninput="applyPos()">
               </div>
               <div>
-                <label for="by">Y</label>
+                <label for="by">Y (px)</label>
                 <input type="number" id="by" min="0" oninput="applyPos()">
               </div>
-            </div>
-          </fieldset>
-
-          <fieldset class="sc">
-            <legend>Dimensions (px)</legend>
-            <div class="g2">
               <div>
                 <label for="bw">Largeur</label>
                 <input type="number" id="bw" min="80" oninput="applySz()">
@@ -348,9 +443,10 @@
                 <input type="number" id="bh" min="28" oninput="applySz()">
               </div>
             </div>
-          </fieldset>
+          </div>
 
-          <div class="sc" id="bp-fontsize" style="display:none">
+          <div class="ps" id="bp-fontsize" style="display:none">
+            <h3 class="ps-title">Typographie</h3>
             <label for="bfontsize">Taille de police (pt)</label>
             <div style="display:flex;gap:6px;align-items:center">
               <input type="number" id="bfontsize" min="6" max="96" step="1" style="width:70px"
@@ -359,164 +455,145 @@
                 onclick="bprop('fontSize', undefined); document.getElementById('bfontsize').value=''; rr(sid)"
                 title="Remettre la taille par défaut">↺ Défaut</button>
             </div>
-            <p class="field-hint">Laissez vide pour utiliser la taille par défaut du type de bloc.</p>
+            <p class="field-hint">Vide = taille par défaut du type.</p>
           </div>
 
-          <div class="sc">
-            <h4 class="sc-title" id="lbl-align">Alignement rapide</h4>
-            <div class="brow" role="group" aria-labelledby="lbl-align">
+          <div class="ps">
+            <h3 class="ps-title">Alignement</h3>
+            <div class="brow" id="lbl-align" role="group" aria-label="Alignement rapide">
               <button class="sb" type="button" onclick="qa('l')">⇤ Gauche</button>
               <button class="sb" type="button" onclick="qa('c')">⊙ Centre</button>
-              <button class="sb" type="button" onclick="qa('r')">Droite ⇥</button>
+              <button class="sb" type="button" onclick="qa('r')">⇥ Droite</button>
               <button class="sb" type="button" onclick="qa('t')">⇡ Haut</button>
             </div>
           </div>
 
-          <div class="sc">
-            <h4 class="sc-title" id="lbl-order">Ordre de lecture PDF/UA</h4>
-            <div class="brow" role="group" aria-labelledby="lbl-order">
+          <div class="ps">
+            <h3 class="ps-title">Ordre de lecture PDF/UA</h3>
+            <div class="brow" role="group">
               <button class="sb" type="button" onclick="chOrd(-1)">↑ Avancer</button>
               <button class="sb" type="button" onclick="chOrd(1)">↓ Reculer</button>
             </div>
-            <p id="oi" class="muted small" aria-live="polite" aria-atomic="true"></p>
-            <button class="sb" type="button" onclick="syncOrderToPosition()" style="margin-top:6px;width:100%" title="Recalcule l'ordre de lecture de tous les blocs selon leur position (haut→bas, page par page)">⟳ Sync ordre ↔ position</button>
+            <p id="oi" class="muted" style="margin-top:5px" aria-live="polite" aria-atomic="true"></p>
+            <button class="sb" type="button" onclick="syncOrderToPosition()" style="margin-top:8px;width:100%"
+              title="Recalcule l'ordre selon position (haut→bas)">⟳ Sync ordre ↔ position</button>
           </div>
 
-          <div class="sc">
-            <h4 class="sc-title" id="lbl-z">Calque (superposition visuelle)</h4>
-            <div class="brow" role="group" aria-labelledby="lbl-z">
+          <div class="ps">
+            <h3 class="ps-title">Calque (superposition)</h3>
+            <div class="brow" role="group">
               <button class="sb" type="button" onclick="chZ(1)">↑ Au-dessus</button>
               <button class="sb" type="button" onclick="chZ(-1)">↓ En dessous</button>
             </div>
-            <p id="z-level-lbl" class="muted small" aria-live="polite" aria-atomic="true">Normal (0)</p>
-            <p class="field-hint">Utile pour placer une forme colorée derrière un texte. N'affecte pas l'ordre de lecture PDF.</p>
+            <p id="z-level-lbl" class="muted" style="margin-top:5px" aria-live="polite">Normal (0)</p>
+            <p class="field-hint">N'affecte pas l'ordre de lecture PDF.</p>
           </div>
 
-          <div class="sc" id="bp-alt" style="display:none">
-            <h4 class="sc-title">Image</h4>
+          <!-- Propriétés contextuelles selon type de bloc -->
+          <div class="ps" id="bp-alt" style="display:none">
+            <h3 class="ps-title">Image</h3>
             <label for="bav">Texte alternatif <span aria-label="obligatoire">*</span></label>
             <textarea id="bav" placeholder="Description de l'image…" aria-required="true" aria-describedby="bav-hint"
               oninput="bprop('alt',this.value)"></textarea>
-            <p id="bav-hint" class="field-hint">Décrit l'image pour les lecteurs d'écran. Laisser vide pour une image
-              décorative.</p>
-            <label for="bimglink" style="margin-top:8px;display:block">URL du lien <span class="field-hint"
-                style="display:inline;font-size:10px">(optionnel — image cliquable)</span></label>
+            <p id="bav-hint" class="field-hint">Laisser vide pour image décorative.</p>
+            <label for="bimglink" style="margin-top:8px">URL du lien <span class="field-hint"
+                style="display:inline">(optionnel)</span></label>
             <input id="bimglink" type="url" placeholder="https://…" oninput="bprop('imgLinkUrl',this.value);rr(sid)"
               aria-describedby="bimglink-hint">
-            <p id="bimglink-hint" class="field-hint">Si renseigné, l'image devient un lien (structure PDF/UA : Link ›
-              Figure).</p>
+            <p id="bimglink-hint" class="field-hint">Image cliquable (Link › Figure).</p>
           </div>
 
-          <div class="sc" id="bp-lnk" style="display:none">
-            <h4 class="sc-title">Lien hypertexte</h4>
+          <div class="ps" id="bp-lnk" style="display:none">
+            <h3 class="ps-title">Lien hypertexte</h3>
             <label for="blt">Texte du lien</label>
             <input id="blt" type="text" placeholder="Cliquez ici" oninput="bprop('linkText',this.value)">
             <label for="blu">URL</label>
             <input id="blu" type="url" placeholder="https://…" oninput="bprop('linkUrl',this.value)">
           </div>
 
-          <div class="sc" id="bp-list" style="display:none">
-            <h4 class="sc-title">Liste</h4>
-            <div class="grid-check-row">
-              <input type="checkbox" id="blistnobullet"
-                onchange="bprop('listNoBullet', this.checked); rr(sid);">
+          <div class="ps" id="bp-list" style="display:none">
+            <h3 class="ps-title">Liste</h3>
+            <div class="ck-row">
+              <input type="checkbox" id="blistnobullet" onchange="bprop('listNoBullet', this.checked); rr(sid);">
               <label for="blistnobullet">Masquer les puces / numéros</label>
             </div>
           </div>
 
-          <div class="sc" id="bp-hlv" style="display:none">
-            <h4 class="sc-title">Titre</h4>
+          <div class="ps" id="bp-hlv" style="display:none">
+            <h3 class="ps-title">Titre</h3>
             <label for="bhlv">Niveau de titre</label>
             <select id="bhlv" onchange="bprop('type',this.value);rr(sid)">
               <option value="h1">H1 — Titre principal</option>
               <option value="h2">H2 — Titre de section</option>
               <option value="h3">H3 — Titre de sous-section</option>
-              <option value="h4">H4 — Titre de sous-sous-section</option>
-              <option value="h5">H5 — Titre de niveau 5</option>
-              <option value="h6">H6 — Titre de niveau 6</option>
+              <option value="h4">H4 — Niveau 4</option>
+              <option value="h5">H5 — Niveau 5</option>
+              <option value="h6">H6 — Niveau 6</option>
             </select>
           </div>
 
-          <div class="sc" id="bp-bookmark" style="display:none">
-            <fieldset>
-              <legend>Signet PDF</legend>
-              <label style="color:#374151">
-                <input type="checkbox" id="bbookmark" onchange="bprop('bookmark', this.checked)"
-                  aria-describedby="bbookmark-hint">
-                Inclure dans les signets
-              </label>
-              <p id="bbookmark-hint" class="field-hint">
-                Visible dans le panneau de navigation du lecteur PDF.
-              </p>
-            </fieldset>
+          <div class="ps" id="bp-bookmark" style="display:none">
+            <h3 class="ps-title">Signet PDF</h3>
+            <div class="ck-row">
+              <input type="checkbox" id="bbookmark" onchange="bprop('bookmark', this.checked)"
+                aria-describedby="bbookmark-hint">
+              <label for="bbookmark">Inclure dans les signets</label>
+            </div>
+            <p id="bbookmark-hint" class="field-hint">Visible dans le panneau de navigation du lecteur PDF.</p>
           </div>
 
-          <div class="sc" id="bp-quote" style="display:none">
-            <h4 class="sc-title">Citation</h4>
+          <div class="ps" id="bp-quote" style="display:none">
+            <h3 class="ps-title">Citation</h3>
             <label for="bqsrc">Source / auteur</label>
             <input id="bqsrc" type="text" placeholder="— Auteur, Œuvre" oninput="bprop('quoteSource',this.value)">
           </div>
 
-          <div class="sc" id="bp-note" style="display:none">
-            <h4 class="sc-title">Note de bas de page</h4>
+          <div class="ps" id="bp-note" style="display:none">
+            <h3 class="ps-title">Note de bas de page</h3>
             <label for="bnref">Numéro / référence</label>
             <input id="bnref" type="text" placeholder="1" oninput="bprop('noteRef',this.value)">
           </div>
 
-          <div class="sc" id="bp-form" style="display:none">
-            <fieldset>
-              <legend>Champ de formulaire</legend>
+          <div class="ps" id="bp-form" style="display:none">
+            <h3 class="ps-title">Champ de formulaire</h3>
+            <label for="bform-label">Libellé <span aria-label="obligatoire">*</span></label>
+            <input id="bform-label" type="text" placeholder="Libellé du champ"
+              oninput="bprop('formLabel',this.value);rr(sid)" aria-required="true" aria-describedby="bform-label-hint">
+            <p id="bform-label-hint" class="field-hint">Visible et lu par les lecteurs d'écran (PDF/UA §7.18).</p>
 
-              <label for="bform-label">Libellé <span aria-label="obligatoire">*</span></label>
-              <input id="bform-label" type="text" placeholder="Libellé du champ"
-                oninput="bprop('formLabel',this.value);rr(sid)" aria-required="true"
-                aria-describedby="bform-label-hint">
-              <p id="bform-label-hint" class="field-hint">Visible et lu par les lecteurs d'écran (PDF/UA §7.18).</p>
-
-              <div id="bform-row-placeholder">
-                <label for="bform-placeholder">Texte indicatif (placeholder)</label>
-                <input id="bform-placeholder" type="text" placeholder="Saisir…"
-                  oninput="bprop('formPlaceholder',this.value);rr(sid)">
-              </div>
-
-              <div id="bform-row-default">
-                <label for="bform-default">Valeur par défaut</label>
-                <input id="bform-default" type="text" placeholder=""
-                  oninput="bprop('formDefaultValue',this.value);rr(sid)">
-              </div>
-
-              <div id="bform-row-options">
-                <label for="bform-options">Options <span class="field-hint" style="display:inline;font-size:10px">(une
-                    par ligne)</span></label>
-                <textarea id="bform-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"
-                  oninput="bprop('formOptions',this.value);rr(sid)" style="min-height:60px"></textarea>
-              </div>
-
-              <div id="bform-row-checked" class="grid-check-row">
-                <input type="checkbox" id="bform-checked" onchange="bprop('formChecked',this.checked);rr(sid)">
-                <label for="bform-checked">Coché par défaut</label>
-              </div>
-
-              <div id="bform-row-required" class="grid-check-row">
-                <input type="checkbox" id="bform-required" onchange="bprop('formRequired',this.checked);rr(sid)">
-                <label for="bform-required">Champ obligatoire</label>
-              </div>
-
-              <div id="bform-row-readonly" class="grid-check-row">
-                <input type="checkbox" id="bform-readonly" onchange="bprop('formReadonly',this.checked);rr(sid)">
-                <label for="bform-readonly">Lecture seule</label>
-              </div>
-
-              <p class="field-hint" style="margin-top:6px">
-                Les champs génèrent des annotations AcroForm interactives conformes PDF/UA
-                (tag <code>Form</code> + attribut <code>/TU</code>).
-              </p>
-            </fieldset>
+            <div id="bform-row-placeholder">
+              <label for="bform-placeholder">Texte indicatif</label>
+              <input id="bform-placeholder" type="text" placeholder="Saisir…"
+                oninput="bprop('formPlaceholder',this.value);rr(sid)">
+            </div>
+            <div id="bform-row-default">
+              <label for="bform-default">Valeur par défaut</label>
+              <input id="bform-default" type="text" oninput="bprop('formDefaultValue',this.value);rr(sid)">
+            </div>
+            <div id="bform-row-options">
+              <label for="bform-options">Options <span class="field-hint" style="display:inline">(une par
+                  ligne)</span></label>
+              <textarea id="bform-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"
+                oninput="bprop('formOptions',this.value);rr(sid)"></textarea>
+            </div>
+            <div id="bform-row-checked" class="ck-row">
+              <input type="checkbox" id="bform-checked" onchange="bprop('formChecked',this.checked);rr(sid)">
+              <label for="bform-checked">Coché par défaut</label>
+            </div>
+            <div id="bform-row-required" class="ck-row">
+              <input type="checkbox" id="bform-required" onchange="bprop('formRequired',this.checked);rr(sid)">
+              <label for="bform-required">Champ obligatoire</label>
+            </div>
+            <div id="bform-row-readonly" class="ck-row">
+              <input type="checkbox" id="bform-readonly" onchange="bprop('formReadonly',this.checked);rr(sid)">
+              <label for="bform-readonly">Lecture seule</label>
+            </div>
+            <p class="field-hint" style="margin-top:6px">Génère une annotation AcroForm conforme PDF/UA.</p>
           </div>
 
-          <div class="sc" id="bp-aside" style="display:none">
-            <h4 class="sc-title">Encadré</h4>
-            <label for="basidestyle">Style de l'encadré</label>
+          <div class="ps" id="bp-aside" style="display:none">
+            <h3 class="ps-title">Encadré</h3>
+            <label for="basidestyle">Style</label>
             <select id="basidestyle" onchange="bprop('asideStyle',this.value);rr(sid)">
               <option value="info">Information (bleu)</option>
               <option value="warn">Avertissement (orange)</option>
@@ -525,8 +602,9 @@
             </select>
           </div>
 
-          <div class="sc" id="bp-shape" style="display:none">
-            <label for="bshapekind">Forme</label>
+          <div class="ps" id="bp-shape" style="display:none">
+            <h3 class="ps-title">Forme décorative</h3>
+            <label for="bshapekind">Type</label>
             <select id="bshapekind" onchange="bprop('shapeKind',this.value);rr(sid)">
               <option value="circle">● Cercle</option>
               <option value="halfcircle">◑ Demi-cercle</option>
@@ -541,265 +619,244 @@
             </select>
             <label for="bshapecolor">Couleur de remplissage</label>
             <div id="bshapecolor-wrap"></div>
-            <div class="grid-check-row" style="margin:4px 0 6px">
+            <div class="ck-row" style="margin:6px 0">
               <input type="checkbox" id="bshapetransparent" onchange="bprop('shapeFillNone',this.checked);rr(sid)">
-              <label for="bshapetransparent" style="font-size:12px;color:#374151;cursor:pointer;margin:0">Sans
-                remplissage</label>
+              <label for="bshapetransparent">Sans remplissage</label>
             </div>
-            <label for="bshapeopacity">Opacité <span id="bshapeopacity-val">100%</span></label>
+            <label for="bshapeopacity">Opacité — <span id="bshapeopacity-val">100%</span></label>
             <input type="range" id="bshapeopacity" min="0.05" max="1" step="0.05" value="1"
-              oninput="document.getElementById('bshapeopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)"
-              style="width:100%;margin-bottom:6px">
-            <label for="bshaperotation">Rotation <span id="bshaperotation-val">0°</span></label>
+              oninput="document.getElementById('bshapeopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)">
+            <label for="bshaperotation">Rotation — <span id="bshaperotation-val">0°</span></label>
             <input type="range" id="bshaperotation" min="0" max="359" step="1" value="0"
-              oninput="document.getElementById('bshaperotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)"
-              style="width:100%;margin-bottom:6px">
-            <fieldset style="border:none;padding:0;margin-bottom:4px">
-              <legend
-                style="font-size:10px;color:#9ca3af;margin-bottom:5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">
-                Bordure</legend>
-              <div class="grid-check-row" style="margin-bottom:6px">
-                <input type="checkbox" id="bshapeborder" onchange="bprop('shapeBorderEnabled',this.checked);rr(sid)">
-                <label for="bshapeborder" style="font-size:12px;color:#374151;cursor:pointer;margin:0">Afficher la
-                  bordure</label>
-              </div>
-              <label for="bshapebordercolor">Couleur de la bordure</label>
-              <div id="bshapebordercolor-wrap" style="margin-bottom:0"></div>
-              <label for="bshapeborderwidth">Épaisseur <span id="bshapeborderwidth-val">2px</span></label>
-              <input type="range" id="bshapeborderwidth" min="1" max="20" step="1" value="2"
-                oninput="document.getElementById('bshapeborderwidth-val').textContent=this.value+'px';bprop('shapeBorderWidth',parseInt(this.value));rr(sid)"
-                style="width:100%;margin-bottom:6px">
-            </fieldset>
-            <p class="field-hint">Les formes sont exportées en tant qu'artefacts décoratifs (non lus par les AT).</p>
+              oninput="document.getElementById('bshaperotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)">
+            <p class="ps-title" style="margin-top:12px">Bordure</p>
+            <div class="ck-row">
+              <input type="checkbox" id="bshapeborder" onchange="bprop('shapeBorderEnabled',this.checked);rr(sid)">
+              <label for="bshapeborder">Afficher la bordure</label>
+            </div>
+            <label for="bshapebordercolor">Couleur de la bordure</label>
+            <div id="bshapebordercolor-wrap"></div>
+            <label for="bshapeborderwidth">Épaisseur — <span id="bshapeborderwidth-val">2px</span></label>
+            <input type="range" id="bshapeborderwidth" min="1" max="20" step="1" value="2"
+              oninput="document.getElementById('bshapeborderwidth-val').textContent=this.value+'px';bprop('shapeBorderWidth',parseInt(this.value));rr(sid)">
+            <p class="field-hint">Exportée comme artefact décoratif (non lu par les AT).</p>
           </div>
 
-          <div class="sc" id="bp-freeform" style="display:none">
-            <h4 class="sc-title">Forme libre</h4>
+          <div class="ps" id="bp-freeform" style="display:none">
+            <h3 class="ps-title">Forme libre</h3>
             <label for="bffcolor">Couleur</label>
             <div id="bffcolor-wrap"></div>
-            <label for="bffopacity">Opacité <span id="bffopacity-val">100%</span></label>
+            <label for="bffopacity">Opacité — <span id="bffopacity-val">100%</span></label>
             <input type="range" id="bffopacity" min="0.05" max="1" step="0.05" value="1"
-              oninput="document.getElementById('bffopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)"
-              style="width:100%;margin-bottom:6px">
-            <label for="bffrotation">Rotation <span id="bffrotation-val">0°</span></label>
+              oninput="document.getElementById('bffopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)">
+            <label for="bffrotation">Rotation — <span id="bffrotation-val">0°</span></label>
             <input type="range" id="bffrotation" min="0" max="359" step="1" value="0"
-              oninput="document.getElementById('bffrotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)"
-              style="width:100%;margin-bottom:6px">
-            <label for="bffstroke">Épaisseur du tracé <span id="bffstroke-val">2px</span></label>
+              oninput="document.getElementById('bffrotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)">
+            <label for="bffstroke">Épaisseur du tracé — <span id="bffstroke-val">2px</span></label>
             <input type="range" id="bffstroke" min="1" max="20" step="1" value="2"
-              oninput="document.getElementById('bffstroke-val').textContent=this.value+'px';bprop('strokeWidth',parseInt(this.value));rr(sid)"
-              style="width:100%;margin-bottom:6px">
-            <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#374151;cursor:pointer">
-                <input type="checkbox" id="bfffill" onchange="bprop('shapeFilled',this.checked);rr(sid)"> Remplir
-              </label>
-              <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#374151;cursor:pointer">
+              oninput="document.getElementById('bffstroke-val').textContent=this.value+'px';bprop('strokeWidth',parseInt(this.value));rr(sid)">
+            <div style="display:flex;gap:12px;margin:6px 0">
+              <div class="ck-row" style="margin:0">
+                <input type="checkbox" id="bfffill" onchange="bprop('shapeFilled',this.checked);rr(sid)">
+                <label for="bfffill">Remplir</label>
+              </div>
+              <div class="ck-row" style="margin:0">
                 <input type="checkbox" id="bffclosed" onchange="bprop('pathClosed',this.checked);rr(sid)" checked>
-                Fermer
-              </label>
+                <label for="bffclosed">Fermer</label>
+              </div>
             </div>
-            <button type="button" onclick="editFreeformPath(sid)" class="sb" style="width:100%;margin-bottom:4px">✏
-              Retracer</button>
-            <p class="field-hint">Forme libre vectorielle. Retracer pour modifier les points.</p>
+            <button type="button" onclick="editFreeformPath(sid)" class="sb" style="width:100%">✏ Retracer</button>
           </div>
 
-          <!-- Panneau graphique -->
-          <div class="sc" id="bp-chart" style="display:none">
-            <h4 class="sc-title">Graphique</h4>
-            <label for="bchartkind">Type de graphique</label>
+          <div class="ps" id="bp-chart" style="display:none">
+            <h3 class="ps-title">Graphique</h3>
+            <label for="bchartkind">Type</label>
             <select id="bchartkind" onchange="bprop('chartKind',this.value);rr(sid)">
               <option value="pie">◕ Camembert</option>
               <option value="donut">◎ Anneau</option>
               <option value="bar">▬ Barres</option>
               <option value="line">↗ Courbes</option>
             </select>
-            <label for="bcharttitle" style="margin-top:4px">Titre du graphique</label>
+            <label for="bcharttitle">Titre</label>
             <input id="bcharttitle" type="text" placeholder="Titre…" oninput="bprop('chartTitle',this.value);rr(sid)">
             <label for="bchartalt">Texte alternatif <span aria-label="obligatoire">*</span></label>
-            <textarea id="bchartalt" placeholder="Description du graphique pour les lecteurs d'écran…"
-              aria-required="true" oninput="bprop('alt',this.value)" style="min-height:40px"></textarea>
-            <p class="field-hint">Requis PDF/UA — décrit les données du graphique.</p>
-            <label>Données <span class="field-hint" style="display:inline;font-size:10px">(une série par ligne :
-                Étiquette, Valeur)</span></label>
-            <div id="bchartrows" style="display:flex;flex-direction:column;gap:3px;margin-bottom:4px"></div>
-            <button type="button" id="bchartadd" class="sb" style="width:100%;margin-bottom:4px"
-              onclick="chartAddRow()">+ Ajouter une série</button>
-            <p class="field-hint">Les graphiques sont exportés comme figures vectorielles (Figure PDF/UA).</p>
+            <textarea id="bchartalt" placeholder="Description pour les lecteurs d'écran…" aria-required="true"
+              oninput="bprop('alt',this.value)"></textarea>
+            <p class="field-hint">Requis PDF/UA.</p>
+            <label>Données <span class="field-hint" style="display:inline">(Étiquette, Valeur par ligne)</span></label>
+            <div id="bchartrows"></div>
+            <button type="button" id="bchartadd" class="sb" style="width:100%;margin-top:4px" onclick="chartAddRow()">+
+              Ajouter une série</button>
           </div>
 
-        </div>
-      </div>
+        </div><!-- /#bp-fields -->
 
-      <!-- Panneau UA -->
-      <div class="rp" id="tp-ua" role="tabpanel" aria-labelledby="tab-ua" tabindex="0" hidden>
-        <h3 class="panel-title">Conformité PDF/UA</h3>
-        <div class="sc" id="ual" role="status" aria-live="polite" aria-atomic="false"
-          aria-label="Checklist de conformité PDF/UA"></div>
-        <div class="sc muted small">
-          PDF/UA (ISO 14289) exige : titre, langue, tags structurés,
-          alternatives textuelles des images informatives, ordre de lecture logique…
-        </div>
-        <h4 class="sc-title" style="padding:0 10px;margin-top:8px">Arbre de structure</h4>
-        <div class="sc">
-          <p class="muted small" style="margin-bottom:8px">
-            Arbre de structure — ordre de lecture logique.<br>
-            Appuyer sur <kbd>Entrée</kbd> pour sélectionner le bloc correspondant.
-          </p>
-          <div id="tagt" role="tree" aria-label="Arbre des tags PDF/UA"></div>
-        </div>
-      </div>
+      </div><!-- /#pane-bloc -->
 
-      <!-- Panneau Sauvegarde -->
-      <div class="rp" id="tp-save" role="tabpanel" aria-labelledby="tab-save" tabindex="0" hidden>
-        <h3 class="panel-title">Sauvegarde du projet</h3>
+      <!-- ── Panneau PDF/UA (vide — contenu déplacé dans #ua-modal) ── -->
+      <!-- blocks.js a besoin de ce panneau en DOM pour switchTab('ua') -->
+      <div class="pane rp" id="tp-ua" role="tabpanel" aria-labelledby="tab-ua" tabindex="-1" hidden></div>
 
-        <!-- Fichier projet -->
-        <div class="sc">
-          <h4 class="sc-title">Fichier projet</h4>
-          <div style="display:flex;gap:6px">
-            <button class="ab se" style="flex:1;margin:0" type="button" onclick="saveProject()">
-              <span aria-hidden="true">💾</span> Sauvegarder
-            </button>
-            <button class="ab se" style="flex:1;margin:0" type="button"
-              onclick="document.getElementById('open-project-input').click()">
-              <span aria-hidden="true">📂</span> Ouvrir
-            </button>
+      <!-- ── Panneau Export ── -->
+      <div class="pane rp" id="tp-export" role="tabpanel" aria-labelledby="tab-export" tabindex="0" hidden>
+
+        <div class="ps">
+          <h3 class="ps-title">Numérotation des pages</h3>
+          <div class="ck-row">
+            <input type="checkbox" id="pg-enabled" onchange="updUA()">
+            <label for="pg-enabled">Activer la pagination</label>
           </div>
-          <input type="file" id="open-project-input" accept=".pdfua" style="display:none" onchange="openProject(this)"
-            aria-label="Ouvrir un fichier projet .pdfua">
-          <p class="field-hint" style="margin-top:6px">
-            Format <code>.pdfua</code> — sauvegarde l'intégralité du document (blocs, images, métadonnées).
-          </p>
+          <div class="ck-row">
+            <input type="checkbox" id="pg-skip-first" checked>
+            <label for="pg-skip-first">Masquer sur la 1ʳᵉ page</label>
+          </div>
+          <label for="pg-position">Position</label>
+          <select id="pg-position">
+            <option value="bottom-center">Bas — centré</option>
+            <option value="bottom-right">Bas — droite</option>
+            <option value="bottom-left">Bas — gauche</option>
+            <option value="top-center">Haut — centré</option>
+            <option value="top-right">Haut — droite</option>
+            <option value="top-left">Haut — gauche</option>
+          </select>
+          <label for="pg-format">Format</label>
+          <select id="pg-format">
+            <option value="n">1</option>
+            <option value="n/t" selected>1 / 10</option>
+            <option value="page-n">Page 1</option>
+            <option value="page-n/t">Page 1 / 10</option>
+          </select>
         </div>
 
-      </div>
-
-      <!-- Panneau Export -->
-      <div class="rp" id="tp-export" role="tabpanel" aria-labelledby="tab-export" tabindex="0" hidden>
-        <h3 class="panel-title">Génération PDF</h3>
-        <div class="sc">
-          <p class="muted small" style="margin-bottom:10px">
-            Vérifiez que le titre et la langue sont définis (onglet Méta) avant de générer.
-          </p>
+        <div class="ps">
+          <h3 class="ps-title">Table des matières</h3>
+          <div class="ck-row">
+            <input type="checkbox" id="toc-enabled" onchange="updUA()">
+            <label for="toc-enabled">Générer une TdM</label>
+          </div>
+          <label for="toc-title">Titre de la TdM</label>
+          <input id="toc-title" type="text" placeholder="Table des matières">
+          <label for="toc-depth">Profondeur</label>
+          <select id="toc-depth">
+            <option value="1">H1 seulement</option>
+            <option value="2">H1 + H2</option>
+            <option value="3" selected>H1 + H2 + H3</option>
+          </select>
+          <div class="ck-row" style="margin-top:8px">
+            <input type="checkbox" id="toc-after-first" checked>
+            <label for="toc-after-first">Insérer après la 1ʳᵉ page</label>
+          </div>
+          <p class="field-hint">Page supplémentaire avec liens internes (TOC › TOCI).</p>
         </div>
 
-        <!-- Pagination -->
-        <div class="sc">
-          <fieldset>
-            <legend>Numérotation des pages</legend>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div class="grid-check-row">
-                <input type="checkbox" id="pg-enabled" onchange="updUA()">
-                <label for="pg-enabled">Activer la pagination</label>
-              </div>
-              <div class="grid-check-row">
-                <input type="checkbox" id="pg-skip-first" checked>
-                <label for="pg-skip-first">Masquer sur la 1ʳᵉ page</label>
-              </div>
-              <div>
-                <label for="pg-position"
-                  style="font-size:10px;color:#9ca3af;margin-bottom:3px;display:block">Position</label>
-                <select id="pg-position"
-                  style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:5px">
-                  <option value="bottom-center">Bas — centré</option>
-                  <option value="bottom-right">Bas — droite</option>
-                  <option value="bottom-left">Bas — gauche</option>
-                  <option value="top-center">Haut — centré</option>
-                  <option value="top-right">Haut — droite</option>
-                  <option value="top-left">Haut — gauche</option>
-                </select>
-              </div>
-              <div>
-                <label for="pg-format"
-                  style="font-size:10px;color:#9ca3af;margin-bottom:3px;display:block">Format</label>
-                <select id="pg-format"
-                  style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:5px">
-                  <option value="n">1</option>
-                  <option value="n/t" selected>1 / 10</option>
-                  <option value="page-n">Page 1</option>
-                  <option value="page-n/t">Page 1 / 10</option>
-                </select>
-              </div>
-            </div>
-          </fieldset>
-        </div>
+      </div><!-- /#pane-export -->
 
-        <!-- Table des matières -->
-        <div class="sc">
-          <fieldset>
-            <legend>Table des matières</legend>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <div class="grid-check-row">
-                <input type="checkbox" id="toc-enabled" onchange="updUA()">
-                <label for="toc-enabled">Générer une TdM</label>
-              </div>
-              <div>
-                <label for="toc-title" style="font-size:10px;color:#9ca3af;margin-bottom:3px;display:block">Titre de la TdM</label>
-                <input id="toc-title" type="text" placeholder="Table des matières"
-                  style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:5px">
-              </div>
-              <div>
-                <label for="toc-depth"
-                  style="font-size:10px;color:#9ca3af;margin-bottom:3px;display:block">Profondeur</label>
-                <select id="toc-depth"
-                  style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:5px">
-                  <option value="1">H1 seulement</option>
-                  <option value="2">H1 + H2</option>
-                  <option value="3" selected>H1 + H2 + H3</option>
-                </select>
-              </div>
-              <div class="grid-check-row">
-                <input type="checkbox" id="toc-after-first" checked>
-                <label for="toc-after-first">Insérer après la 1ʳᵉ page</label>
-              </div>
-            </div>
-            <p class="field-hint" style="margin-top:6px">La TdM est une page supplémentaire avec liens internes PDF/UA (TOC › TOCI).</p>
-          </fieldset>
-        </div>
-
-        <button class="ab pr" id="btn-gen" type="button" onclick="genPDF()">
-          <span aria-hidden="true">⬇</span> Générer le PDF/UA
-        </button>
-        <button class="ab se" id="btn-prev" type="button" onclick="prevPDF()">
-          <span aria-hidden="true">👁</span> Prévisualiser
-        </button>
-        <button class="ab te" id="btn-exp" type="button" onclick="exportCode()">
-          <span aria-hidden="true">{ }</span> Exporter le code JS
-        </button>
-        <div class="sc" style="margin-top:4px">
-          <p class="muted small">
-            <strong>Générer</strong> — télécharge le fichier <code>.pdf</code> conforme PDF/UA.<br><br>
-            <strong>Prévisualiser</strong> — affiche le rendu dans le navigateur.<br><br>
-            <strong>Exporter le code JS</strong> — produit un script PDFKit autonome réutilisable hors de l'éditeur.
-          </p>
-        </div>
-      </div>
-
-    </aside>
+    </aside><!-- /#panel -->
 
   </div><!-- /#app -->
 
+
+  <!-- ════════════════════════════════════════
+       MODALE PDF/UA
+  ════════════════════════════════════════ -->
+  <div id="ua-modal" role="dialog" aria-modal="true" aria-labelledby="ua-modal-title"
+    onclick="if(event.target===this)this.classList.remove('open')">
+    <div class="ua-modal-inner">
+      <div class="ua-modal-hd">
+        <h2 id="ua-modal-title">Conformité PDF/UA</h2>
+        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA"
+          onclick="document.getElementById('ua-modal').classList.remove('open')">×</button>
+      </div>
+      <div class="ua-modal-body">
+
+        <h3>Checklist</h3>
+        <div id="ual" role="status" aria-live="polite" aria-atomic="false" aria-label="Checklist de conformité PDF/UA">
+        </div>
+
+        <div class="ua-modal-section">
+          <h3>Arbre de structure</h3>
+          <p class="muted" style="margin-bottom:8px;font-size:11px">Ordre de lecture logique.
+            <kbd
+              style="font-size:9px;background:var(--bg-raised);border:1px solid var(--border-weak);border-radius:3px;padding:1px 4px;font-family:var(--font-mono)">Entrée</kbd>
+            pour sélectionner.
+          </p>
+          <div id="tagt" role="tree" aria-label="Arbre des tags PDF/UA"></div>
+        </div>
+
+        <div class="ua-modal-section">
+          <h3>À propos</h3>
+          <p class="muted" style="font-size:11px">PDF/UA (ISO 14289) requiert titre, langue, tags structurés, textes
+            alternatifs et ordre de lecture logique.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODALE PRÉVISUALISATION
+  ════════════════════════════════════════ -->
   <div id="prev-modal" role="dialog" aria-modal="true" aria-labelledby="prev-modal-title"
     aria-describedby="prev-modal-desc">
     <div class="prev-inner">
       <div class="prev-hd">
         <h2 id="prev-modal-title" class="prev-modal-title">Prévisualisation PDF</h2>
         <button id="prev-close-btn" class="prev-close" type="button" onclick="closePv()"
-          aria-label="Fermer la prévisualisation (Échap)">
-          <span aria-hidden="true">×</span>
-        </button>
+          aria-label="Fermer la prévisualisation (Échap)">×</button>
       </div>
       <p id="prev-modal-desc" class="sr-only">
-        Prévisualisation du document PDF généré.
-        Appuyer sur Échap ou sur le bouton Fermer pour revenir à l'éditeur.
+        Prévisualisation du document PDF généré. Appuyer sur Échap pour fermer.
       </p>
-      <iframe id="pif" title="Prévisualisation du document PDF" aria-label="Document PDF en prévisualisation"></iframe>
+      <iframe id="pif" title="Prévisualisation PDF"></iframe>
     </div>
   </div>
 
+  <!-- Toast notifications -->
   <div id="toast" role="status" aria-live="polite" aria-atomic="true" aria-relevant="additions text"></div>
 
+  <script>
+    /* Met à jour le badge de statut PDF/UA dans la topbar.
+       Appelé depuis updUA() dans blocks.js après chaque vérification. */
+    /* Met à jour le H2 du panneau selon l'onglet actif */
+    const _origSwitchTab = window.switchTab;
+    document.addEventListener('DOMContentLoaded', () => {
+      const patchST = setInterval(() => {
+        if (typeof window.switchTab === 'function' && window.switchTab !== _patchedST) {
+          const _orig = window.switchTab;
+          window.switchTab = function (name) {
+            _orig(name);
+            const labels = { meta: 'Document', bloc: 'Bloc sélectionné', ua: 'PDF/UA', export: 'Paramètres' };
+            const h2 = document.getElementById('panel-heading');
+            if (h2) h2.textContent = 'Panneau — ' + (labels[name] || name);
+          };
+          window._patchedST = window.switchTab;
+          clearInterval(patchST);
+        }
+      }, 100);
+    });
+
+    window._patchUABadge = function () {
+      const badge = document.getElementById('tb-ua-status');
+      const label = document.getElementById('tb-ua-label');
+      if (!badge || !label) return;
+      const errs = document.querySelectorAll('#ual .ua-err').length;
+      const warns = document.querySelectorAll('#ual .ua-warn').length;
+      const items = document.querySelectorAll('#ual .ua-item').length;
+      if (!items) { badge.className = ''; label.textContent = 'PDF/UA'; return; }
+      // Puce rouge si erreur OU alerte, verte si tout OK. Indication par la couleur à revoir ultérieurement.
+      if (errs || warns) {
+        badge.className = 'err';
+        const n = errs + warns;
+        label.textContent = n + ' anomalie' + (n > 1 ? 's' : '');
+      } else {
+        badge.className = 'ok';
+        label.textContent = 'Conforme';
+      }
+    };
+  </script>
+
   <script defer src="dist/editor.min.js"></script>
+
 </body>
 
 </html>

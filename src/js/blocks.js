@@ -1712,11 +1712,12 @@ function updUA() {
 
   /* Construire le HTML en une passe, une seule écriture DOM */
   document.getElementById('ual').innerHTML = chks.map(ck => {
-    const status = ck.ok ? 'ok' : ck.warn ? 'warn' : 'err';
+    const status = ck.ok ? 'ua-ok' : ck.warn ? 'ua-warn' : 'ua-err';
     const label = ck.ok ? 'Conforme : ' : (ck.warn ? 'Avertissement : ' : 'Non conforme : ');
-    return `<div class="ur"><div class="dot ${status}" aria-hidden="true"></div>` +
+    return `<div class="ua-item ${status}"><div class="ua-dot" aria-hidden="true"></div>` +
       `<span class="sr-only">${label}</span><span>${ck.l}</span></div>`;
   }).join('');
+  window._patchUABadge?.();
 }
 
 /* ── ARBRE DES TAGS ── */
