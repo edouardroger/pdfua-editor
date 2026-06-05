@@ -94,8 +94,8 @@ const ts = new Date().toISOString().slice(0, 19);
 function minifyCSS() {
   console.log('\n── CSS ─────────────────────────────────────────');
   const cssFile = path.join(__dirname, 'src', 'css', 'style.css');
-  if (!fs.existsSync(cssFile)) { console.log('  (style.css introuvable, ignoré)'); printSummary(); return; }
-  if (noMin) { console.log('  (ignoré via --no-min)'); printSummary(); return; }
+  if (!fs.existsSync(cssFile)) { console.log('  (style.css introuvable, ignoré)'); copyFavicon(); printSummary(); return; }
+  if (noMin) { console.log('  (ignoré via --no-min)'); copyFavicon(); printSummary(); return; }
 
   let CleanCSS;
   try { CleanCSS = require('clean-css'); } catch {
@@ -114,7 +114,23 @@ function minifyCSS() {
   const ratio = (100 - minCSS.length / cssSource.length * 100).toFixed(0);
   console.log(`  ✓ style.css → style.min.css : ${minKo} Ko (−${ratio} % vs ${origKo} Ko)`);
 
+  copyFavicon();
   printSummary();
+}
+
+// ── 4. Copie du répertoire favicon ────────────────────────────────────────────
+function copyFavicon() {
+  console.log('\n── Favicon ─────────────────────────────────────');
+  const src = path.join(__dirname, 'src', 'favicon');
+  const dest = path.join(__dirname, 'dist', 'favicon');
+  if (!fs.existsSync(src)) { console.log('  (src/favicon introuvable, ignoré)'); return; }
+  fs.mkdirSync(dest, { recursive: true });
+  let count = 0;
+  for (const file of fs.readdirSync(src)) {
+    fs.copyFileSync(path.join(src, file), path.join(dest, file));
+    count++;
+  }
+  console.log(`  ✓ src/favicon → dist/favicon   (${count} fichier${count > 1 ? 's' : ''})`);
 }
 
 function printSummary() {
