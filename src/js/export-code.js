@@ -382,7 +382,7 @@ function exportCode() {
     `/**`,
     ` * Script généré par l'éditeur PDF/UA`,
     ` * Intégration dans une page HTML :`,
-    ` *   <script src="https://cdn.jsdelivr.net/npm/pdfkit@0.15/js/pdfkit.standalone.js"><\/script>`,
+    ` *   <script src="https://cdn.jsdelivr.net/npm/pdfkit@0.18.0/js/pdfkit.standalone.js"><\/script>`,
     ` *   <script src="https://cdn.jsdelivr.net/npm/blob-stream@0.1.3/index.js"><\/script>`,
     ` *   <script src="ce-fichier.js"><\/script>`,
     ` *`,
