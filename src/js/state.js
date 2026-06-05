@@ -1,7 +1,5 @@
 // state.js — État global, historique undo/redo, session, projet, grille
 
-// PDF/UA WYSIWYG Editor - editor.js
-
 // État global du document
 let blocks = [];           // liste de tous les blocs
 let sid = null;            // id du bloc sélectionné
