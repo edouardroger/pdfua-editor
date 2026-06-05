@@ -11,31 +11,31 @@
 class PDFBuilder {
   constructor() {
     // Paramètres lus depuis l'IHM au moment du build
-    this.lang       = null;
-    this.doc        = null;
-    this.docStruct  = null;
+    this.lang = null;
+    this.doc = null;
+    this.docStruct = null;
 
     // Blocs triés par ordre de lecture (page puis Y)
-    this.sortedBlocks   = [];
+    this.sortedBlocks = [];
     // Map<pageIndex, Block[]> : blocs groupés par page canvas
-    this.blocksByPage   = new Map();
+    this.blocksByPage = new Map();
 
     // Options table des matières
     this.toc = {
-      enabled:      false,
-      depth:        3,
-      afterFirst:   true,
-      titleText:    'Table des matières',
+      enabled: false,
+      depth: 3,
+      afterFirst: true,
+      titleText: 'Table des matières',
       headingBlocks: [],         // blocs titres éligibles
       destinations: {},          // id bloc → { destName, physPage }
     };
 
     // Options pagination
     this.pagination = {
-      enabled:    false,
-      skipFirst:  true,
-      position:   'bottom-center',
-      format:     'n/t',
+      enabled: false,
+      skipFirst: true,
+      position: 'bottom-center',
+      format: 'n/t',
       totalPages: 0,
     };
 
@@ -69,15 +69,15 @@ class PDFBuilder {
   _readSettings() {
     this.lang = document.getElementById('m-lang').value || 'fr-FR';
 
-    this.toc.enabled    = document.getElementById('toc-enabled')?.checked  || false;
-    this.toc.depth      = parseInt(document.getElementById('toc-depth')?.value || '3');
+    this.toc.enabled = document.getElementById('toc-enabled')?.checked || false;
+    this.toc.depth = parseInt(document.getElementById('toc-depth')?.value || '3');
     this.toc.afterFirst = document.getElementById('toc-after-first')?.checked !== false;
-    this.toc.titleText  = document.getElementById('toc-title')?.value.trim() || 'Table des matières';
+    this.toc.titleText = document.getElementById('toc-title')?.value.trim() || 'Table des matières';
 
-    this.pagination.enabled   = document.getElementById('pg-enabled')?.checked || false;
+    this.pagination.enabled = document.getElementById('pg-enabled')?.checked || false;
     this.pagination.skipFirst = document.getElementById('pg-skip-first')?.checked !== false;
-    this.pagination.position  = document.getElementById('pg-position')?.value  || 'bottom-center';
-    this.pagination.format    = document.getElementById('pg-format')?.value    || 'n/t';
+    this.pagination.position = document.getElementById('pg-position')?.value || 'bottom-center';
+    this.pagination.format = document.getElementById('pg-format')?.value || 'n/t';
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -142,23 +142,23 @@ class PDFBuilder {
   _createDocument() {
     // Réinitialiser l'état partagé utilisé par emitRichRuns / les renderers
     emitRichRuns._noteLinks = [];
-    buildPDF._noteStructs  = {};
+    buildPDF._noteStructs = {};
 
     this.doc = new PDFDocument({
-      pdfVersion:    '1.7',
-      subset:        'PDF/UA',
-      tagged:        true,
-      lang:          this.lang,
-      info:          this._collectDocInfo(),
-      displayTitle:  true,
+      pdfVersion: '1.7',
+      subset: 'PDF/UA',
+      tagged: true,
+      lang: this.lang,
+      info: this._collectDocInfo(),
+      displayTitle: true,
       autoFirstPage: false,
-      size:          [pageW(0), pageH(0)],
-      margins:       { top: 0, bottom: 0, left: 0, right: 0 },
+      size: [pageW(0), pageH(0)],
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
     });
 
     // Ajouter la première page manuellement avec la bonne taille
     this.doc.addPage({
-      size:    [pageW(0), pageH(0)],
+      size: [pageW(0), pageH(0)],
       margins: { top: 0, bottom: 0, left: 0, right: 0 },
     });
 
@@ -170,8 +170,8 @@ class PDFBuilder {
     const g = id => document.getElementById(id).value.trim();
     const info = { Creator: CREATOR, Producer: PRODUCER };
     const t = g('m-title'), a = g('m-author'), s = g('m-subject');
-    if (t) info.Title   = t;
-    if (a) info.Author  = a;
+    if (t) info.Title = t;
+    if (a) info.Author = a;
     if (s) info.Subject = s;
     return info;
   }
@@ -181,9 +181,9 @@ class PDFBuilder {
   // ─────────────────────────────────────────────────────────────────────
 
   _registerFonts() {
-    this.doc.registerFont('Regular',    window.FONTS.regular);
-    this.doc.registerFont('Bold',       window.FONTS.bold);
-    this.doc.registerFont('Italic',     window.FONTS.italic);
+    this.doc.registerFont('Regular', window.FONTS.regular);
+    this.doc.registerFont('Bold', window.FONTS.bold);
+    this.doc.registerFont('Italic', window.FONTS.italic);
     this.doc.registerFont('BoldItalic', window.FONTS.bolditalic);
     this.doc.font('Regular');
   }
@@ -217,7 +217,7 @@ class PDFBuilder {
     if (this.toc.enabled) {
       this._physPage++;
       this.doc.addPage({
-        size:    [pageW(0), pageH(0)],
+        size: [pageW(0), pageH(0)],
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
       });
       this._drawPageNumber(this._physPage);
@@ -228,7 +228,7 @@ class PDFBuilder {
     for (let canvasPage = 1; canvasPage < numPages; canvasPage++) {
       this._physPage++;
       this.doc.addPage({
-        size:    [pageW(canvasPage), pageH(canvasPage)],
+        size: [pageW(canvasPage), pageH(canvasPage)],
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
       });
       this._drawPageNumber(this._physPage);
@@ -256,12 +256,12 @@ class PDFBuilder {
 
   _renderTOCPage() {
     const { doc, docStruct, toc } = this;
-    const pw         = doc.page.width;
-    const marginX    = MAR;
+    const pw = doc.page.width;
+    const marginX = MAR;
     const tocTitleFs = 20;
-    const entryFs    = 11;
-    const lineH      = 22;
-    let   curY       = MAR;
+    const entryFs = 11;
+    const lineH = 22;
+    let curY = MAR;
 
     // ── Titre de la TdM (H2) ──
     const tocTitleS = doc.struct('H2');
@@ -295,27 +295,27 @@ class PDFBuilder {
   /** Rend une entrée (TOCI) dans la TdM et retourne la nouvelle position Y. */
   _renderTOCEntry(tocS, b, curY, { pw, marginX, entryFs, lineH }) {
     const { doc, toc } = this;
-    const level      = parseInt(b.type[1]);
-    const indent     = (level - 1) * 18;
-    const destInfo   = toc.destinations[b.id];
-    const pageNum    = destInfo ? (destInfo.physPage + 1) : '?';
-    const entryText  = (b.content || ('Titre ' + level)).trim();
-    const destName   = destInfo?.destName ?? null;
+    const level = parseInt(b.type[1]);
+    const indent = (level - 1) * 18;
+    const destInfo = toc.destinations[b.id];
+    const pageNum = destInfo ? (destInfo.physPage + 1) : '?';
+    const entryText = (b.content || ('Titre ' + level)).trim();
+    const destName = destInfo?.destName ?? null;
     const pageNumStr = String(pageNum);
 
-    const isBold      = level === 1;
-    const textColor   = level === 1 ? '#111111' : level === 2 ? '#374151' : '#505869';
-    const fs          = level === 1 ? entryFs + 1 : level === 2 ? entryFs : entryFs - 1;
-    const pageNumW    = 36;
-    const titleZoneW  = pw - marginX * 2 - indent - pageNumW - 16;
+    const isBold = level === 1;
+    const textColor = level === 1 ? '#111111' : level === 2 ? '#374151' : '#505869';
+    const fs = level === 1 ? entryFs + 1 : level === 2 ? entryFs : entryFs - 1;
+    const pageNumW = 36;
+    const titleZoneW = pw - marginX * 2 - indent - pageNumW - 16;
 
     doc.fontSize(fs).font(isBold ? 'Bold' : 'Regular');
     const titleActualW = Math.min(doc.widthOfString(entryText), titleZoneW);
-    const dotGap   = 5;
+    const dotGap = 5;
     const dotStartX = marginX + indent + titleActualW + dotGap;
-    const pageNumX  = pw - marginX - pageNumW;
-    const dotEndX   = pageNumX - dotGap;
-    const dotY      = curY + fs * 0.72;
+    const pageNumX = pw - marginX - pageNumW;
+    const dotEndX = pageNumX - dotGap;
+    const dotY = curY + fs * 0.72;
 
     const tociS = doc.struct('TOCI');
     tocS.add(tociS);
@@ -375,22 +375,22 @@ class PDFBuilder {
     if (!pagination.enabled) return;
     if (pagination.skipFirst && pagePhysIdx === 0) return;
 
-    const pw       = doc.page.width;
-    const ph       = doc.page.height;
-    const margin   = MAR;
-    const fs       = 9;
-    const num      = pagePhysIdx + 1;
-    const total    = pagination.totalPages;
+    const pw = doc.page.width;
+    const ph = doc.page.height;
+    const margin = MAR;
+    const fs = 9;
+    const num = pagePhysIdx + 1;
+    const total = pagination.totalPages;
 
     const label = this._formatPageLabel(num, total, pagination.format);
 
     const isBottom = pagination.position.startsWith('bottom');
-    const ty       = isBottom ? ph - margin + 6 : margin - fs - 6;
-    const side     = pagination.position.split('-')[1];
-    let   tx, align;
-    if (side === 'center')     { tx = margin;              align = 'center'; }
-    else if (side === 'right') { tx = pw - margin - 80;    align = 'right';  }
-    else                       { tx = margin;              align = 'left';   }
+    const ty = isBottom ? ph - margin + 6 : margin - fs - 6;
+    const side = pagination.position.split('-')[1];
+    let tx, align;
+    if (side === 'center') { tx = margin; align = 'center'; }
+    else if (side === 'right') { tx = pw - margin - 80; align = 'right'; }
+    else { tx = margin; align = 'left'; }
 
     doc.markContent('Artifact');
     doc.save()
@@ -402,11 +402,11 @@ class PDFBuilder {
 
   _formatPageLabel(num, total, format) {
     switch (format) {
-      case 'n':       return String(num);
-      case 'n/t':     return num + ' / ' + total;
-      case 'page-n':  return 'Page ' + num;
-      case 'page-n/t':return 'Page ' + num + ' / ' + total;
-      default:        return String(num);
+      case 'n': return String(num);
+      case 'n/t': return num + ' / ' + total;
+      case 'page-n': return 'Page ' + num;
+      case 'page-n/t': return 'Page ' + num + ' / ' + total;
+      default: return String(num);
     }
   }
 
@@ -415,25 +415,25 @@ class PDFBuilder {
   // ─────────────────────────────────────────────────────────────────────
 
   _linkNoteAnchors() {
-    const noteLinks  = emitRichRuns._noteLinks  || [];
-    const noteStructs = buildPDF._noteStructs   || {};
+    const noteLinks = emitRichRuns._noteLinks || [];
+    const noteStructs = buildPDF._noteStructs || {};
 
     for (const { struct: anchorLink, noteId } of noteLinks) {
       const entry = noteStructs[noteId];
       if (!entry) continue;
       const { noteStruct, backLink } = entry;
-      try { anchorLink.dictionary.data.Obj  = noteStruct.dictionary; } catch (_) {}
-      try { noteStruct.dictionary.data.Obj  = anchorLink.dictionary; } catch (_) {}
+      try { anchorLink.dictionary.data.Obj = noteStruct.dictionary; } catch (_) { }
+      try { noteStruct.dictionary.data.Obj = anchorLink.dictionary; } catch (_) { }
       if (backLink) {
-        try { backLink.dictionary.data.Obj = anchorLink.dictionary; } catch (_) {}
-        try { backLink.end(); } catch (_) {}
+        try { backLink.dictionary.data.Obj = anchorLink.dictionary; } catch (_) { }
+        try { backLink.end(); } catch (_) { }
       }
-      try { anchorLink.end(); } catch (_) {}
-      try { noteStruct.end(); } catch (_) {}
+      try { anchorLink.end(); } catch (_) { }
+      try { noteStruct.end(); } catch (_) { }
     }
 
     emitRichRuns._noteLinks = [];
-    buildPDF._noteStructs   = {};
+    buildPDF._noteStructs = {};
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -442,8 +442,8 @@ class PDFBuilder {
 
   _buildBookmarks() {
     const { doc, toc } = this;
-    const RE_HEADING   = /^h[1-6]$/;
-    const lastAtLevel  = { 0: doc.outline };
+    const RE_HEADING = /^h[1-6]$/;
+    const lastAtLevel = { 0: doc.outline };
 
     const headings = blocks
       .filter(b => RE_HEADING.test(b.type))
@@ -460,10 +460,10 @@ class PDFBuilder {
       if (!parent) continue;
 
       const canvasPage = Math.floor(b.y / PH);
-      const physPage   = this._canvasPageToPhysPage(canvasPage);
-      const pageH_val  = pageH(canvasPage);
-      const yOnPage    = b.y - canvasPage * PH + BAR_H;
-      const top        = pageH_val - yOnPage; // convention PDFKit : distance depuis le bas
+      const physPage = this._canvasPageToPhysPage(canvasPage);
+      const pageH_val = pageH(canvasPage);
+      const yOnPage = b.y - canvasPage * PH + BAR_H;
+      const top = pageH_val - yOnPage; // convention PDFKit : distance depuis le bas
 
       lastAtLevel[lv] = parent.addItem(b.content || '', { pageNumber: physPage, top });
     }
@@ -471,8 +471,8 @@ class PDFBuilder {
 
   /** Convertit un index de page canvas en index de page physique PDF. */
   _canvasPageToPhysPage(canvasPage) {
-    if (!this.toc.enabled)            return canvasPage;
-    if (this.toc.afterFirst)          return canvasPage === 0 ? 0 : canvasPage + 1;
+    if (!this.toc.enabled) return canvasPage;
+    if (this.toc.afterFirst) return canvasPage === 0 ? 0 : canvasPage + 1;
     return canvasPage + 1; // TdM en page 0
   }
 
@@ -519,29 +519,29 @@ async function _requireTitleAndBuild(actionLabel) {
     setTimeout(() => tf.classList.remove('input-error'), 2500);
     return null;
   }
-  const doc    = await buildPDF();
+  const doc = await buildPDF();
   const stream = doc.pipe(blobStream());
   doc.end();
   return { doc, stream, title: tf.value.trim() };
 }
 
 async function genPDF() {
-  const btn   = document.getElementById('btn-gen');
+  const btn = document.getElementById('btn-gen');
   const reset = () => {
     btn.removeAttribute('aria-busy');
-    btn.disabled  = false;
+    btn.disabled = false;
     btn.innerHTML = '<span aria-hidden="true">⬇</span> Générer le PDF/UA';
   };
   btn.setAttribute('aria-busy', 'true');
-  btn.disabled   = true;
+  btn.disabled = true;
   btn.textContent = 'Génération en cours…';
   try {
     const result = await _requireTitleAndBuild('générer le PDF');
     if (!result) { reset(); return; }
     const { stream, title } = result;
     stream.on('finish', () => {
-      const a    = document.createElement('a');
-      a.href     = stream.toBlobURL('application/pdf');
+      const a = document.createElement('a');
+      a.href = stream.toBlobURL('application/pdf');
       a.download = (title || 'document') + '.pdf';
       a.click();
       reset();
