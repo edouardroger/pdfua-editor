@@ -10,14 +10,17 @@
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
     rel="stylesheet">
-
+  <link rel="apple-touch-icon" sizes="180x180" href="./dist/favicon/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./dist/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./dist/favicon/favicon-16x16.png">
+  <link rel="manifest" href="./dist/favicon/site.webmanifest">
   <link rel="stylesheet" href="dist/style.min.css">
 </head>
 
 <body>
 
   <a class="skip-link" href="#page-wrap">Aller à la zone d'édition</a>
-  <a class="skip-link" href="#panel">Aller aux propriétés du document</a>
+  <a class="skip-link" href="#tp-meta">Aller aux propriétés du document</a>
 
   <div id="app">
 
@@ -33,7 +36,7 @@
 
       <div class="tb-sep" role="separator"></div>
 
-      <!-- Zone d'actions rapides -->
+      <!-- H2 sr-only : nommage accessible de la zone d'actions rapides -->
       <nav aria-labelledby="tb-actions-label">
         <h2 id="tb-actions-label" class="sr-only">Actions rapides</h2>
 
@@ -74,10 +77,18 @@
 
       </nav>
 
+      <!-- Bouton hamburger — visible uniquement sur mobile, ouvre le drawer sidebar -->
+      <button id="tb-hamburger" class="tb-btn tb-hamburger" type="button" aria-label="Ouvrir la palette de blocs"
+        aria-expanded="false" aria-controls="sidebar" onclick="toggleMobileSidebar()">
+        <span aria-hidden="true">☰</span>
+      </button>
+
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" onclick="document.getElementById('ua-modal').classList.toggle('open')">
+      <button id="tb-ua-status" type="button" aria-haspopup="dialog"
+        title="Statut conformité PDF/UA — cliquer pour ouvrir"
+        onclick="document.getElementById('ua-modal').classList.toggle('open')">
         <span class="dot" aria-hidden="true"></span>
         <span id="tb-ua-label">PDF/UA</span>
       </button>
@@ -330,7 +341,7 @@
     </nav>
 
     <!-- ════════════════════════════════════════
-         Canvas A4
+         VIEWPORT — canvas A4
     ════════════════════════════════════════ -->
     <main role="main" id="viewport" aria-label="Zone d'édition multi-pages">
       <div id="page-wrap">
@@ -794,7 +805,7 @@
   </div>
 
   <!-- ════════════════════════════════════════
-       MODALE PRÉVISUALISATION
+       MODAL PRÉVISUALISATION
   ════════════════════════════════════════ -->
   <div id="prev-modal" role="dialog" aria-modal="true" aria-labelledby="prev-modal-title"
     aria-describedby="prev-modal-desc">
@@ -807,32 +818,79 @@
       <p id="prev-modal-desc" class="sr-only">
         Prévisualisation du document PDF généré. Appuyer sur Échap pour fermer.
       </p>
-      <iframe id="pif" title="Prévisualisation PDF"></iframe>
+      <iframe id="pif" title="Prévisualisation PDF" aria-label="Document PDF en prévisualisation"></iframe>
     </div>
   </div>
 
   <!-- Toast notifications -->
   <div id="toast" role="status" aria-live="polite" aria-atomic="true" aria-relevant="additions text"></div>
 
+  <!-- Overlay fond sidebar mobile -->
+  <div id="sidebar-overlay" aria-hidden="true" onclick="toggleMobileSidebar(false)"></div>
+
+  </div>
+  </div>
+
+  <!-- Patch badge topbar UA — branché après chargement du bundle -->
   <script>
     /* Met à jour le badge de statut PDF/UA dans la topbar.
        Appelé depuis updUA() dans blocks.js après chaque vérification. */
-    /* Met à jour le H2 du panneau selon l'onglet actif */
+    /* Met à jour le H2 sr-only du panneau selon l'onglet actif */
     const _origSwitchTab = window.switchTab;
     document.addEventListener('DOMContentLoaded', () => {
       const patchST = setInterval(() => {
-        if (typeof window.switchTab === 'function' && window.switchTab !== _patchedST) {
+        if (
+          typeof window.switchTab === 'function' &&
+          window.switchTab !== window._patchedST
+        ) {
           const _orig = window.switchTab;
+
           window.switchTab = function (name) {
             _orig(name);
-            const labels = { meta: 'Document', bloc: 'Bloc sélectionné', ua: 'PDF/UA', export: 'Paramètres' };
+
+            const labels = {
+              meta: 'Document',
+              bloc: 'Bloc sélectionné',
+              ua: 'PDF/UA',
+              export: 'Paramètres'
+            };
+
             const h2 = document.getElementById('panel-heading');
-            if (h2) h2.textContent = 'Panneau — ' + (labels[name] || name);
+            if (h2) {
+              h2.textContent = 'Panneau — ' + (labels[name] || name);
+            }
           };
+
           window._patchedST = window.switchTab;
           clearInterval(patchST);
         }
       }, 100);
+    });
+
+    /* ── Mobile : toggle sidebar drawer ── */
+    window.toggleMobileSidebar = function (forceState) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const btn = document.getElementById('tb-hamburger');
+      const isOpen = sidebar.classList.contains('mobile-open');
+      const open = forceState !== undefined ? forceState : !isOpen;
+      sidebar.classList.toggle('mobile-open', open);
+      overlay.classList.toggle('visible', open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) {
+        // focus premier élément de la sidebar
+        const first = sidebar.querySelector('.bsrc');
+        if (first) first.focus();
+      }
+    };
+
+    /* Fermer drawer au clic en dehors (overlay gère déjà ce cas) */
+
+    /* Échap ferme le drawer sidebar */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        toggleMobileSidebar(false);
+      }
     });
 
     window._patchUABadge = function () {
@@ -843,7 +901,7 @@
       const warns = document.querySelectorAll('#ual .ua-warn').length;
       const items = document.querySelectorAll('#ual .ua-item').length;
       if (!items) { badge.className = ''; label.textContent = 'PDF/UA'; return; }
-      // Puce rouge si erreur OU alerte, verte si tout OK. Indication par la couleur à revoir ultérieurement.
+      // Puce rouge si erreur OU alerte, verte si tout OK
       if (errs || warns) {
         badge.className = 'err';
         const n = errs + warns;
