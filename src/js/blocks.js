@@ -723,7 +723,7 @@ function el(tag, { cls, style, attrs = {}, html, text, on = {} } = {}) {
 function buildEl(b) {
   const label = labelForType(b.type), localY = b.y % PH;
   const isDecorative = b.type === 'shape' || b.type === 'freeform';
-  const wrapper = el('div', { cls: 'fb' + (isDecorative ? ' shape-block' : ''), style: `left:${b.x}px;top:${localY}px;width:${b.w}px;height:${b.h}px;z-index:${b.zIndex||0}`, attrs: { id: 'el-' + b.id } });
+  const wrapper = el('div', { cls: 'fb' + (isDecorative ? ' shape-block' : ''), style: `left:${b.x}px;top:${localY}px;width:${b.w}px;height:${b.h}px;z-index:${b.zIndex || 0}`, attrs: { id: 'el-' + b.id } });
   const bar = el('div', { cls: 'fb-bar', attrs: { 'aria-hidden': 'true' } });
   bar.append(
     el('span', { cls: 'fb-bar-lbl', text: label }),
@@ -1438,8 +1438,11 @@ function applyPos() {
 
 function applySz() {
   const b = blocks.find(x => x.id === sid); if (!b) return;
-  b.w = Math.max(80, parseInt(document.getElementById('bw').value) || 80);
-  b.h = Math.max(28, parseInt(document.getElementById('bh').value) || 28);
+  const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+  const minW = isDecorative ? 1 : 80;
+  const minH = isDecorative ? 1 : 28;
+  b.w = Math.max(minW, parseInt(document.getElementById('bw').value) || minW);
+  b.h = Math.max(minH, parseInt(document.getElementById('bh').value) || minH);
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) { domEl.style.width = b.w + 'px'; domEl.style.height = b.h + 'px'; }
 }
@@ -1517,7 +1520,7 @@ const PANEL_BINDINGS = [
   },
   {
     panel: 'bp-fontsize',
-    types: ['h1','h2','h3','h4','h5','h6','p','ul','ol','quote','note','aside'],
+    types: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'quote', 'note', 'aside'],
     fill: b => {
       const inp = $('bfontsize');
       if (inp) inp.value = b.fontSize != null ? b.fontSize : '';
@@ -1777,9 +1780,9 @@ function updTree() {
    rafale est coûteux. Un debounce de 150 ms regroupe les appels successifs
    en un seul rendu, sans impacter la réactivité perçue. */
 let _uaTimer = null, _treeTimer = null;
-const _updUA   = updUA;
+const _updUA = updUA;
 const _updTree = updTree;
-updUA   = () => { clearTimeout(_uaTimer);   _uaTimer   = setTimeout(_updUA,   150); };
+updUA = () => { clearTimeout(_uaTimer); _uaTimer = setTimeout(_updUA, 150); };
 updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 150); };
 
 /* ══════════════════════════════════════════════════════════════
@@ -1856,7 +1859,9 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
       onMove: (e, ctx) => {
         if (!ctx?.b) return; const { sx, sy, ox, oy, b } = ctx;
         const pi = Math.floor(b.y / PH);
-        b.x = snapVal(Math.max(0, Math.min(pageW(pi) - b.w, ox + (e.clientX - sx))));
+        const _isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+        const _newX = ox + (e.clientX - sx);
+        b.x = snapVal(_isDecorative ? _newX : Math.max(0, Math.min(pageW(pi) - b.w, _newX)));
         b.y = snapVal(oy + (e.clientY - sy));
         fbEl.style.left = b.x + 'px'; fbEl.style.top = (b.y % PH) + 'px';
         const ni = Math.floor(b.y / PH);
@@ -1879,8 +1884,11 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
       onStart: e => { const b = getB(); if (!b) return null; return { sx: e.clientX, sy: e.clientY, sw: b.w, sh: b.h, b }; },
       onMove: (e, ctx) => {
         if (!ctx?.b) return; const { sx, sy, sw, sh, b } = ctx;
-        b.w = Math.max(80, Math.min(pageW(Math.floor(b.y / PH)) - b.x, snapVal(sw + (e.clientX - sx))));
-        b.h = Math.max(28, snapVal(sh + (e.clientY - sy)));
+        const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+        const minW = isDecorative ? 1 : 80;
+        const minH = isDecorative ? 1 : 28;
+        b.w = Math.max(minW, Math.min(pageW(Math.floor(b.y / PH)) - b.x, snapVal(sw + (e.clientX - sx))));
+        b.h = Math.max(minH, snapVal(sh + (e.clientY - sy)));
         fbEl.style.width = b.w + 'px'; fbEl.style.height = b.h + 'px'; updBP();
       },
       onEnd: () => saveSession(),
