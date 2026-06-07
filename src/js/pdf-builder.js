@@ -445,14 +445,18 @@ class PDFBuilder {
     const RE_HEADING = /^h[1-6]$/;
     const lastAtLevel = { 0: doc.outline };
 
+    // Tri stable : page canvas d'abord, puis Y au sein d'une même page
     const headings = blocks
       .filter(b => RE_HEADING.test(b.type))
-      .sort((a, b) => a.y - b.y);
+      .sort((a, b) => {
+        const pa = Math.floor(a.y / PH), pb = Math.floor(b.y / PH);
+        return pa !== pb ? pa - pb : a.y - b.y;
+      });
 
     for (const b of headings) {
       const lv = parseInt(b.type[1]);
 
-      // Trouver le parent le plus proche dans la hiérarchie
+      // Trouver le parent le plus proche dans la hiérarchie des niveaux
       let parent = null;
       for (let l = lv - 1; l >= 0; l--) {
         if (lastAtLevel[l]) { parent = lastAtLevel[l]; break; }
@@ -461,9 +465,14 @@ class PDFBuilder {
 
       const canvasPage = Math.floor(b.y / PH);
       const physPage = this._canvasPageToPhysPage(canvasPage);
-      const pageH_val = pageH(canvasPage);
-      const yOnPage = b.y - canvasPage * PH + BAR_H;
-      const top = pageH_val - yOnPage; // convention PDFKit : distance depuis le bas
+
+      // PDFKit attend `top` comme une distance depuis le HAUT de la page
+      // (espace CSS/canvas), et se charge lui-même de la conversion vers
+      // l'espace PDF (XYZ dest = [page, XYZ, left, destHeight - top, zoom]).
+      // Passer ph - y serait une double conversion et inverserait le résultat.
+      // On ajoute CT_PAD pour pointer sur le contenu visible (sous la barre flottante).
+      const yOnPageCSS = b.y - canvasPage * PH;
+      const top = yOnPageCSS + CT_PAD;
 
       lastAtLevel[lv] = parent.addItem(b.content || '', { pageNumber: physPage, top });
     }
@@ -498,7 +507,7 @@ class PDFBuilder {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fonctions utilitaires
+// Fonctions utilitaires (conservées pour compatibilité avec genPDF / prevPDF)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Construit le document PDF/UA et retourne l'instance PDFDocument. */
