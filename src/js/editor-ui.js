@@ -875,7 +875,10 @@ function attachDrag(bar, el, b) {
     onStart: e => { sel(b.id); snapshotState(); el.classList.add('moving'); return { startX: e.clientX, startY: e.clientY, origX: b.x, origY: b.y }; },
     onMove: (e, { startX, startY, origX, origY }) => {
       const pageIdx = Math.floor(b.y / PH);
-      b.x = snapVal(Math.max(0, Math.min(pageW(pageIdx) - b.w, origX + (e.clientX - startX))));
+      const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+      const newX = origX + (e.clientX - startX);
+      // Les formes décoratives peuvent déborder des bords (usage ornemental)
+      b.x = snapVal(isDecorative ? newX : Math.max(0, Math.min(pageW(pageIdx) - b.w, newX)));
       b.y = snapVal(origY + (e.clientY - startY));
       el.style.left = b.x + 'px'; el.style.top = (b.y % PH) + 'px';
       if (Math.floor(b.y / PH) !== pageIdx) { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(el); }
@@ -896,8 +899,11 @@ function attachRsz(rsz, el, b) {
     onStart: e => ({ sx: e.clientX, sy: e.clientY, sw: b.w, sh: b.h }),
     onMove: (e, { sx, sy, sw, sh }) => {
       const maxW = pageW(Math.floor(b.y / PH)) - b.x;
-      b.w = Math.max(80, Math.min(maxW, snapVal(sw + (e.clientX - sx))));
-      b.h = Math.max(28, snapVal(sh + (e.clientY - sy)));
+      const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+      const minW = isDecorative ? 1 : 80;
+      const minH = isDecorative ? 1 : 28;
+      b.w = Math.max(minW, Math.min(maxW, snapVal(sw + (e.clientX - sx))));
+      b.h = Math.max(minH, snapVal(sh + (e.clientY - sy)));
       el.style.width = b.w + 'px'; el.style.height = b.h + 'px'; updBP();
     },
     onEnd: () => saveSession(),
