@@ -334,12 +334,12 @@ function _chartRebuildRows(b) {
   container.innerHTML = '';
   (b.chartData || []).forEach((d, i) => {
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:4px;align-items:center;margin-bottom:2px';
+    row.className = 'chart-row';
 
     /* Sélecteur couleur DSFR */
     const colorWrap = document.createElement('div');
     colorWrap.id = `chartcolor-wrap-${i}`;
-    colorWrap.style.cssText = 'flex:1;min-width:0';
+    colorWrap.className = 'chart-color-wrap';
     const colorWidget = makeDsfrColorSelect(
       `chartcolor-${i}`,
       d.color || CHART_PALETTE[i % CHART_PALETTE.length],
@@ -349,7 +349,7 @@ function _chartRebuildRows(b) {
 
     /* Sélecteur de motif */
     const patSel = document.createElement('select');
-    patSel.style.cssText = 'width:70px;font-size:9px;padding:2px 3px;border:1px solid #e5e7eb;border-radius:4px;flex-shrink:0';
+    patSel.className = 'chart-pat-sel';
     patSel.setAttribute('aria-label', 'Motif série ' + (i + 1));
     CHART_PATTERNS.forEach(p => {
       const opt = document.createElement('option');
@@ -364,9 +364,9 @@ function _chartRebuildRows(b) {
     /* Label */
     const labelIn = document.createElement('input');
     labelIn.type = 'text';
+    labelIn.className = 'chart-label-input';
     labelIn.value = d.label || '';
     labelIn.placeholder = 'Étiquette';
-    labelIn.style.cssText = 'flex:1;font-size:10px;padding:3px 5px;border:1px solid #e5e7eb;border-radius:4px;min-width:0';
     labelIn.setAttribute('aria-label', 'Étiquette série ' + (i + 1));
     labelIn.oninput = () => { d.label = labelIn.value; rr(sid); saveSession(); };
     labelIn.onmousedown = e => e.stopPropagation();
@@ -374,9 +374,9 @@ function _chartRebuildRows(b) {
     /* Valeur */
     const valIn = document.createElement('input');
     valIn.type = 'number';
+    valIn.className = 'chart-val-input';
     valIn.value = d.value ?? 0;
     valIn.min = '0';
-    valIn.style.cssText = 'width:40px;font-size:10px;padding:3px 4px;border:1px solid #e5e7eb;border-radius:4px;flex-shrink:0';
     valIn.setAttribute('aria-label', 'Valeur série ' + (i + 1));
     valIn.oninput = () => { d.value = parseFloat(valIn.value) || 0; rr(sid); saveSession(); };
     valIn.onmousedown = e => e.stopPropagation();
@@ -384,8 +384,8 @@ function _chartRebuildRows(b) {
     /* Supprimer */
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
+    delBtn.className = 'chart-del-btn';
     delBtn.textContent = '×';
-    delBtn.style.cssText = 'width:18px;height:18px;border:none;border-radius:3px;background:#fee2e2;color:#dc2626;font-size:12px;cursor:pointer;flex-shrink:0;line-height:1;padding:0';
     delBtn.setAttribute('aria-label', 'Supprimer série ' + (i + 1));
     delBtn.onclick = e => {
       e.stopPropagation();
@@ -398,15 +398,14 @@ function _chartRebuildRows(b) {
 
     /* Ligne 1 : couleur + motif + supprimer */
     const line1 = document.createElement('div');
-    line1.style.cssText = 'display:flex;gap:4px;align-items:center;width:100%';
+    line1.className = 'chart-row-line1';
     line1.append(colorWrap, patSel, delBtn);
 
     /* Ligne 2 : label + valeur */
     const line2 = document.createElement('div');
-    line2.style.cssText = 'display:flex;gap:4px;align-items:center;width:100%';
+    line2.className = 'chart-row-line2';
     line2.append(labelIn, valIn);
 
-    row.style.cssText = 'display:flex;flex-direction:column;gap:2px;padding:4px;background:#f9fafb;border:1px solid #f0f0ea;border-radius:4px';
     row.append(line1, line2);
     container.appendChild(row);
   });

@@ -2542,3 +2542,280 @@ fieldset legend {
     padding: 16px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CLASSES EXTERNALISÉES — anciennement styles inline
+══════════════════════════════════════════════════════════════ */
+
+/* ── Utilitaires display/layout ── */
+.hidden {
+  display: none;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.d-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.d-inline {
+  display: inline;
+}
+
+.gap-4 {
+  gap: 4px;
+}
+
+.gap-6 {
+  gap: 6px;
+}
+
+.gap-12 {
+  gap: 12px;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+/* ── Espacement (margin / padding) ── */
+.mt-5 {
+  margin-top: 5px;
+}
+
+.mt-6 {
+  margin-top: 6px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mt-12 {
+  margin-top: 12px;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+/* ── Typographie ── */
+.fs-9 {
+  font-size: 9px;
+}
+
+.fs-11 {
+  font-size: 11px;
+}
+
+/* ── Listes sans puce (sb-grid) ── */
+.sb-grid {
+  list-style: none;
+}
+
+/* ── Champ de saisie étroit (taille de police) ── */
+#bfontsize {
+  width: 70px;
+}
+
+/* ── Bouton pleine largeur ── */
+.sb-full {
+  width: 100%;
+}
+
+/* ── Rangée de boutons avec espacement ── */
+.sb-full-mt {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* ── Bouton « Ajouter série » graphique ── */
+#bchartadd {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* ── Panneau freeform : rangée fill/closed ── */
+.bp-ff-row {
+  display: flex;
+  gap: 12px;
+  margin: 6px 0;
+}
+
+.bp-ff-row .ck-row {
+  margin: 0;
+}
+
+/* ── Panneau shape : titre de section secondaire ── */
+.ps-subtitle {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ui-txt-muted);
+  font-family: var(--ui-font-mono);
+  margin: 12px 0 0;
+  padding: 0;
+  line-height: inherit;
+}
+
+/* ── Panneau shape : rangée checkbox avec marge ── */
+.ck-row-spaced {
+  margin: 6px 0;
+}
+
+/* ── Nœud kbd dans l'arbre UA ── */
+.ua-tree-hint {
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.ua-tree-hint kbd {
+  font-size: 9px;
+  background: var(--ui-bg-raised);
+  border: 1px solid var(--ui-border-weak);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: var(--ui-font-mono);
+}
+
+/* ── À propos dans la modale UA ── */
+.ua-about {
+  font-size: 11px;
+}
+
+/* ── TdM : rangée checkbox avec marge ── */
+.toc-mt {
+  margin-top: 8px;
+}
+
+/* ── field-hint display:inline ── */
+.field-hint-inline {
+  font-size: 10px;
+  color: var(--ui-txt-muted);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   ÉDITEUR DE SÉRIES GRAPHIQUES (chart rows)
+   Anciennement tout en style inline dans _chartRebuildRows()
+══════════════════════════════════════════════════════════════ */
+
+/* Token dark-mode pour les chart rows */
+:root {
+  --ui-chart-row-bg: #f9fafb;
+  --ui-chart-row-border: #f0f0ea;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ui-chart-row-bg: var(--ui-bg-raised);
+    --ui-chart-row-border: var(--ui-border-weak);
+  }
+}
+
+/* Conteneur d'une ligne de série */
+.chart-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--ui-chart-row-bg);
+  border: 1px solid var(--ui-chart-row-border);
+  border-radius: var(--ui-r-sm);
+  margin-bottom: 2px;
+}
+
+/* Ligne 1 : couleur + motif + supprimer */
+.chart-row-line1 {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Ligne 2 : label + valeur */
+.chart-row-line2 {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Enveloppe du sélecteur de couleur */
+.chart-color-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sélecteur de motif */
+.chart-pat-sel {
+  width: 70px;
+  font-size: 9px;
+  flex-shrink: 0;
+  /* hérite border/border-radius/background de select global */
+}
+
+/* Champ label de série */
+.chart-label-input {
+  flex: 1;
+  font-size: 10px;
+  min-width: 0;
+  /* hérite border/border-radius/background de input global */
+}
+
+/* Champ valeur de série */
+.chart-val-input {
+  width: 40px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* Bouton supprimer série */
+.chart-del-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: var(--ui-r-sm);
+  background: var(--ui-del-bg);
+  color: var(--ui-del-color);
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-del-btn:hover {
+  opacity: .85;
+}

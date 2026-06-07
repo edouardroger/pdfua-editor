@@ -106,7 +106,7 @@
         <!-- Contenu textuel -->
         <div class="sb-section">
           <h3 class="sb-section-title">Contenu</h3>
-          <ul class="sb-grid" id="bloc-list" aria-label="Types de blocs disponibles" style="list-style:none">
+          <ul class="sb-grid" id="bloc-list" aria-label="Types de blocs disponibles">
             <li>
               <div class="bsrc" draggable="true" data-t="h1" tabindex="0" role="button"
                 aria-label="Titre Hx — glisser ou Entrée">
@@ -199,7 +199,7 @@
         <!-- Formulaire -->
         <div class="sb-section">
           <h3 class="sb-section-title">Formulaire</h3>
-          <ul class="sb-grid" id="form-list" aria-label="Champs de formulaire disponibles" style="list-style:none">
+          <ul class="sb-grid" id="form-list" aria-label="Champs de formulaire disponibles">
             <li>
               <div class="bsrc" draggable="true" data-t="form-text" tabindex="0" role="button" aria-label="Champ texte">
                 <div class="bsrc-ico t-fm" aria-hidden="true">Aa</div>
@@ -242,7 +242,7 @@
         <!-- Formes décoratives -->
         <div class="sb-section">
           <h3 class="sb-section-title">Formes</h3>
-          <ul class="sb-grid" id="shape-list" aria-label="Formes décoratives" style="list-style:none">
+          <ul class="sb-grid" id="shape-list" aria-label="Formes décoratives">
             <li>
               <div class="bsrc" draggable="true" data-t="shape" data-shape="circle" tabindex="0" role="button"
                 aria-label="Cercle décoratif">
@@ -412,14 +412,14 @@
                 <input type="checkbox" id="grid-show" onchange="toggleGrid(undefined,this.checked,undefined)">
                 <label for="grid-show">Afficher la grille</label>
               </div>
-              <label for="grid-size" style="margin-top:8px">Taille de cellule</label>
+              <label for="grid-size" class="mt-8">Taille de cellule</label>
               <select id="grid-size" onchange="toggleGrid(undefined,undefined,parseInt(this.value))">
                 <option value="10">10 px — Fin</option>
                 <option value="20" selected>20 px — Normal</option>
                 <option value="40">40 px — Large</option>
                 <option value="80">80 px — Très large</option>
               </select>
-              <p class="field-hint" style="margin-top:6px">Le magnétisme s'applique au déplacement et au
+              <p class="field-hint mt-6">Le magnétisme s'applique au déplacement et au
                 redimensionnement.</p>
             </fieldset>
           </div>
@@ -432,7 +432,7 @@
 
         <p class="muted ps" id="bp-none">Sélectionnez un bloc sur la page.</p>
 
-        <div id="bp-fields" style="display:none">
+        <div id="bp-fields" class="hidden">
 
           <div class="ps">
             <h3 class="ps-title">Géométrie</h3>
@@ -456,11 +456,11 @@
             </div>
           </div>
 
-          <div class="ps" id="bp-fontsize" style="display:none">
+          <div class="ps hidden" id="bp-fontsize">
             <h3 class="ps-title">Typographie</h3>
             <label for="bfontsize">Taille de police (pt)</label>
-            <div style="display:flex;gap:6px;align-items:center">
-              <input type="number" id="bfontsize" min="6" max="96" step="1" style="width:70px"
+            <div class="d-flex gap-6 items-center">
+              <input type="number" id="bfontsize" min="6" max="96" step="1"
                 oninput="bprop('fontSize', this.value ? +this.value : undefined); rr(sid)">
               <button class="sb" type="button"
                 onclick="bprop('fontSize', undefined); document.getElementById('bfontsize').value=''; rr(sid)"
@@ -485,8 +485,8 @@
               <button class="sb" type="button" onclick="chOrd(-1)">↑ Avancer</button>
               <button class="sb" type="button" onclick="chOrd(1)">↓ Reculer</button>
             </div>
-            <p id="oi" class="muted" style="margin-top:5px" aria-live="polite" aria-atomic="true"></p>
-            <button class="sb" type="button" onclick="syncOrderToPosition()" style="margin-top:8px;width:100%"
+            <p id="oi" class="muted mt-5" aria-live="polite" aria-atomic="true"></p>
+            <button class="sb sb-full-mt" type="button" onclick="syncOrderToPosition()"
               title="Recalcule l'ordre selon position (haut→bas)">⟳ Sync ordre ↔ position</button>
           </div>
 
@@ -496,25 +496,24 @@
               <button class="sb" type="button" onclick="chZ(1)">↑ Au-dessus</button>
               <button class="sb" type="button" onclick="chZ(-1)">↓ En dessous</button>
             </div>
-            <p id="z-level-lbl" class="muted" style="margin-top:5px" aria-live="polite">Normal (0)</p>
+            <p id="z-level-lbl" class="muted mt-5" aria-live="polite">Normal (0)</p>
             <p class="field-hint">N'affecte pas l'ordre de lecture PDF.</p>
           </div>
 
           <!-- Propriétés contextuelles selon type de bloc -->
-          <div class="ps" id="bp-alt" style="display:none">
+          <div class="ps hidden" id="bp-alt">
             <h3 class="ps-title">Image</h3>
             <label for="bav">Texte alternatif <span aria-label="obligatoire">*</span></label>
             <textarea id="bav" placeholder="Description de l'image…" aria-required="true" aria-describedby="bav-hint"
               oninput="bprop('alt',this.value)"></textarea>
             <p id="bav-hint" class="field-hint">Laisser vide pour image décorative.</p>
-            <label for="bimglink" style="margin-top:8px">URL du lien <span class="field-hint"
-                style="display:inline">(optionnel)</span></label>
+            <label for="bimglink" class="mt-8">URL du lien <span class="field-hint-inline">(optionnel)</span></label>
             <input id="bimglink" type="url" placeholder="https://…" oninput="bprop('imgLinkUrl',this.value);rr(sid)"
               aria-describedby="bimglink-hint">
             <p id="bimglink-hint" class="field-hint">Image cliquable (Link › Figure).</p>
           </div>
 
-          <div class="ps" id="bp-lnk" style="display:none">
+          <div class="ps hidden" id="bp-lnk">
             <h3 class="ps-title">Lien hypertexte</h3>
             <label for="blt">Texte du lien</label>
             <input id="blt" type="text" placeholder="Cliquez ici" oninput="bprop('linkText',this.value)">
@@ -522,7 +521,7 @@
             <input id="blu" type="url" placeholder="https://…" oninput="bprop('linkUrl',this.value)">
           </div>
 
-          <div class="ps" id="bp-list" style="display:none">
+          <div class="ps hidden" id="bp-list">
             <h3 class="ps-title">Liste</h3>
             <div class="ck-row">
               <input type="checkbox" id="blistnobullet" onchange="bprop('listNoBullet', this.checked); rr(sid);">
@@ -530,7 +529,7 @@
             </div>
           </div>
 
-          <div class="ps" id="bp-hlv" style="display:none">
+          <div class="ps hidden" id="bp-hlv">
             <h3 class="ps-title">Titre</h3>
             <label for="bhlv">Niveau de titre</label>
             <select id="bhlv" onchange="bprop('type',this.value);rr(sid)">
@@ -543,7 +542,7 @@
             </select>
           </div>
 
-          <div class="ps" id="bp-bookmark" style="display:none">
+          <div class="ps hidden" id="bp-bookmark">
             <h3 class="ps-title">Signet PDF</h3>
             <div class="ck-row">
               <input type="checkbox" id="bbookmark" onchange="bprop('bookmark', this.checked)"
@@ -553,19 +552,19 @@
             <p id="bbookmark-hint" class="field-hint">Visible dans le panneau de navigation du lecteur PDF.</p>
           </div>
 
-          <div class="ps" id="bp-quote" style="display:none">
+          <div class="ps hidden" id="bp-quote">
             <h3 class="ps-title">Citation</h3>
             <label for="bqsrc">Source / auteur</label>
             <input id="bqsrc" type="text" placeholder="— Auteur, Œuvre" oninput="bprop('quoteSource',this.value)">
           </div>
 
-          <div class="ps" id="bp-note" style="display:none">
+          <div class="ps hidden" id="bp-note">
             <h3 class="ps-title">Note de bas de page</h3>
             <label for="bnref">Numéro / référence</label>
             <input id="bnref" type="text" placeholder="1" oninput="bprop('noteRef',this.value)">
           </div>
 
-          <div class="ps" id="bp-form" style="display:none">
+          <div class="ps hidden" id="bp-form">
             <h3 class="ps-title">Champ de formulaire</h3>
             <label for="bform-label">Libellé <span aria-label="obligatoire">*</span></label>
             <input id="bform-label" type="text" placeholder="Libellé du champ"
@@ -582,8 +581,7 @@
               <input id="bform-default" type="text" oninput="bprop('formDefaultValue',this.value);rr(sid)">
             </div>
             <div id="bform-row-options">
-              <label for="bform-options">Options <span class="field-hint" style="display:inline">(une par
-                  ligne)</span></label>
+              <label for="bform-options">Options <span class="field-hint-inline">(une par ligne)</span></label>
               <textarea id="bform-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"
                 oninput="bprop('formOptions',this.value);rr(sid)"></textarea>
             </div>
@@ -599,10 +597,10 @@
               <input type="checkbox" id="bform-readonly" onchange="bprop('formReadonly',this.checked);rr(sid)">
               <label for="bform-readonly">Lecture seule</label>
             </div>
-            <p class="field-hint" style="margin-top:6px">Génère une annotation AcroForm conforme PDF/UA.</p>
+            <p class="field-hint mt-6">Génère une annotation AcroForm conforme PDF/UA.</p>
           </div>
 
-          <div class="ps" id="bp-aside" style="display:none">
+          <div class="ps hidden" id="bp-aside">
             <h3 class="ps-title">Encadré</h3>
             <label for="basidestyle">Style</label>
             <select id="basidestyle" onchange="bprop('asideStyle',this.value);rr(sid)">
@@ -613,7 +611,7 @@
             </select>
           </div>
 
-          <div class="ps" id="bp-shape" style="display:none">
+          <div class="ps hidden" id="bp-shape">
             <h3 class="ps-title">Forme décorative</h3>
             <label for="bshapekind">Type</label>
             <select id="bshapekind" onchange="bprop('shapeKind',this.value);rr(sid)">
@@ -630,7 +628,7 @@
             </select>
             <label for="bshapecolor">Couleur de remplissage</label>
             <div id="bshapecolor-wrap"></div>
-            <div class="ck-row" style="margin:6px 0">
+            <div class="ck-row ck-row-spaced">
               <input type="checkbox" id="bshapetransparent" onchange="bprop('shapeFillNone',this.checked);rr(sid)">
               <label for="bshapetransparent">Sans remplissage</label>
             </div>
@@ -640,7 +638,7 @@
             <label for="bshaperotation">Rotation — <span id="bshaperotation-val">0°</span></label>
             <input type="range" id="bshaperotation" min="0" max="359" step="1" value="0"
               oninput="document.getElementById('bshaperotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)">
-            <p class="ps-title" style="margin-top:12px">Bordure</p>
+            <p class="ps-subtitle">Bordure</p>
             <div class="ck-row">
               <input type="checkbox" id="bshapeborder" onchange="bprop('shapeBorderEnabled',this.checked);rr(sid)">
               <label for="bshapeborder">Afficher la bordure</label>
@@ -653,7 +651,7 @@
             <p class="field-hint">Exportée comme artefact décoratif (non lu par les AT).</p>
           </div>
 
-          <div class="ps" id="bp-freeform" style="display:none">
+          <div class="ps hidden" id="bp-freeform">
             <h3 class="ps-title">Forme libre</h3>
             <label for="bffcolor">Couleur</label>
             <div id="bffcolor-wrap"></div>
@@ -666,20 +664,20 @@
             <label for="bffstroke">Épaisseur du tracé — <span id="bffstroke-val">2px</span></label>
             <input type="range" id="bffstroke" min="1" max="20" step="1" value="2"
               oninput="document.getElementById('bffstroke-val').textContent=this.value+'px';bprop('strokeWidth',parseInt(this.value));rr(sid)">
-            <div style="display:flex;gap:12px;margin:6px 0">
-              <div class="ck-row" style="margin:0">
+            <div class="bp-ff-row">
+              <div class="ck-row">
                 <input type="checkbox" id="bfffill" onchange="bprop('shapeFilled',this.checked);rr(sid)">
                 <label for="bfffill">Remplir</label>
               </div>
-              <div class="ck-row" style="margin:0">
+              <div class="ck-row">
                 <input type="checkbox" id="bffclosed" onchange="bprop('pathClosed',this.checked);rr(sid)" checked>
                 <label for="bffclosed">Fermer</label>
               </div>
             </div>
-            <button type="button" onclick="editFreeformPath(sid)" class="sb" style="width:100%">✏ Retracer</button>
+            <button type="button" onclick="editFreeformPath(sid)" class="sb sb-full">✏ Retracer</button>
           </div>
 
-          <div class="ps" id="bp-chart" style="display:none">
+          <div class="ps hidden" id="bp-chart">
             <h3 class="ps-title">Graphique</h3>
             <label for="bchartkind">Type</label>
             <select id="bchartkind" onchange="bprop('chartKind',this.value);rr(sid)">
@@ -694,9 +692,9 @@
             <textarea id="bchartalt" placeholder="Description pour les lecteurs d'écran…" aria-required="true"
               oninput="bprop('alt',this.value)"></textarea>
             <p class="field-hint">Requis PDF/UA.</p>
-            <label>Données <span class="field-hint" style="display:inline">(Étiquette, Valeur par ligne)</span></label>
+            <label>Données <span class="field-hint-inline">(Étiquette, Valeur par ligne)</span></label>
             <div id="bchartrows"></div>
-            <button type="button" id="bchartadd" class="sb" style="width:100%;margin-top:4px" onclick="chartAddRow()">+
+            <button type="button" id="bchartadd" class="sb" onclick="chartAddRow()">+
               Ajouter une série</button>
           </div>
 
@@ -753,7 +751,7 @@
             <option value="2">H1 + H2</option>
             <option value="3" selected>H1 + H2 + H3</option>
           </select>
-          <div class="ck-row" style="margin-top:8px">
+          <div class="ck-row toc-mt">
             <input type="checkbox" id="toc-after-first" checked>
             <label for="toc-after-first">Insérer après la 1ʳᵉ page</label>
           </div>
@@ -786,9 +784,8 @@
 
         <div class="ua-modal-section">
           <h3>Arbre de structure</h3>
-          <p class="muted" style="margin-bottom:8px;font-size:11px">Ordre de lecture logique.
-            <kbd
-              style="font-size:9px;background:var(--ui-bg-raised);border:1px solid var(--ui-border-weak);border-radius:3px;padding:1px 4px;font-family:var(--ui-font-mono)">Entrée</kbd>
+          <p class="muted ua-tree-hint">Ordre de lecture logique.
+            <kbd>Entrée</kbd>
             pour sélectionner.
           </p>
           <div id="tagt" role="tree" aria-label="Arbre des tags PDF/UA"></div>
@@ -796,7 +793,7 @@
 
         <div class="ua-modal-section">
           <h3>À propos</h3>
-          <p class="muted" style="font-size:11px">PDF/UA (ISO 14289) requiert titre, langue, tags structurés, textes
+          <p class="muted ua-about">PDF/UA (ISO 14289) requiert titre, langue, tags structurés, textes
             alternatifs et ordre de lecture logique.</p>
         </div>
 
