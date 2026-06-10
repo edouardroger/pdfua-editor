@@ -163,8 +163,120 @@ function toggleGrid(enabled, visible, size) {
 function _cleanBlocks() { return blocks.map(b => { const c = { ...b }; delete c._bmNode; return c; }); }
 function _collectMeta() { const g = id => document.getElementById(id)?.value || ''; return { title: g('m-title'), author: g('m-author'), subject: g('m-subject'), lang: g('m-lang'), font: g('m-font') }; }
 
+/* ── Validation d'URL — bloque javascript:, data:, vbscript: etc.
+   Utilisé par confirmLink (blocks.js), bprop, _validateImportedBlock et openProject.
+   Défini ici (state.js) car ce fichier est chargé en premier. ── */
+function isSafeUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim().toLowerCase().replace(/[\u200b-\u200d\ufeff\u00ad]/g, '');
+  /* Rejeter tout schéma dangereux connu */
+  if (/^(javascript|vbscript|data|blob):/i.test(trimmed)) return false;
+  /* N'autoriser que http, https et mailto */
+  return /^(https?:|mailto:)/i.test(trimmed) || trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('.');
+}
+
 // Sauvegarde de session dans le navigateur
 const SESSION_KEY = 'pdfua_editor_v1';
+
+/* ── Liste blanche des types de blocs valides ── */
+const _ALLOWED_BLOCK_TYPES = new Set([
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol',
+  'img', 'link', 'table', 'quote', 'note', 'hr', 'aside', 'code',
+  'shape', 'freeform', 'chart',
+  'form-text', 'form-textarea', 'form-checkbox', 'form-radio', 'form-select',
+]);
+const _ALLOWED_ORIENTATIONS = new Set(['portrait', 'landscape']);
+
+/* ── Validation et nettoyage d'un bloc importé (projet ou sessionStorage) ──
+   • Rejette les blocs dont le type est inconnu
+   • Sanitise richContent via _sanitizeRichContent (définie dans blocks.js,
+     appelée uniquement après son chargement — ok car loadSession/openProject
+     ne sont appelées qu'au runtime, bien après le chargement de blocks.js)
+   • Valide les URLs (linkUrl, imgLinkUrl)
+   • Garantit que les champs numériques sont bien des nombres
+   Retourne le bloc nettoyé, ou null si le bloc est invalide. ── */
+function _validateImportedBlock(b) {
+  if (!b || typeof b !== 'object') return null;
+  if (!_ALLOWED_BLOCK_TYPES.has(b.type)) return null;
+
+  const clean = { ...b };
+
+  /* Champs numériques */
+  for (const k of ['x', 'y', 'w', 'h', 'order', 'zIndex', 'fontSize',
+    'shapeOpacity', 'shapeRotation', 'strokeWidth', 'shapeBorderWidth']) {
+    if (clean[k] !== undefined) clean[k] = Number(clean[k]) || 0;
+  }
+
+  /* Champs booléens */
+  for (const k of ['formRequired', 'formReadonly', 'formChecked', 'shapeFillNone',
+    'shapeBorderEnabled', 'shapeFilled', 'pathClosed', 'listNoBullet', 'bookmark']) {
+    if (clean[k] !== undefined) clean[k] = Boolean(clean[k]);
+  }
+
+  /* Champs texte — forcer string, tronquer à 10 000 caractères */
+  for (const k of ['content', 'alt', 'linkText', 'noteRef', 'quoteSource',
+    'formLabel', 'formPlaceholder', 'formDefaultValue', 'formOptions',
+    'chartTitle', 'shapeColor', 'shapeBorderColor', 'asideStyle',
+    'chartKind', 'shapeKind']) {
+    if (clean[k] !== undefined) clean[k] = String(clean[k]).slice(0, 10000);
+  }
+
+  /* id : alphanumérique uniquement */
+  if (clean.id !== undefined) clean.id = String(clean.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+
+  /* URLs — valider avec isSafeUrl */
+  for (const k of ['linkUrl', 'imgLinkUrl']) {
+    if (clean[k] && !isSafeUrl(clean[k])) clean[k] = '';
+  }
+
+  /* imgData — n'accepter que data:image/... ou URL https (pas javascript:, pas data:text…) */
+  if (clean.imgData !== undefined) {
+    const d = String(clean.imgData);
+    const isDataImage = /^data:image\/(png|jpe?g|gif|webp|svg\+xml|bmp|ico);base64,/i.test(d);
+    const isHttps = /^https:\/\//i.test(d);
+    if (!isDataImage && !isHttps) clean.imgData = null;
+  }
+
+  /* richContent — sanitiser via _sanitizeRichContent si disponible */
+  if (clean.richContent) {
+    clean.richContent = typeof _sanitizeRichContent === 'function'
+      ? _sanitizeRichContent(clean.richContent)
+      : '';
+  }
+
+  /* tableData — forcer tableau de tableaux de strings */
+  if (clean.tableData !== undefined) {
+    if (!Array.isArray(clean.tableData)) { clean.tableData = []; }
+    else clean.tableData = clean.tableData.slice(0, 200).map(row =>
+      Array.isArray(row) ? row.slice(0, 50).map(c => String(c ?? '').slice(0, 1000)) : []
+    );
+  }
+
+  /* chartData — valider chaque série */
+  if (clean.chartData !== undefined) {
+    if (!Array.isArray(clean.chartData)) { clean.chartData = []; }
+    else clean.chartData = clean.chartData.slice(0, 50).map(d => ({
+      label: String(d?.label ?? '').slice(0, 200),
+      value: Number(d?.value) || 0,
+      color: typeof d?.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(d.color) ? d.color : '#000091',
+      pattern: String(d?.pattern ?? 'solid').replace(/[^a-z0-9_]/g, '').slice(0, 20),
+    }));
+  }
+
+  /* pathPoints — valider chaque point */
+  if (clean.pathPoints !== undefined) {
+    if (!Array.isArray(clean.pathPoints)) { clean.pathPoints = []; }
+    else clean.pathPoints = clean.pathPoints.slice(0, 5000).map(p => {
+      if (!p || typeof p !== 'object') return null;
+      const pt = { x: Number(p.x) || 0, y: Number(p.y) || 0 };
+      if (p.cp1 && typeof p.cp1 === 'object') pt.cp1 = { x: Number(p.cp1.x) || 0, y: Number(p.cp1.y) || 0 };
+      if (p.cp2 && typeof p.cp2 === 'object') pt.cp2 = { x: Number(p.cp2.x) || 0, y: Number(p.cp2.y) || 0 };
+      return pt;
+    }).filter(Boolean);
+  }
+
+  return clean;
+}
 
 /* Debounce interne : évite les sauvegardes multiples sur oninput rapides */
 let _saveTimer = null;
@@ -185,11 +297,18 @@ function loadSession() {
     if (!raw) return false;
     const saved = JSON.parse(raw);
     if (!Array.isArray(saved.blocks)) return false;
-    blocks = saved.blocks; cnt = saved.cnt || 0;
+    /* Valider et sanitiser chaque bloc avant restauration */
+    blocks = saved.blocks.map(_validateImportedBlock).filter(Boolean);
+    cnt = typeof saved.cnt === 'number' ? saved.cnt : 0;
     _ordCacheKey = '';
-    if (Array.isArray(saved.pageOrientations)) { pageOrientations = saved.pageOrientations; }
-    if (saved.meta) {
-      ['title', 'author', 'subject', 'lang'].forEach(k => { const e = document.getElementById('m-' + k); if (e && saved.meta[k]) e.value = saved.meta[k]; });
+    if (Array.isArray(saved.pageOrientations)) {
+      pageOrientations = saved.pageOrientations.map(o => _ALLOWED_ORIENTATIONS.has(o) ? o : 'portrait');
+    }
+    if (saved.meta && typeof saved.meta === 'object') {
+      ['title', 'author', 'subject', 'lang'].forEach(k => {
+        const e = document.getElementById('m-' + k);
+        if (e && saved.meta[k] && typeof saved.meta[k] === 'string') e.value = saved.meta[k].slice(0, 500);
+      });
     }
     return true;
   } catch { return false; }
@@ -256,13 +375,19 @@ async function _compress(obj) {
 
 // Décompresser en gzip
 async function _decompress(buffer) {
+  /* Limite de taille du buffer décompressé : 50 Mo.
+     Protège contre les zip bombs (fichier gzip minuscule → JSON géant). */
+  const MAX_DECOMPRESSED = 50 * 1024 * 1024;
   const bytes = new Uint8Array(buffer);
   if (bytes[0] === 0x1f && bytes[1] === 0x8b && typeof DecompressionStream !== 'undefined') {
     const ds = new DecompressionStream('gzip');
     const w = ds.writable.getWriter();
     w.write(bytes); w.close();
-    return JSON.parse(new TextDecoder().decode(await _readStream(ds.readable)));
+    const decompressed = await _readStream(ds.readable);
+    if (decompressed.byteLength > MAX_DECOMPRESSED) throw new Error('Fichier trop volumineux après décompression.');
+    return JSON.parse(new TextDecoder().decode(decompressed));
   }
+  if (bytes.byteLength > MAX_DECOMPRESSED) throw new Error('Fichier trop volumineux.');
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
@@ -282,6 +407,10 @@ async function saveProject() {
 async function openProject(input) {
   const file = input?.files?.[0]; if (!file) return;
   input.value = '';
+  /* Limite de taille du fichier brut — un projet légitime ne dépasse pas 10 Mo compressé
+     (la limite réelle est surtout sur le décompressé, voir _decompress). */
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_FILE_SIZE) { announce('Fichier trop volumineux (max 10 Mo).'); return; }
   try {
     const project = await _decompress(await file.arrayBuffer());
     if (!project || typeof project.v === 'undefined') { announce('Fichier invalide — impossible de lire le projet.'); return; }
@@ -294,11 +423,31 @@ async function openProject(input) {
     blocks = []; cnt = 0; numPages = 1; pageOrientations = ['portrait']; sid = null;
     _ordCacheKey = '';
 
-    if (project.meta) ['title', 'author', 'subject', 'lang', 'font'].forEach(k => { const e = document.getElementById('m-' + k); if (e && project.meta[k]) e.value = project.meta[k]; });
-    if (project.grid) toggleGrid(project.grid.enabled, project.grid.visible, project.grid.size || 20);
-    if (Array.isArray(project.pageOrientations)) pageOrientations = project.pageOrientations;
+    /* Sanitiser les méta — champs texte uniquement */
+    if (project.meta && typeof project.meta === 'object') {
+      ['title', 'author', 'subject', 'lang', 'font'].forEach(k => {
+        const e = document.getElementById('m-' + k);
+        if (e && project.meta[k] && typeof project.meta[k] === 'string') e.value = project.meta[k].slice(0, 500);
+      });
+    }
 
-    blocks = project.blocks || []; cnt = project.cnt || 0;
+    if (project.grid) {
+      const gridSizeRaw = Number(project.grid.size);
+      /* Valider la taille de grille : entier entre 5 et 200px, fallback 20 */
+      const safeGridSize = Number.isFinite(gridSizeRaw) && gridSizeRaw >= 5 && gridSizeRaw <= 200
+        ? Math.round(gridSizeRaw) : 20;
+      toggleGrid(!!project.grid.enabled, !!project.grid.visible, safeGridSize);
+    }
+
+    /* Valider les orientations */
+    if (Array.isArray(project.pageOrientations)) {
+      pageOrientations = project.pageOrientations.map(o => _ALLOWED_ORIENTATIONS.has(o) ? o : 'portrait');
+    }
+
+    /* Valider et sanitiser chaque bloc */
+    const rawBlocks = Array.isArray(project.blocks) ? project.blocks : [];
+    blocks = rawBlocks.map(_validateImportedBlock).filter(Boolean);
+    cnt = typeof project.cnt === 'number' ? project.cnt : 0;
     _ordCacheKey = '';
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
@@ -306,6 +455,6 @@ async function openProject(input) {
     blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
 
     desel(); updUA(); updTree(); saveSession();
-    announce('Projet ouvert — ' + (project.meta?.title || file.name));
+    announce('Projet ouvert — ' + (typeof project.meta?.title === 'string' ? project.meta.title.slice(0, 200) : file.name));
   } catch (e) { announce('Erreur lors de l\'ouverture : ' + e.message); console.error(e); }
 }
