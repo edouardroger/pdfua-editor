@@ -1,7 +1,7 @@
 {
   "name": "pdfua-editor",
   "version": "1.0.0",
-  "description": "Script de build pour concaténer et minifier les modules/CSS de l'éditeur de PDF/UA",
+  "description": "Éditeur de fichiers accessibles (conformes à PDF/UA) via une interface Web.",
   "license": "L'utilisation, la redistribution ou l'intégration dans un produit commercial sont interdites.",
   "scripts": {
     "build": "node build.js"
@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "clean-css": "^5.3.3",
-    "pdfkit": "^0.18.0",
+    "pdfkit": "^0.19.0",
     "terser": "^5.36.0"
   }
 }
