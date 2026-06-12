@@ -287,7 +287,7 @@ function saveSession() {
       const meta = _collectMeta();
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
         v: PROJECT_VERSION,
-        blocks: blocks.map(_serializeBlock),
+        blocks: [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0)).map(_serializeBlock),
         meta,
         pageOrientations: pageOrientations.slice(0, MAX_PAGES),
       }));
@@ -731,7 +731,7 @@ function _projectSnapshot() {
     v: PROJECT_VERSION,
     meta: _collectMeta(),
     /* Sérialisation par liste blanche : champs canoniques uniquement */
-    blocks: blocks.map(_serializeBlock),
+    blocks: [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0)).map(_serializeBlock),
     /* cnt est omis volontairement — recalculé à l'import depuis les ids */
     grid: { enabled: gridEnabled, visible: gridVisible, size: gridSize },
     /* Borner pageOrientations à MAX_PAGES par sécurité */
