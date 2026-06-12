@@ -90,6 +90,78 @@ function invalidateHtmlToRunsCache(html) {
 // Extraire le texte brut d'un innerHTML
 function htmlToPlain(html) { const d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent || ''; }
 
+/* ── Sanitisation du richContent importé (projet / sessionStorage) ──────────
+   Conserve uniquement les balises et attributs nécessaires au rendu WYSIWYG
+   et à l'export PDF : mise en forme inline, liens, appels de notes, listes.
+   Bloque tout le reste (script, style, iframe, onclick…) en le remplaçant
+   par son contenu texte, ce qui préserve le texte visible sans le balisage
+   potentiellement dangereux.
+   Liste blanche des balises conservées :
+     Inline : strong, b, em, i, u, span, a, sup, br
+     Bloc   : div, p, ul, ol, li
+   Attributs conservés par balise :
+     a   → href (vérifié par isSafeUrl)
+     sup → data-note-id, style, title
+     span → style (font-weight / text-decoration uniquement)
+   Tous les autres attributs sont supprimés.
+────────────────────────────────────────────────────────────────────────── */
+function _sanitizeRichContent(html) {
+  if (!html || typeof html !== 'string') return '';
+
+  /* Parser via un div détaché — jamais injecté dans le DOM principal */
+  const root = document.createElement('div');
+  root.innerHTML = html;
+
+  /* Balises autorisées (en minuscules) */
+  const ALLOWED_TAGS = new Set([
+    'strong', 'b', 'em', 'i', 'u', 'span', 'a', 'sup', 'br',
+    'div', 'p', 'ul', 'ol', 'li',
+  ]);
+
+  /* Pattern de style autorisé pour <span> : font-weight et text-decoration */
+  const SAFE_STYLE_RE = /^(font-weight\s*:\s*(bold|normal|\d+)|text-decoration\s*:\s*(underline|none|line-through))(\s*;\s*(font-weight\s*:\s*(bold|normal|\d+)|text-decoration\s*:\s*(underline|none|line-through)))*\s*;?$/i;
+
+  function walk(node) {
+    /* Nœud texte — rien à faire */
+    if (node.nodeType === Node.TEXT_NODE) return;
+    if (node.nodeType !== Node.ELEMENT_NODE) { node.remove(); return; }
+
+    const tag = node.tagName.toLowerCase();
+
+    if (!ALLOWED_TAGS.has(tag)) {
+      /* Remplacer la balise non autorisée par ses enfants (on garde le texte) */
+      const frag = document.createDocumentFragment();
+      while (node.firstChild) frag.appendChild(node.firstChild);
+      node.replaceWith(frag);
+      return; /* les enfants seront traités par l'itération du parent */
+    }
+
+    /* Nettoyer les attributs : ne conserver que ceux de la liste blanche */
+    const attrsToRemove = [];
+    for (const attr of node.attributes) {
+      attrsToRemove.push(attr.name);
+    }
+    for (const name of attrsToRemove) {
+      if (tag === 'a' && name === 'href') {
+        if (!isSafeUrl(node.getAttribute('href'))) node.setAttribute('href', '#');
+      } else if (tag === 'sup' && (name === 'data-note-id' || name === 'style' || name === 'title')) {
+        /* Conserver tel quel */
+      } else if (tag === 'span' && name === 'style') {
+        const styleVal = (node.getAttribute('style') || '').trim();
+        if (!SAFE_STYLE_RE.test(styleVal)) node.removeAttribute('style');
+      } else {
+        node.removeAttribute(name);
+      }
+    }
+
+    /* Traiter récursivement les enfants (itérer sur une copie car walk peut modifier la liste) */
+    for (const child of [...node.childNodes]) walk(child);
+  }
+
+  for (const child of [...root.childNodes]) walk(child);
+  return root.innerHTML;
+}
+
 function syncRichContent() {
   if (!sid) return;
   const b = blocks.find(x => x.id === sid);
@@ -952,7 +1024,24 @@ const FILL_CT = {
       li.onmousedown = e => e.stopPropagation();
       li.oninput = _syncContent;
       li.onkeydown = e => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && e.shiftKey) {
+          /* Shift+Entrée → saut de ligne interne au sein de l'item */
+          e.preventDefault();
+          const sel = window.getSelection();
+          if (!sel || !sel.rangeCount) return;
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const br = document.createElement('br');
+          range.insertNode(br);
+          /* Placer le curseur après le <br> inséré */
+          const after = document.createRange();
+          after.setStartAfter(br);
+          after.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(after);
+          _syncContent();
+        } else if (e.key === 'Enter') {
+          /* Entrée seule → nouvel élément de liste */
           e.preventDefault();
           const newLi = document.createElement('li');
           newLi.contentEditable = 'true';

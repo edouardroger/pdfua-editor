@@ -203,7 +203,7 @@ function _validateImportedBlock(b) {
 
   /* Champs numériques */
   for (const k of ['x', 'y', 'w', 'h', 'order', 'zIndex', 'fontSize',
-    'shapeOpacity', 'shapeRotation', 'strokeWidth', 'shapeBorderWidth']) {
+    'textIndent', 'shapeOpacity', 'shapeRotation', 'strokeWidth', 'shapeBorderWidth']) {
     if (clean[k] !== undefined) clean[k] = Number(clean[k]) || 0;
   }
 
@@ -241,7 +241,7 @@ function _validateImportedBlock(b) {
   if (clean.richContent) {
     clean.richContent = typeof _sanitizeRichContent === 'function'
       ? _sanitizeRichContent(clean.richContent)
-      : '';
+      : String(clean.richContent).slice(0, 200000); // fallback conservatif si appelé très tôt
   }
 
   /* tableData — forcer tableau de tableaux de strings */
@@ -663,7 +663,7 @@ const _BLOCK_FIELDS = {
   h4: ['richContent', 'content', 'fontSize'],
   h5: ['richContent', 'content', 'fontSize'],
   h6: ['richContent', 'content', 'fontSize'],
-  p: ['richContent', 'content', 'fontSize'],
+  p: ['richContent', 'content', 'fontSize', 'textIndent'],
   ul: ['richContent', 'content', 'listNoBullet', 'fontSize'],
   ol: ['richContent', 'content', 'listNoBullet', 'fontSize'],
   img: ['imgData', 'alt', 'imgLinkUrl'],
