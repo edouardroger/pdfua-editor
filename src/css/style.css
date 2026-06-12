@@ -1,8 +1,3 @@
-/* ══════════════════════════════════════════════════════════════
-   DESIGN TOKENS — un seul système, mode clair + sombre
-   Préfixe : --ui-  (neutralise les deux anciens --c- et --ui-)
-   Contrastes WCAG AA minimum sur tous les fonds de référence.
-══════════════════════════════════════════════════════════════ */
 :root {
   /* ── Géométrie ── */
   --ui-topbar-h: 44px;
@@ -33,34 +28,25 @@
 
   /* ── Textes ── */
   --ui-txt-primary: #1a1a18;
-  /* 16.5:1 ✓ */
   --ui-txt-sec: #3d3d3a;
-  /* 10.2:1 ✓ */
   --ui-txt-muted: #6b6b67;
-  /*  5.1:1 ✓ */
   --ui-txt-disabled: #a0a09c;
 
   /* ── Accent ── */
   --ui-accent: #964b00;
-  /* 6.36:1 ✓ */
   --ui-accent-dim: rgba(176, 122, 0, .10);
   --ui-accent-glow: rgba(176, 122, 0, .05);
   --ui-accent-hover: #7a3c00;
-  /* 8.49:1 ✓ */
 
   /* ── Focus ── */
   --ui-focus: #0060df;
-  /* 4.6:1 ✓ */
 
   /* ── États sémantiques ── */
   --ui-ok: #1a7a4a;
-  /* 5.2:1 ✓ */
   --ui-ok-dim: rgba(26, 122, 74, .10);
   --ui-ok-border: rgba(26, 122, 74, .28);
   --ui-warn: #8f6200;
-  /* 6.5:1 ✓ */
   --ui-err: #c0392b;
-  /* 5.4:1 ✓ */
   --ui-err-dim: rgba(192, 57, 43, .10);
   --ui-err-border: rgba(192, 57, 43, .28);
 
@@ -100,13 +86,10 @@
   --ui-fb-bg: #ffffff;
   --ui-fb-text: #1a1a18;
   --ui-fb-placeholder: #6b6b67;
-  /* 5.35:1 sur blanc ✓ */
   /* Valeurs fixes (non overridées en dark) car .fb est toujours sur fond blanc */
   --ui-iph-bg: #eff6ff;
   --ui-iph-color: #1d4ed8;
-  /* 6.16:1 sur #eff6ff ✓ */
   --ui-fb-link: #1d4ed8;
-  /* 6.7:1 sur blanc ✓ — fixe, ne suit pas le dark */
   --ui-fb-border: #d1d5db;
   --ui-fb-bar-bg: #f0f4ff;
   --ui-fb-bar-color: #606163;
@@ -197,31 +180,22 @@
     --ui-border-input: #646466;
 
     --ui-txt-primary: #f0efe8;
-    /* 14.8:1 ✓ */
     --ui-txt-sec: #b8b6b0;
-    /*  7.2:1 ✓ */
     --ui-txt-muted: #868686;
-    /*  4.86:1 ✓ */
     --ui-txt-disabled: #3e3c38;
 
     --ui-accent: #f0b84a;
-    /* 7.1:1 ✓ */
     --ui-accent-dim: rgba(240, 184, 74, .14);
     --ui-accent-glow: rgba(240, 184, 74, .07);
     --ui-accent-hover: #f5c96a;
-    /* 11.33:1 ✓ */
 
     --ui-focus: #60a5fa;
-    /* 4.8:1 ✓ */
 
     --ui-ok: #5ccb8a;
-    /* 7.4:1 ✓ */
     --ui-ok-dim: rgba(92, 203, 138, .12);
     --ui-ok-border: rgba(92, 203, 138, .30);
     --ui-warn: #f0b84a;
-    /* 7.1:1 ✓ */
     --ui-err: #f07070;
-    /* 5.8:1 ✓ */
     --ui-err-dim: rgba(240, 112, 112, .12);
     --ui-err-border: rgba(240, 112, 112, .30);
 
@@ -244,7 +218,6 @@
     --ui-fb-bg: #ffffff;
     --ui-fb-text: #1a1a18;
     --ui-fb-placeholder: #767676;
-    /* 4.54:1 sur blanc ✓ AA */
     --ui-fb-border: #c5c8d0;
     --ui-fb-bar-bg: #1e1e24;
     --ui-fb-bar-color: #b8b6b0;
@@ -1792,6 +1765,19 @@ code {
   border-radius: 3px;
   padding: 1px 4px;
   color: var(--ui-txt-sec);
+}
+
+.ua-code {
+  background-color: #1e293b !important;
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.ua-code code {
+  font-family: var(--ui-font-mono), 'Courier New', monospace;
+  line-height: 1.5;
+  color: #e2e8f0 !important;
+  background: transparent;
 }
 
 .muted {

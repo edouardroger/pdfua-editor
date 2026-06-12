@@ -1274,15 +1274,20 @@ const FILL_CT = {
 
   code(ct, b) {
     const pre = document.createElement('pre');
-    pre.style.cssText = 'background:#1e293b;border-radius:3px;padding:6px 8px;height:100%;overflow:hidden;margin:0';
+    pre.className = 'ua-code';
+    pre.style.cssText = 'height:100%;overflow:hidden;margin:0;';
+
     const code = document.createElement('code');
     code.contentEditable = 'true';
     code.setAttribute('aria-label', 'Bloc de code — contenu éditable');
-    code.style.cssText = `font-size:${FS.code}px;font-family:'Courier New',monospace;line-height:1.5;outline:none;white-space:pre-wrap;color:#e2e8f0;display:block`;
+    code.style.cssText = `font-size:${FS.code}px;outline:none;white-space:pre-wrap;display:block;`;
+
     code.textContent = b.content || '';
     code.oninput = () => { b.content = code.textContent; };
     code.onmousedown = e => e.stopPropagation();
-    pre.appendChild(code); ct.appendChild(pre);
+
+    pre.appendChild(code);
+    ct.appendChild(pre);
     ct.appendChild(utag('CODE', 'u-cd'));
   },
 
