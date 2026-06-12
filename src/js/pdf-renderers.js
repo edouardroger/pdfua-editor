@@ -247,8 +247,10 @@ class BlockRenderer {
     const runs = htmlToRuns(b.richContent || b.content || '');
     const pS = doc.struct('P');
     docStruct.add(pS);
+
     const indent = b.textIndent || 0;
-    this.emitRichRuns(pS, runs, ox + indent, oy, cw - indent, ch, b.fontSize || FS.p, '#111111', { lineGap: 2 });
+    this.emitRichRuns(pS, runs, ox, oy, cw, ch, b.fontSize || FS.p, '#111111', { lineGap: 2, indent: indent });
+
     pS.end();
   }
 
