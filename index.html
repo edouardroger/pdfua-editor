@@ -337,6 +337,7 @@
         <!-- Aide rapide -->
         <div class="sb-hint" aria-label="Aide clavier">
           Glisser → page &nbsp;·&nbsp; <kbd>Suppr</kbd> suppr.
+          <br><kbd>Ctrl+B</kbd> gras &nbsp;·&nbsp; <kbd>Ctrl+I</kbd> italique &nbsp;·&nbsp; <kbd>Ctrl+U</kbd> souligné
           <br><kbd>Ctrl+D</kbd> dupliquer
         </div>
 
@@ -530,6 +531,15 @@
             <input id="blt" type="text" placeholder="Cliquez ici" oninput="bprop('linkText',this.value)">
             <label for="blu">URL</label>
             <input id="blu" type="url" placeholder="https://…" oninput="bprop('linkUrl',this.value)">
+          </div>
+
+          <div class="ps hidden" id="bp-indent">
+            <h3 class="ps-title">Retrait de première ligne</h3>
+            <label for="btextindent">Retrait — <span id="btextindent-val">0 pt</span></label>
+            <input type="range" id="btextindent" min="0" max="80" step="4" value="0"
+              oninput="document.getElementById('btextindent-val').textContent=this.value+' pt';bprop('textIndent',parseInt(this.value));rr(sid)"
+              aria-describedby="btextindent-hint">
+            <p id="btextindent-hint" class="field-hint">Décale la première ligne du paragraphe vers la droite.</p>
           </div>
 
           <div class="ps hidden" id="bp-list">

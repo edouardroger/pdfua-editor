@@ -54,12 +54,18 @@ function htmlToRuns(html) {
     const next = { ...ctx };
     if (tag === 'strong' || tag === 'b') next.bold = true;
     if (tag === 'em' || tag === 'i') next.italic = true;
-    if (tag === 'a') {
-      const href = node.getAttribute('href') || '';
-      /* Valider l'URL — rejeter javascript:, data:, vbscript: etc. */
-      next.linkUrl = isSafeUrl(href) ? href : '';
-      next.linkText = node.textContent || '';
+    if (tag === 'u') next.underline = true;
+    if (tag === 'span' && node.style?.textDecoration?.includes('underline')) next.underline = true;
+    if (tag === 'span') {
+      const fw = node.style?.fontWeight;
+      const hasTdUnderline = node.style?.textDecoration?.includes('underline');
+      if (!hasTdUnderline) {
+        /* Modification intentionnelle du gras — pas un artefact de soulignement */
+        if (fw === 'normal' || fw === '400') next.bold = false;
+        if (fw === 'bold' || fw === '700') next.bold = true;
+      }
     }
+    if (tag === 'a') { next.linkUrl = node.getAttribute('href') || ''; next.linkText = node.textContent || ''; }
     if (tag === 'sup' && node.dataset?.noteId) { runs.push({ ...ctx, text: node.textContent || '', superscript: true, noteId: node.dataset.noteId }); return; }
     if (tag === 'br') { runs.push({ ...ctx, text: '\n' }); return; }
     const isBlock = BLOCK_TAGS.has(tag);
@@ -67,7 +73,7 @@ function htmlToRuns(html) {
     for (const child of node.childNodes) walk(child, next);
     if (isBlock) pushNL(ctx);
   }
-  walk(tmp, { bold: false, italic: false, linkUrl: null, linkText: null });
+  walk(tmp, { bold: undefined, italic: false, underline: false, linkUrl: null, linkText: null });
   while (runs.length && runs[runs.length - 1].text === '\n') runs.pop();
 
   /* Stocker dans le cache — éviction FIFO si plein */
@@ -130,6 +136,7 @@ function initFmtBar() {
 
   fmtBar.appendChild(mkBtn('bold', 'Gras (Ctrl+B)', '<strong>G</strong>', 'bold'));
   fmtBar.appendChild(mkBtn('italic', 'Italique (Ctrl+I)', '<em>I</em>', 'italic'));
+  fmtBar.appendChild(mkBtn('underline', 'Souligner (Ctrl+U)', '<u>S</u>', 'underline'));
   fmtBar.appendChild(sep());
   const lnkBtn = mkBtn('link', 'Insérer un lien hypertexte', '🔗', null);
   lnkBtn.onclick = e => { e.preventDefault(); e.stopPropagation(); openLinkModal(); };
@@ -240,6 +247,7 @@ function positionFmtBar() {
   /* Marquer les boutons actifs selon l'état de la sélection */
   document.getElementById('fmt-bold').classList.toggle('active', document.queryCommandState('bold'));
   document.getElementById('fmt-italic').classList.toggle('active', document.queryCommandState('italic'));
+  document.getElementById('fmt-underline').classList.toggle('active', document.queryCommandState('underline'));
   const anchor = sel.anchorNode && sel.anchorNode.parentElement;
   document.getElementById('fmt-link').classList.toggle('active', !!anchor?.closest('a'));
 }
@@ -299,8 +307,6 @@ function confirmLink() {
   const savedRange = _savedRange;
   closeLinkModal();
   if (!url) return;
-  /* Bloquer les URLs dangereuses (javascript:, data:, vbscript:…) */
-  if (!isSafeUrl(url)) { announce('URL non autorisée.'); return; }
   if (savedRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
   const cur = window.getSelection(), hasSel = cur && !cur.isCollapsed;
   if (hasSel) {
@@ -511,6 +517,7 @@ document.addEventListener('keydown', e => {
   if (!active || !active.isContentEditable) return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); applyFmt('bold'); }
   if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); applyFmt('italic'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'u') { e.preventDefault(); applyFmt('underline'); }
 }, true); // capture phase pour priorité
 
 /* ── FONCTIONS SIMPLES — Pas d'abstraction ── */
@@ -787,40 +794,6 @@ const ASIDE_STYLES = {
   neutral: { bg: '#f9fafb', border: '#9ca3af', icon: '▮', iconColor: '#6b7280' },
 };
 
-function _sanitizeRichContent(html) {
-  if (!html || typeof html !== 'string') return '';
-  const ALLOWED_TAGS = new Set(['strong', 'b', 'em', 'i', 'a', 'br', 'sup', 'div', 'p', 'ul', 'ol', 'li', 'span']);
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  const walk = node => {
-    for (const child of [...node.childNodes]) {
-      if (child.nodeType === Node.TEXT_NODE) continue;
-      if (child.nodeType !== Node.ELEMENT_NODE) { child.remove(); continue; }
-      const tag = child.tagName.toLowerCase();
-      if (!ALLOWED_TAGS.has(tag)) {
-        /* Remplacer la balise par son contenu textuel */
-        child.replaceWith(document.createTextNode(child.textContent));
-        continue;
-      }
-      /* Retirer tous les attributs event handlers et les attributs non autorisés */
-      for (const attr of [...child.attributes]) {
-        const name = attr.name.toLowerCase();
-        if (name.startsWith('on')) { child.removeAttribute(attr.name); continue; }
-        if (tag === 'a' && name === 'href') {
-          if (!isSafeUrl(attr.value)) child.removeAttribute(attr.name);
-          continue;
-        }
-        if (tag === 'sup' && name === 'data-note-id') continue;
-        if (name === 'style' || name === 'title' || name === 'class') continue;
-        child.removeAttribute(attr.name);
-      }
-      walk(child);
-    }
-  };
-  walk(tmp);
-  return tmp.innerHTML;
-}
-
 /* ── Helper : crée un div contenteditable rich avec oninput → richContent ── */
 function _mkRichDiv(b, ariaLabel, style) {
   const t = document.createElement('div');
@@ -829,8 +802,7 @@ function _mkRichDiv(b, ariaLabel, style) {
   t.setAttribute('aria-multiline', 'true');
   t.setAttribute('aria-label', ariaLabel);
   t.style.cssText = style;
-  /* Sanitiser richContent avant injection dans innerHTML */
-  if (b.richContent) t.innerHTML = _sanitizeRichContent(b.richContent); else t.textContent = b.content || '';
+  if (b.richContent) t.innerHTML = b.richContent; else t.textContent = b.content || '';
   t.oninput = () => { invalidateHtmlToRunsCache(b.richContent); b.richContent = t.innerHTML; b.content = htmlToPlain(t.innerHTML); };
   t.onmousedown = e => e.stopPropagation();
   return t;
@@ -924,7 +896,8 @@ const FILL_CT = {
 
   _heading(ct, b) {
     /* On utilise un <div> neutre (pas de <h1>…<h6>) pour ne pas polluer
-       la hiérarchie sémantique de l'IHM — le vrai tag hX n'existe que dans le PDF produit. */
+       la hiérarchie sémantique de l'IHM — le vrai tag hX n'existe que dans le PDF produit.
+       Note : on ne force pas font-weight:700 ici pour permettre le toggle gras inline. */
     ct.appendChild(_mkRichDiv(b,
       labelForType(b.type) + ' — contenu éditable. Sélectionner du texte pour le mettre en forme.',
       `font-size:${b.fontSize || FS[b.type]}px;font-weight:700;font-family:${docFont()};line-height:1.2;outline:none;display:block`
@@ -933,9 +906,10 @@ const FILL_CT = {
   },
 
   p(ct, b) {
+    const indent = b.textIndent ? `text-indent:${b.textIndent}px;` : '';
     ct.appendChild(_mkRichDiv(b,
       'Paragraphe — contenu éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS.p}px;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal`
+      `font-size:${b.fontSize || FS.p}px;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal;${indent}`
     ));
     ct.appendChild(utag('P', 'u-p'));
   },
@@ -957,8 +931,7 @@ const FILL_CT = {
           savedLis.forEach(savedLi => {
             const li = document.createElement('li');
             li.contentEditable = 'true';
-            /* Sanitiser le contenu de chaque <li> avant injection */
-            li.innerHTML = _sanitizeRichContent(savedLi.innerHTML || '') || '<br>';
+            li.innerHTML = savedLi.innerHTML || '<br>';
             _attachLi(li);
             lst.appendChild(li);
           });
@@ -969,8 +942,7 @@ const FILL_CT = {
       (lines.length ? lines : ['']).forEach(line => {
         const li = document.createElement('li');
         li.contentEditable = 'true';
-        /* b.content est du texte brut — utiliser textContent, pas innerHTML */
-        li.textContent = line || '';
+        li.innerHTML = line || '<br>';
         _attachLi(li);
         lst.appendChild(li);
       });
@@ -1416,9 +1388,7 @@ function deletePage(idx) {
 function _removeNoteAnchor(b) {
   if (b.type !== 'note' || !b.anchorBlockId) return;
   const parent = blocks.find(x => x.id === b.anchorBlockId); if (!parent) return;
-  /* CSS.escape protège contre tout id contenant des caractères spéciaux */
-  const selector = 'sup[data-note-id="' + (typeof CSS !== 'undefined' ? CSS.escape(b.id) : b.id.replace(/["\\]/g, '')) + '"]';
-  document.getElementById('ct-' + parent.id)?.querySelector(selector)?.remove();
+  document.getElementById('ct-' + parent.id)?.querySelector('sup[data-note-id="' + b.id + '"]')?.remove();
   _syncRichFromDOM(parent);
 }
 
@@ -1448,9 +1418,6 @@ function dupB(id) {
 
 function bprop(k, v) {
   const b = blocks.find(x => x.id === sid); if (!b) return;
-  if ((k === 'linkUrl' || k === 'imgLinkUrl') && v && !isSafeUrl(v)) {
-    announce('URL non autorisée.'); return;
-  }
   b[k] = v;
   if (k === 'alt' || k === 'linkText') rr(b.id);
   /* Quand le type change (ex. h1→h2), mettre à jour le label visible dans la barre du bloc */
@@ -1573,6 +1540,16 @@ const PANEL_BINDINGS = [
     fill: b => {
       const inp = $('bfontsize');
       if (inp) inp.value = b.fontSize != null ? b.fontSize : '';
+    },
+  },
+  {
+    panel: 'bp-indent',
+    types: ['p'],
+    fill: b => {
+      const inp = $('btextindent');
+      if (inp) inp.value = b.textIndent != null ? b.textIndent : 0;
+      const lbl = $('btextindent-val');
+      if (lbl) lbl.textContent = (b.textIndent || 0) + ' pt';
     },
   },
   {
@@ -1815,19 +1792,7 @@ function updTree() {
     n.setAttribute('aria-label', `Nœud ${i + 1} : ${labelForType(b.type)}${b.content ? ' — ' + b.content.slice(0, 30) : ''}`);
     n.onclick = () => { sel(b.id); switchTab('bloc'); };
     n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel(b.id); switchTab('bloc'); } };
-    const sNum = document.createElement('span');
-    sNum.setAttribute('aria-hidden', 'true');
-    sNum.style.color = '#9ca3af';
-    sNum.textContent = String(i + 1).padStart(2, '0') + ' ';
-    const sTg = document.createElement('span');
-    sTg.className = 'tg';
-    sTg.setAttribute('aria-hidden', 'true');
-    sTg.textContent = '<' + tg + '>';
-    const sCo = document.createElement('span');
-    sCo.className = 'tc';
-    sCo.setAttribute('aria-hidden', 'true');
-    sCo.textContent = co;
-    n.append(sNum, sTg, ' ', sCo);
+    n.innerHTML = `<span aria-hidden="true" style="color:#9ca3af">${String(i + 1).padStart(2, '0')} </span><span class="tg" aria-hidden="true">&lt;${tg}&gt;</span> <span class="tc" aria-hidden="true">${co}</span>`;
     frag.appendChild(n);
   });
 

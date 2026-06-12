@@ -124,19 +124,22 @@ class BlockRenderer {
         isVeryFirst = false;
 
         const defaultBold = extraOpts.bold || false;
-        const runFont = (run.bold || defaultBold)
+        const isBold = run.bold === false ? false : (run.bold || defaultBold);
+
+        const runFont = isBold
           ? (run.italic ? 'BoldItalic' : 'Bold')
           : run.italic ? 'Italic' : 'Regular';
         const runNoteId = run.noteId || null;
         const runColor = (run.linkUrl || runNoteId) ? LINK_COLOR : color;
         const runLink = run.linkUrl || null;
         const runAlt = run.linkText || run.text;
+        const runUnderline = run.underline || false;
 
         const layoutOpts = Object.assign(
           { width: w, lineBreak: true, ellipsis: true, continued: !isLastRun },
           isFirst ? { height: h } : {},
           extraOpts,
-          runLink ? { link: runLink, underline: true } : {}
+          runLink ? { link: runLink, underline: true } : (runUnderline ? { underline: true } : {})
         );
 
         const captureX = isFirst ? x : undefined;
@@ -181,7 +184,9 @@ class BlockRenderer {
           parentStruct.add(() => {
             doc.fontSize(fontSize).font(runFont).fillColor(color);
             if (nextRun && !nextRun.noteId) {
+              const nextIsBold = defaultBold || nextRun.bold;
               const nFont = nextRun.bold ? 'Bold' : nextRun.italic ? 'Italic' : 'Regular';
+
               doc.fontSize(fontSize).font(nFont)
                 .fillColor(nextRun.linkUrl ? LINK_COLOR : color);
               doc.text(nextRun.text, {
@@ -242,7 +247,8 @@ class BlockRenderer {
     const runs = htmlToRuns(b.richContent || b.content || '');
     const pS = doc.struct('P');
     docStruct.add(pS);
-    this.emitRichRuns(pS, runs, ox, oy, cw, ch, b.fontSize || FS.p, '#111111', { lineGap: 2 });
+    const indent = b.textIndent || 0;
+    this.emitRichRuns(pS, runs, ox + indent, oy, cw - indent, ch, b.fontSize || FS.p, '#111111', { lineGap: 2 });
     pS.end();
   }
 

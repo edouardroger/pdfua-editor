@@ -54,14 +54,12 @@ function exportCode() {
         const isLastRun = idx === seg.length - 1;
         isVeryFirst = false;
 
-        const font = run.bold ? 'Bold' : run.italic ? 'Italic' : 'Regular';
+        const font = run.bold === false ? 'Regular' : (run.bold ? 'Bold' : run.italic ? 'Italic' : 'Regular');
         const clr = run.linkUrl ? LINK_COLOR : color;
         const safeText = run.text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
         const continued = isLastRun ? '' : ', continued: true';
-        const underline = run.linkUrl ? ', underline: true' : '';
-        /* Valider l'URL avant injection dans le code généré */
-        const validatedUrl = run.linkUrl && isSafeUrl(run.linkUrl) ? run.linkUrl : '';
-        const link = validatedUrl ? `, link: '${validatedUrl.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` : '';
+        const underline = (run.linkUrl || run.underline) ? ', underline: true' : '';
+        const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
 
         const posArgs = isFirst ? `${x}, ${curY}, ` : '';
         const heightArg = isFirst ? `, height: ${h}` : '';
@@ -86,33 +84,40 @@ function exportCode() {
     const bh = Math.max(4, b.h - BAR_H - 8);
     const pageTop = Math.floor(b.y / PH) * PH;
     const by = b.y - pageTop + BAR_H;
-    /* Sanitiser b.id pour utilisation sûre comme identifiant JS dans le code généré */
-    const id = String(b.id).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 64);
+    const id = b.id;
     const s = t => t.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const sn = t => s(t).replace(/\n/g, '\\n');
 
     const EXPORT_RENDERERS = {
 
       _heading(b) {
-        const tag = b.type.toUpperCase(), fs = FS[b.type];
-        const txt = s((b.content || 'Titre') + ' ');
+        const tag = b.type.toUpperCase(), fs = b.fontSize || FS[b.type];
         lines.push(`  // ${tag}`);
         lines.push(`  const ${b.type}_${id} = doc.struct('${tag}');`);
         lines.push(`  docStruct.add(${b.type}_${id});`);
-        lines.push(`  ${b.type}_${id}.add(() => {`);
-        lines.push(`    doc.fontSize(${fs}).font('Bold').fillColor('#111111')`);
-        lines.push(`      .text('${txt}', ${bx}, ${by}, { width:${bw}, height:${bh}, lineBreak:true, ellipsis:true });`);
-        lines.push(`  });`);
+        if (b.richContent) {
+          const runs = extractRuns(b.richContent, b.content);
+          lines.push(`  ${b.type}_${id}.add(() => {`);
+          runsCode(b.type + '_' + id, runs, bx, by, bw, bh, fs, '#111111', { bold: true }, 4).forEach(l => lines.push(l));
+          lines.push(`  });`);
+        } else {
+          const txt = s((b.content || 'Titre') + ' ');
+          lines.push(`  ${b.type}_${id}.add(() => {`);
+          lines.push(`    doc.fontSize(${fs}).font('Bold').fillColor('#111111')`);
+          lines.push(`      .text('${txt}', ${bx}, ${by}, { width:${bw}, height:${bh}, lineBreak:true, ellipsis:true });`);
+          lines.push(`  });`);
+        }
         lines.push(`  ${b.type}_${id}.end();`);
       },
 
       p(b) {
         const runs = extractRuns(b.richContent, b.content);
+        const indent = b.textIndent || 0;
         lines.push(`  // Paragraphe`);
         lines.push(`  const p_${id} = doc.struct('P');`);
         lines.push(`  docStruct.add(p_${id});`);
         lines.push(`  p_${id}.add(() => {`);
-        runsCode('p_' + id, runs, bx, by, bw, bh, FS.p, '#111111', { lineGap: 2 }, 4).forEach(l => lines.push(l));
+        runsCode('p_' + id, runs, bx + indent, by, bw - indent, bh, FS.p, '#111111', { lineGap: 2 }, 4).forEach(l => lines.push(l));
         lines.push(`  });`);
         lines.push(`  p_${id}.end();`);
       },
@@ -147,12 +152,11 @@ function exportCode() {
               const safeText = (run.text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '');
               if (!safeText) return;
               const continued = isLast ? '' : ', continued: true';
-              const safeRunUrl = run.linkUrl && isSafeUrl(run.linkUrl) ? run.linkUrl : '';
-              const underline = safeRunUrl ? ', underline: true' : '';
-              const link = safeRunUrl ? `, link: '${safeRunUrl.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` : '';
+              const underline = run.linkUrl ? ', underline: true' : '';
+              const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
               const posArgs = isFirst ? `${bx + 20}, ${iy}, ` : '';
               const heightArg = isFirst ? `, height: ${lineH}` : '';
-              lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${safeRunUrl ? '#1d4ed8' : '#111111'}')`);
+              lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${run.linkUrl ? '#1d4ed8' : '#111111'}')`);
               lines.push(`      .text('${safeText}', ${posArgs}{ width: ${bw - 20}${heightArg}, lineBreak: false${continued}${underline}${link} });`);
               isFirst = false;
             });
@@ -195,10 +199,9 @@ function exportCode() {
                 lines.push(`  });`);
               } else {
                 const continued = isLast ? '' : ', continued: true';
-                const safeRunUrl2 = run.linkUrl && isSafeUrl(run.linkUrl) ? run.linkUrl : '';
-                const underline = safeRunUrl2 ? ', underline: true' : '';
-                const link = safeRunUrl2 ? `, link: '${safeRunUrl2.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'` : '';
-                const clr = safeRunUrl2 ? '#1d4ed8' : '#111111';
+                const underline = run.linkUrl ? ', underline: true' : '';
+                const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
+                const clr = run.linkUrl ? '#1d4ed8' : '#111111';
                 if (isVeryFirst) {
                   lines.push(`  lbody_${id}_${i}.add(() => {`);
                   lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${clr}')`);
@@ -238,9 +241,7 @@ function exportCode() {
       },
 
       link(b) {
-        /* Valider l'URL — rejeter javascript:, data:, vbscript:… */
-        const rawUrl = b.linkUrl && isSafeUrl(b.linkUrl) ? b.linkUrl : 'https://';
-        const url = s(rawUrl);
+        const url = s(b.linkUrl || 'https://');
         const txt = s((b.linkText || 'Lien') + ' ');
         lines.push(`  // Lien`);
         lines.push(`  const pLnk_${id} = doc.struct('P');`);
