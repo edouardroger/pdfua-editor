@@ -907,7 +907,6 @@ const FILL_CT = {
   },
 
   'form-checkbox'(ct, b) {
-    /* DSFR v1.14 : 24×24px, border-radius 4px, fond #000091 + coche #f5f5fe si coché */
     ct.style.cssText = 'display:flex;align-items:center;gap:12px;padding:4px 0';
     const box = document.createElement('span');
     box.style.cssText = `flex-shrink:0;width:24px;height:24px;border-radius:4px;border:1px solid ${b.formChecked ? '#000091' : '#3a3a3a'};background:${b.formChecked ? '#000091' : '#fff'};display:flex;align-items:center;justify-content:center;box-sizing:border-box`;
@@ -919,7 +918,6 @@ const FILL_CT = {
   },
 
   'form-radio'(ct, b) {
-    /* DSFR v1.14 : cercle 24px, fond blanc, bordure #3a3a3a */
     ct.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:2px 0';
     const grpLbl = document.createElement('span');
     grpLbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
@@ -937,7 +935,6 @@ const FILL_CT = {
   },
 
   'form-select'(ct, b) {
-    /* DSFR v1.14 : fond #eeeeee, coins arrondis haut, bordure bas, zone chevron distincte */
     ct.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:2px 0';
     const lbl = document.createElement('label');
     lbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
@@ -1917,11 +1914,6 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   const IS_NARROW = window.matchMedia('(max-width: 1100px)').matches;
   if (!IS_TOUCH && !IS_NARROW) return;
 
-  /* ── 1. PATCH useDrag — touch events sur déplacement, resize, rotation ──
-     useDrag est défini dans editor-ui.js. Il est réécrit ici pour inclure
-     nativement les handlers touchstart/touchmove/touchend en parallèle
-     des handlers mouse existants. On surcharge la référence globale
-     après que editor-ui.js l'ait définie (ce fichier est chargé après). */
   function _normTouch(e, touch) {
     /* Renvoie un objet compatible MouseEvent à partir d'un Touch */
     return {
