@@ -873,14 +873,23 @@ body {
   overflow: hidden;
 }
 
-.fb:hover {
+.fb:hover,
+.fb:focus-within {
   border-color: var(--ui-fb-hover-border);
   overflow: visible;
+  z-index: 50;
 }
 
 .fb:hover .fb-bar,
-.fb.sel .fb-bar {
+.fb.sel .fb-bar,
+.fb:focus-within .fb-bar {
   opacity: 1;
+}
+
+.fb-del:focus-visible,
+.fb-dup:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
 }
 
 .fb.sel {

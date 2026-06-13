@@ -97,9 +97,7 @@
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" aria-haspopup="dialog"
-        title="Statut conformité PDF/UA — cliquer pour ouvrir"
-        onclick="document.getElementById('ua-modal').classList.toggle('open')">
+      <button id="tb-ua-status" type="button" onclick="openModal('ua-modal')" title="Afficher le panneau PDF/UA" aria-label="Afficher le panneau PDF/UA">
         <span class="dot" aria-hidden="true"></span>
         <span id="tb-ua-label">PDF/UA</span>
       </button>
@@ -499,7 +497,9 @@
             </div>
             <p id="oi" class="muted mt-5" aria-live="polite" aria-atomic="true"></p>
             <button class="sb sb-full-mt" type="button" onclick="syncOrderToPosition()"
-              title="Recalcule l'ordre selon position (haut→bas)">⟳ Sync ordre ↔ position</button>
+              title="Sync ordre ↔ position : recalcule selon la position (haut→bas)">
+              <span aria-hidden="true">⟳</span> Sync ordre ↔ position
+            </button>
           </div>
 
           <div class="ps">
@@ -725,7 +725,7 @@
 
       <!-- ── Panneau PDF/UA (vide — contenu déplacé dans #ua-modal) ── -->
       <!-- blocks.js a besoin de ce panneau en DOM pour switchTab('ua') -->
-      <div class="pane rp" id="tp-ua" role="tabpanel" aria-labelledby="tab-ua" tabindex="-1" hidden></div>
+      <div class="pane rp" id="tp-ua" role="tabpanel" tabindex="-1" hidden></div>
 
       <!-- ── Panneau Export ── -->
       <div class="pane rp" id="tp-export" role="tabpanel" aria-labelledby="tab-export" tabindex="0" hidden>
@@ -789,13 +789,13 @@
   <!-- ════════════════════════════════════════
        MODALE PDF/UA
   ════════════════════════════════════════ -->
-  <div id="ua-modal" role="dialog" aria-modal="true" aria-labelledby="ua-modal-title"
-    onclick="if(event.target===this)this.classList.remove('open')">
+  <div id="ua-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="ua-modal-title">
     <div class="ua-modal-inner">
       <div class="ua-modal-hd">
         <h2 id="ua-modal-title">Conformité PDF/UA</h2>
-        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA"
-          onclick="document.getElementById('ua-modal').classList.remove('open')">×</button>
+        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA" onclick="closeModal('ua-modal')">
+          <span aria-hidden="true">×</span>
+        </button>
       </div>
       <div class="ua-modal-body">
 
@@ -825,13 +825,15 @@
   <!-- ════════════════════════════════════════
        MODAL PRÉVISUALISATION
   ════════════════════════════════════════ -->
-  <div id="prev-modal" role="dialog" aria-modal="true" aria-labelledby="prev-modal-title"
-    aria-describedby="prev-modal-desc">
+  <div id="prev-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="prev-modal-title"
+    aria-describedby="prev-modal-desc" onclick="closeModal('prev-modal')">
     <div class="prev-inner">
       <div class="prev-hd">
         <h2 id="prev-modal-title" class="prev-modal-title">Prévisualisation PDF</h2>
         <button id="prev-close-btn" class="prev-close" type="button" onclick="closePv()"
-          aria-label="Fermer la prévisualisation (Échap)">×</button>
+          aria-label="Fermer la prévisualisation (Échap)">
+          <span aria-hidden="true">×</span>
+        </button>
       </div>
       <p id="prev-modal-desc" class="sr-only">
         Prévisualisation du document PDF généré. Appuyer sur Échap pour fermer.
@@ -845,9 +847,6 @@
 
   <!-- Overlay fond sidebar mobile -->
   <div id="sidebar-overlay" aria-hidden="true" onclick="toggleMobileSidebar(false)"></div>
-
-  </div>
-  </div>
 
   <!-- Patch badge topbar UA — branché après chargement du bundle -->
   <script>

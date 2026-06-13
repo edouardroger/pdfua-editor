@@ -1008,3 +1008,71 @@ function announce(msg) {
     }, 4000);
   });
 }
+
+/* ── GESTION GÉNÉRIQUE DES MODALES (Ouverture, Fermeture, Trap, Échap) ── */
+/* ── GESTION GÉNÉRIQUE DES MODALES (Avec gestion de la pile de focus) ── */
+const focusStack = []; // Pile pour retenir le focus de chaque modale ouverte
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  // On sauvegarde l'élément qui avait le focus AVANT d'ouvrir cette modale
+  focusStack.push(document.activeElement);
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.getElementById('app').setAttribute('aria-hidden', 'true');
+
+  const first = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if (first) first.focus();
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+
+  // Si c'est la dernière modale, on réactive l'app principale
+  if (!document.querySelector('.modal.open')) {
+    document.getElementById('app').removeAttribute('aria-hidden');
+  }
+
+  // On récupère le dernier élément qui avait le focus pour cette modale précise
+  const previousFocus = focusStack.pop();
+  if (previousFocus) previousFocus.focus();
+}
+
+// Global : Écouteur pour Échap et Focus Trap
+document.addEventListener('keydown', e => {
+  const openModal = document.querySelector('.modal.open');
+  if (!openModal) return;
+
+  // 1. Gestion de Échap
+  if (e.key === 'Escape') {
+    closeModal(openModal.id);
+    return;
+  }
+
+  // 2. Focus Trap générique
+  if (e.key === 'Tab') {
+    const focusables = openModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+
+    if (e.shiftKey && document.activeElement === first) {
+      last.focus();
+      e.preventDefault();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      first.focus();
+      e.preventDefault();
+    }
+  }
+});
+
+// Fermeture au clic sur le fond (backdrop)
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
