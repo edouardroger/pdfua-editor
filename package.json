@@ -12,6 +12,7 @@
   "devDependencies": {
     "clean-css": "^5.3.3",
     "pdfkit": "^0.19.0",
+    "purgecss": "^8.0.0",
     "terser": "^5.36.0"
   }
 }
