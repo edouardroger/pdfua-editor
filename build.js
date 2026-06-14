@@ -111,6 +111,7 @@ async function cleanCSS(cssSource) {
       path.join(__dirname, 'src', 'js', 'blocks.js'),
       path.join(__dirname, 'src', 'js', 'editor-ui.js'),
       path.join(__dirname, 'src', 'js', 'state.js'),
+      path.join(__dirname, 'src', 'js', 'constants.js'),
       path.join(__dirname, 'src', 'js', 'pdf-builder.js'),
       path.join(__dirname, 'src', 'js', 'export-code.js')
     ],
@@ -121,7 +122,7 @@ async function cleanCSS(cssSource) {
         'canvas-page', 'sel', 'moving', 'drop-target',
         'grid-check-row',
         'sheet-open',
-        'input-error', 'muted', 'page-orient-btn', 'page-delete-btn', 'freeform-hint'
+        'input-error', 'muted', 'page-orient-btn', 'page-delete-btn'
       ],
       greedy: [
         /^u-/, /^fb-/, /^chart-/,
