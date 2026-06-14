@@ -31,6 +31,7 @@
   --ui-txt-sec: #3d3d3a;
   --ui-txt-muted: #6b6b67;
   --ui-txt-disabled: #a0a09c;
+  --ui-placeholder: #6b6b67;
 
   /* ── Accent ── */
   --ui-accent: #964b00;
@@ -155,8 +156,6 @@
   --u-cd-fg: #7dd3fc;
   --u-ch-bg: #fef9c3;
   --u-ch-fg: #854d0e;
-  --u-pn-bg: #e0f2fe;
-  --u-pn-fg: #0369a1;
   --u-sh-bg: #f3f0ff;
   --u-sh-fg: #6d28d9;
   --u-f-bg: #f5f3ff;
@@ -283,8 +282,6 @@
     --u-cd-fg: #7dd3fc;
     --u-ch-bg: #28240a;
     --u-ch-fg: #e0c840;
-    --u-pn-bg: #0e1a28;
-    --u-pn-fg: #70bae8;
     --u-sh-bg: #1a1828;
     --u-sh-fg: #c0a8e8;
     --u-f-bg: #1a1030;
@@ -595,6 +592,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: 100%;
   gap: 5px;
   padding: 9px 6px 8px;
   background: var(--ui-bg-surface);
@@ -1171,38 +1169,6 @@ body {
   min-height: 0;
 }
 
-.fb-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  line-height: 1.5;
-  border: none;
-}
-
-.fb-table th,
-.fb-table td {
-  padding: 9px 12px;
-  text-align: left;
-  vertical-align: middle;
-  border: none;
-  border-bottom: 1px solid var(--ui-border-mid);
-  background: inherit;
-}
-
-.fb-table thead th {
-  background-color: var(--ui-bg-base);
-  font-weight: 700;
-  border-bottom: 2px solid var(--ui-border-str);
-}
-
-.fb-table tbody tr:nth-child(odd) {
-  background-color: var(--ui-fb-row-odd);
-}
-
-.fb-table tbody tr:nth-child(even) {
-  background-color: var(--ui-bg-surface);
-}
-
 /* Grille magnétique */
 .grid-check-row {
   display: flex;
@@ -1299,11 +1265,6 @@ body {
   color: var(--u-ch-fg);
 }
 
-.u-pn {
-  background: var(--u-pn-bg);
-  color: var(--u-pn-fg);
-}
-
 .u-sh {
   background: var(--u-sh-bg);
   color: var(--u-sh-fg);
@@ -1312,21 +1273,6 @@ body {
 .u-f {
   background: var(--u-f-bg);
   color: var(--u-f-fg);
-}
-
-/* Indicateur mode tracé freeform */
-#freeform-hint {
-  position: fixed;
-  bottom: 52px;
-  right: 16px;
-  background: var(--ui-fmtbar-bg);
-  color: var(--ui-fmtbar-fg);
-  font-size: 11px;
-  padding: 6px 12px;
-  border-radius: var(--ui-r-md);
-  z-index: 9998;
-  display: none;
-  pointer-events: none;
 }
 
 /* Pagination & TdM — mise en évidence si activées */
@@ -2547,45 +2493,12 @@ fieldset legend {
   display: flex;
 }
 
-.d-flex-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.d-inline {
-  display: inline;
-}
-
-.gap-4 {
-  gap: 4px;
-}
-
 .gap-6 {
   gap: 6px;
 }
 
-.gap-12 {
-  gap: 12px;
-}
-
 .items-center {
   align-items: center;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.flex-shrink-0 {
-  flex-shrink: 0;
-}
-
-.min-w-0 {
-  min-width: 0;
 }
 
 /* ── Espacement (margin / padding) ── */
@@ -2599,31 +2512,6 @@ fieldset legend {
 
 .mt-8 {
   margin-top: 8px;
-}
-
-.mt-12 {
-  margin-top: 12px;
-}
-
-.mb-8 {
-  margin-bottom: 8px;
-}
-
-.mb-0 {
-  margin-bottom: 0;
-}
-
-.m-0 {
-  margin: 0;
-}
-
-/* ── Typographie ── */
-.fs-9 {
-  font-size: 9px;
-}
-
-.fs-11 {
-  font-size: 11px;
 }
 
 /* ── Listes sans puce (sb-grid) ── */
@@ -2808,4 +2696,535 @@ fieldset legend {
 
 .chart-del-btn:hover {
   opacity: .85;
+}
+
+/* ── Sélecteur de couleur DSFR (makeDsfrColorSelect) ── */
+.dsfr-color-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.dsfr-color-select {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 5px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.dsfr-color-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  /* background appliqué par JS (couleur sélectionnée) */
+}
+
+/* ── Overlay canvas grille magnétique ── */
+.grid-overlay-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.45;
+  /* width/height appliquées par JS (dépendent de l'orientation de la page) */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BLOCS CANVAS — ÉLÉMENTS CRÉÉS DYNAMIQUEMENT EN JS
+   (anciennement style inline dans blocks.js / editor-ui.js)
+══════════════════════════════════════════════════════════════ */
+
+/* ── Divs contenteditable "rich" (_mkRichDiv) ──
+   Propriétés communes factorisées ; font-size/font-family restent
+   définies en JS (dynamiques : taille de police du bloc, police du document). */
+.fb-rich-flow {
+  outline: none;
+  line-height: 1.6;
+  white-space: normal;
+}
+
+.fb-rich-heading {
+  outline: none;
+  line-height: 1.2;
+  display: block;
+  font-weight: 700;
+}
+
+.fb-rich-quote {
+  font-style: italic;
+  color: #1e1b4b;
+  flex: 1;
+}
+
+.fb-rich-note {
+  color: #374151;
+}
+
+.fb-rich-aside {
+  color: #1a1a1a;
+}
+
+/* ── Conteneurs de champs de formulaire ── */
+.fb-form-ct {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.fb-form-ct--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.fb-form-ct--radio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+/* ── Libellés dans les blocs formulaire ── */
+.fb-form-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #3a3a3a;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
+.fb-form-lbl--light {
+  font-size: 10px;
+  font-weight: 400;
+  color: #3a3a3a;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
+/* ── Champs texte / textarea dans les blocs ── */
+.fb-ct .fb-form-input,
+.fb-ct .fb-form-textarea {
+  font-size: 10px;
+  border: none;
+  border-bottom: 2px solid #3a3a3a;
+  border-radius: 4px 4px 0 0;
+  padding: 6px 12px;
+  background: #eeeeee;
+  color: #3a3a3a;
+  pointer-events: none;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.fb-ct .fb-form-input[data-readonly="true"],
+.fb-ct .fb-form-textarea[data-readonly="true"] {
+  background: #dedede;
+}
+
+.fb-ct .fb-form-textarea {
+  resize: none;
+  flex: 1;
+  min-height: 40px;
+}
+
+/* ── Case à cocher ── */
+.fb-checkbox-box {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #3a3a3a;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.fb-checkbox-box--checked {
+  border-color: #000091;
+  background: #000091;
+}
+
+/* ── Cercle radio ── */
+.fb-radio-circle {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #3a3a3a;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* ── Ligne radio (label + cercle) ── */
+.fb-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: #3a3a3a;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
+/* ── Select (wrapper + zones) ── */
+.fb-select-wrap {
+  position: relative;
+  width: 100%;
+  pointer-events: none;
+  display: flex;
+}
+
+.fb-select-text {
+  flex: 1;
+  font-size: 10px;
+  border: none;
+  border-bottom: 2px solid #3a3a3a;
+  border-radius: 4px 0 0 0;
+  padding: 5px 8px;
+  background: #eeeeee;
+  color: #3a3a3a;
+  pointer-events: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fb-select-text[data-readonly="true"] {
+  background: #dedede;
+}
+
+.fb-select-chev {
+  width: 32px;
+  flex-shrink: 0;
+  background: #dcdcdc;
+  border-bottom: 2px solid #3a3a3a;
+  border-radius: 0 4px 0 0;
+  border-left: 0.5px solid #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* ── Image : bouton de choix ── */
+.fb-img-choose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+/* ── Image : badge lien ── */
+.fb-img-link-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Image : texte alt / lien ── */
+.fb-img-alt {
+  font-size: 9px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fb-img-alt--has-alt {
+  color: #9d174d;
+}
+
+.fb-img-alt--link-only {
+  color: #1d4ed8;
+}
+
+/* ── Lien hypertexte ── */
+.fb-link-preview {
+  font-size: 12px;
+  color: #1d4ed8;
+  text-decoration: underline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Tableau ── */
+.fb-table-el {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fb-table-cell {
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border: none;
+}
+
+.fb-table-cell--body {
+  border-bottom: 1px solid #e0e0e0;
+  background: transparent;
+}
+
+.fb-table-cell--head {
+  font-weight: 700;
+  background-color: #f6f6f6;
+  border-bottom: 2px solid #999999;
+}
+
+.fb-table-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.fb-table-btn {
+  margin-top: 3px;
+  font-size: 9px;
+  padding: 2px 6px;
+}
+
+/* ── Citation ── */
+.fb-quote-wrap {
+  border-left: 3px solid #6366f1;
+  padding-left: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fb-quote-src {
+  font-size: 9px;
+  color: #6b7280;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Note ── */
+.fb-note-wrap {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.fb-note-ref {
+  font-size: 8px;
+  flex-shrink: 0;
+  font-weight: 700;
+  /* color appliquée par JS (LINK_COLOR) */
+}
+
+.fb-note-anchor-hint {
+  font-size: 9px;
+  color: #9ca3af;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+/* ── Encadré (aside) — base + 4 variantes (couleurs DSFR) ── */
+.fb-aside-wrap {
+  padding: 6px 8px;
+  height: 100%;
+  display: flex;
+  gap: 6px;
+  border-radius: 0 3px 3px 0;
+  border-left: 3px solid;
+}
+
+.fb-aside-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.fb-aside-wrap--info {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.fb-aside-icon--info {
+  color: #1d4ed8;
+}
+
+.fb-aside-wrap--warn {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.fb-aside-icon--warn {
+  color: #92400e;
+}
+
+.fb-aside-wrap--tip {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.fb-aside-icon--tip {
+  color: #166534;
+}
+
+.fb-aside-wrap--neutral {
+  background: #f9fafb;
+  border-left-color: #9ca3af;
+}
+
+.fb-aside-icon--neutral {
+  color: #6b7280;
+}
+
+/* ── Séparateur ── */
+.fb-hr-line {
+  width: 100%;
+  height: 1px;
+  background: #d1d5db;
+  margin-top: calc(50% - 1px);
+}
+
+/* ── Code ── */
+.fb-code-pre {
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+}
+
+.fb-code-el {
+  outline: none;
+  white-space: pre-wrap;
+  display: block;
+  /* font-size appliquée par JS (FS.code) */
+}
+
+/* ── Appel de note (sup inline) ── */
+.note-anchor {
+  cursor: pointer;
+  font-size: 0.65em;
+  /* color appliquée par JS (LINK_COLOR) */
+}
+
+/* ── SVG graphique / freeform dans le bloc ── */
+.fb-chart-svg {
+  display: block;
+  overflow: visible;
+}
+
+.fb-freeform-svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ── Overlay tracé freeform ── */
+.ff-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  cursor: crosshair;
+  background: rgba(59, 130, 246, 0.03);
+}
+
+/* ── SVG de prévisualisation freeform ── */
+.ff-preview-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 301;
+  overflow: visible;
+}
+
+/* ── Barre zoom mobile ── */
+#mob-zoom-bar {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 22px;
+  padding: 5px 12px;
+  z-index: 8000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .3);
+  font-size: 12px;
+  user-select: none;
+}
+
+.mob-zoom-btn {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 17px;
+  cursor: pointer;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#mob-zoom-lbl {
+  min-width: 40px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ── Bannière info mobile (première visite) ── */
+#mob-info-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #1e3a5f;
+  color: #fff;
+  padding: 9px 42px 9px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+}
+
+.mob-info-banner-close {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+  line-height: 1;
 }

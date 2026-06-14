@@ -472,7 +472,8 @@ function insertNoteAnchor() {
   const sup = document.createElement('sup');
   sup.dataset.noteId = noteId;
   sup.textContent = noteRef;
-  sup.style.cssText = `color:${LINK_COLOR};cursor:pointer;font-size:0.65em`;
+  sup.className = 'note-anchor';
+  sup.style.color = LINK_COLOR;
   sup.title = 'Note ' + noteRef + ' — cliquer pour sélectionner';
   sup.onclick = e => { e.stopPropagation(); sel(noteId); switchTab('bloc'); };
 
@@ -867,13 +868,14 @@ const ASIDE_STYLES = {
 };
 
 /* ── Helper : crée un div contenteditable rich avec oninput → richContent ── */
-function _mkRichDiv(b, ariaLabel, style) {
+function _mkRichDiv(b, ariaLabel, style, className) {
   const t = document.createElement('div');
   t.contentEditable = 'true';
   t.setAttribute('role', 'textbox');
   t.setAttribute('aria-multiline', 'true');
   t.setAttribute('aria-label', ariaLabel);
-  t.style.cssText = style;
+  t.className = className || 'fb-rich-flow';
+  if (style) t.style.cssText = style;
   if (b.richContent) t.innerHTML = b.richContent; else t.textContent = b.content || '';
   t.oninput = () => { invalidateHtmlToRunsCache(b.richContent); b.richContent = t.innerHTML; b.content = htmlToPlain(t.innerHTML); };
   t.onmousedown = e => e.stopPropagation();
@@ -883,51 +885,60 @@ function _mkRichDiv(b, ariaLabel, style) {
 const FILL_CT = {
 
   'form-text'(ct, b) {
-    ct.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:2px 0';
+    ct.className += ' fb-form-ct';
     const lbl = document.createElement('label');
-    lbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+    lbl.className = 'fb-form-lbl';
+    lbl.style.fontFamily = docFont();
     lbl.textContent = (b.formLabel || 'Libellé') + (b.formRequired ? ' *' : '');
     const inp = document.createElement('input');
     inp.type = 'text'; inp.placeholder = b.formPlaceholder || '';
     inp.value = b.formDefaultValue || ''; inp.readOnly = true;
     /* DSFR : fond #eeeeee, arrondi haut 4px, bordure bas 2px #3a3a3a */
-    inp.style.cssText = `font-size:10px;font-family:${docFont()};border:none;border-bottom:2px solid #3a3a3a;border-radius:4px 4px 0 0;padding:6px 12px;background:${b.formReadonly ? '#dedede' : '#eeeeee'};color:#3a3a3a;pointer-events:none;width:100%;box-sizing:border-box;outline:none`;
+    inp.className = 'fb-form-input';
+    inp.style.fontFamily = docFont();
+    if (b.formReadonly) inp.dataset.readonly = 'true';
     ct.append(lbl, inp); ct.appendChild(utag('Form', 'u-f'));
   },
 
   'form-textarea'(ct, b) {
-    ct.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:2px 0';
+    ct.className += ' fb-form-ct';
     const lbl = document.createElement('label');
-    lbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+    lbl.className = 'fb-form-lbl';
+    lbl.style.fontFamily = docFont();
     lbl.textContent = (b.formLabel || 'Libellé') + (b.formRequired ? ' *' : '');
     const ta = document.createElement('textarea');
     ta.placeholder = b.formPlaceholder || ''; ta.value = b.formDefaultValue || ''; ta.readOnly = true;
-    ta.style.cssText = `font-size:10px;font-family:${docFont()};border:none;border-bottom:2px solid #3a3a3a;border-radius:4px 4px 0 0;padding:6px 12px;background:${b.formReadonly ? '#dedede' : '#eeeeee'};color:#3a3a3a;pointer-events:none;width:100%;box-sizing:border-box;resize:none;flex:1;min-height:40px;outline:none`;
+    ta.className = 'fb-form-textarea';
+    ta.style.fontFamily = docFont();
+    if (b.formReadonly) ta.dataset.readonly = 'true';
     ct.append(lbl, ta); ct.appendChild(utag('Form', 'u-f'));
   },
 
   'form-checkbox'(ct, b) {
-    ct.style.cssText = 'display:flex;align-items:center;gap:12px;padding:4px 0';
+    ct.className += ' fb-form-ct--checkbox';
     const box = document.createElement('span');
-    box.style.cssText = `flex-shrink:0;width:24px;height:24px;border-radius:4px;border:1px solid ${b.formChecked ? '#000091' : '#3a3a3a'};background:${b.formChecked ? '#000091' : '#fff'};display:flex;align-items:center;justify-content:center;box-sizing:border-box`;
+    box.className = 'fb-checkbox-box' + (b.formChecked ? ' fb-checkbox-box--checked' : '');
     if (b.formChecked) box.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16' aria-hidden='true'><path fill='#f5f5fe' d='M10 15.17l9.2-9.2 1.4 1.42L10 18l-6.36-6.36 1.4-1.42z'/></svg>`;
     const lbl = document.createElement('span');
-    lbl.style.cssText = `font-size:10px;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+    lbl.className = 'fb-form-lbl--light';
+    lbl.style.fontFamily = docFont();
     lbl.textContent = (b.formLabel || 'Case à cocher') + (b.formRequired ? ' *' : '');
     ct.append(box, lbl); ct.appendChild(utag('Form', 'u-f'));
   },
 
   'form-radio'(ct, b) {
-    ct.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:2px 0';
+    ct.className += ' fb-form-ct--radio';
     const grpLbl = document.createElement('span');
-    grpLbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+    grpLbl.className = 'fb-form-lbl';
+    grpLbl.style.fontFamily = docFont();
     grpLbl.textContent = (b.formLabel || 'Groupe') + (b.formRequired ? ' *' : '');
     ct.appendChild(grpLbl);
     (b.formOptions || 'Option 1\nOption 2').split('\n').filter(o => o.trim()).forEach(opt => {
       const row = document.createElement('label');
-      row.style.cssText = `display:flex;align-items:center;gap:12px;font-size:10px;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+      row.className = 'fb-radio-row';
+      row.style.fontFamily = docFont();
       const circ = document.createElement('span');
-      circ.style.cssText = 'flex-shrink:0;width:24px;height:24px;border-radius:50%;border:1px solid #3a3a3a;background:#fff;box-sizing:border-box';
+      circ.className = 'fb-radio-circle';
       row.append(circ, document.createTextNode(opt.trim()));
       ct.appendChild(row);
     });
@@ -935,26 +946,29 @@ const FILL_CT = {
   },
 
   'form-select'(ct, b) {
-    ct.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:2px 0';
+    ct.className += ' fb-form-ct';
     const lbl = document.createElement('label');
-    lbl.style.cssText = `font-size:10px;font-weight:700;font-family:${docFont()};color:#3a3a3a;pointer-events:none;line-height:1.5`;
+    lbl.className = 'fb-form-lbl';
+    lbl.style.fontFamily = docFont();
     lbl.textContent = (b.formLabel || 'Libellé') + (b.formRequired ? ' *' : '');
 
     /* Wrapper positionné pour superposer la zone chevron */
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;width:100%;pointer-events:none;display:flex';
+    wrap.className = 'fb-select-wrap';
 
     /* Zone texte principale */
     const textZone = document.createElement('div');
     const opts = (b.formOptions || 'Choix 1\nChoix 2').split('\n').filter(o => o.trim());
     const displayVal = b.formDefaultValue && opts.includes(b.formDefaultValue)
       ? b.formDefaultValue : (opts[0] || '');
-    textZone.style.cssText = `flex:1;font-size:10px;font-family:${docFont()};border-top:none;border-left:none;border-right:none;border-bottom:2px solid #3a3a3a;border-radius:4px 0 0 0;padding:5px 8px;background:${b.formReadonly ? '#dedede' : '#eeeeee'};color:#3a3a3a;pointer-events:none;box-sizing:border-box;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+    textZone.className = 'fb-select-text';
+    textZone.style.fontFamily = docFont();
+    if (b.formReadonly) textZone.dataset.readonly = 'true';
     textZone.textContent = displayVal;
 
     /* Zone chevron séparée (32px) */
     const chevZone = document.createElement('div');
-    chevZone.style.cssText = `width:32px;flex-shrink:0;background:#dcdcdc;border-bottom:2px solid #3a3a3a;border-radius:0 4px 0 0;border-left:0.5px solid #3a3a3a;display:flex;align-items:center;justify-content:center;pointer-events:none;box-sizing:border-box`;
+    chevZone.className = 'fb-select-chev';
     chevZone.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='#161616' width='14' height='14' aria-hidden='true'><path d='M12 13.1l5-4.9 1.4 1.4L12 15.9l-6.4-6.4L7 8.1z'/></svg>`;
 
     wrap.append(textZone, chevZone);
@@ -969,7 +983,8 @@ const FILL_CT = {
        Note : on ne force pas font-weight:700 ici pour permettre le toggle gras inline. */
     ct.appendChild(_mkRichDiv(b,
       labelForType(b.type) + ' — contenu éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS[b.type]}px;font-weight:700;font-family:${docFont()};line-height:1.2;outline:none;display:block`
+      `font-size:${b.fontSize || FS[b.type]}px;font-family:${docFont()}`,
+      'fb-rich-heading'
     ));
     ct.appendChild(utag(b.type.toUpperCase(), 'u-h'));
   },
@@ -978,7 +993,8 @@ const FILL_CT = {
     const indent = b.textIndent ? `text-indent:${b.textIndent}px;` : '';
     ct.appendChild(_mkRichDiv(b,
       'Paragraphe — contenu éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS.p}px;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal;${indent}`
+      `font-size:${b.fontSize || FS.p}px;font-family:${docFont()};${indent}`,
+      'fb-rich-flow'
     ));
     ct.appendChild(utag('P', 'u-p'));
   },
@@ -1110,8 +1126,8 @@ const FILL_CT = {
     };
     const chooseBtn = document.createElement('button');
     chooseBtn.type = 'button';
+    chooseBtn.className = 'fb-img-choose';
     chooseBtn.setAttribute('aria-label', 'Choisir une image');
-    chooseBtn.style.cssText = 'background:none;border:none;cursor:pointer;width:100%;height:100%;position:absolute;inset:0;';
     chooseBtn.onclick = e => { e.stopPropagation(); fi.click(); };
     ph.style.position = 'relative';
     ph.appendChild(fi); ph.appendChild(chooseBtn);
@@ -1120,7 +1136,7 @@ const FILL_CT = {
     ph.style.outlineOffset = b.imgLinkUrl ? '-2px' : '';
     if (b.imgLinkUrl) {
       const badge = Object.assign(document.createElement('span'), { textContent: '↗ lien' });
-      badge.style.cssText = 'position:absolute;top:3px;right:3px;background:#1d4ed8;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;pointer-events:none;z-index:2';
+      badge.className = 'fb-img-link-badge';
       badge.setAttribute('aria-hidden', 'true');
       ph.appendChild(badge);
     }
@@ -1132,7 +1148,7 @@ const FILL_CT = {
     if (b.alt || b.imgLinkUrl) {
       const ad = document.createElement('p');
       const hasAlt = !!b.alt;
-      ad.style.cssText = `font-size:9px;color:${hasAlt ? '#9d174d' : '#1d4ed8'};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap`;
+      ad.className = 'fb-img-alt ' + (hasAlt ? 'fb-img-alt--has-alt' : 'fb-img-alt--link-only');
       ad.textContent = (b.imgLinkUrl ? '↗ ' + b.imgLinkUrl.slice(0, hasAlt ? 28 : 40) + (hasAlt ? '  |  ' : '') : '') +
         (hasAlt ? 'alt : ' + b.alt : '');
       ct.appendChild(ad);
@@ -1141,7 +1157,7 @@ const FILL_CT = {
 
   link(ct, b) {
     const a = Object.assign(document.createElement('div'), { textContent: b.linkText || 'Lien' });
-    a.style.cssText = 'font-size:12px;color:#1d4ed8;text-decoration:underline;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    a.className = 'fb-link-preview';
     a.setAttribute('aria-label', 'Lien : ' + (b.linkText || b.linkUrl || 'sans texte'));
     ct.appendChild(a);
     ct.appendChild(utag('LINK', 'u-k'));
@@ -1150,7 +1166,7 @@ const FILL_CT = {
   table(ct, b) {
     const tbl = document.createElement('table');
     tbl.setAttribute('aria-label', 'Tableau éditable');
-    tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:12px;line-height:1.5';
+    tbl.className = 'fb-table-el';
     const thead = tbl.createTHead();
     const tbody = tbl.createTBody();
     (b.tableData || []).forEach((row, ri) => {
@@ -1164,20 +1180,16 @@ const FILL_CT = {
         td.contentEditable = 'true';
         td.setAttribute('aria-label', (isHdr ? 'En-tête colonne ' : 'Cellule ligne ' + ri + ' colonne ') + (ci + 1));
         td.textContent = cell;
-        const borderBottom = isHdr ? '2px solid #999999' : '1px solid #e0e0e0';
-        td.style.cssText = 'padding:9px 12px;text-align:left;vertical-align:middle;border:none;' +
-          'border-bottom:' + borderBottom + ';' +
-          (isHdr ? 'font-weight:700;background-color:#f6f6f6;' : 'background:transparent;');
+        td.className = 'fb-table-cell ' + (isHdr ? 'fb-table-cell--head' : 'fb-table-cell--body');
         td.oninput = () => { b.tableData[ri][ci] = td.textContent; };
         td.onmousedown = e => e.stopPropagation();
         tr.appendChild(td);
       });
     });
-    const btnStyle = 'margin-top:3px;font-size:9px;padding:2px 6px;border:1px solid #e5e7eb;border-radius:3px;cursor:pointer;background:#f9fafb';
     const mkTableBtn = (label, ariaLabel, onClick) => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.style.cssText = btnStyle;
+      btn.className = 'sb fb-table-btn';
       btn.textContent = label;
       btn.setAttribute('aria-label', ariaLabel);
       btn.onclick = e => { e.stopPropagation(); onClick(); const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); };
@@ -1192,7 +1204,7 @@ const FILL_CT = {
       announce('Colonne ajoutée au tableau.');
     });
     const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap';
+    btnWrap.className = 'fb-table-btns';
     btnWrap.append(addRowBtn, addColBtn);
     ct.appendChild(tbl); ct.appendChild(btnWrap);
     ct.appendChild(utag('TABLE', 'u-t'));
@@ -1200,11 +1212,12 @@ const FILL_CT = {
 
   quote(ct, b) {
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'border-left:3px solid #6366f1;padding-left:8px;height:100%;display:flex;flex-direction:column;gap:4px';
+    wrap.className = 'fb-quote-wrap';
 
     const txt = _mkRichDiv(b,
       'Citation — texte éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS.quote}px;font-style:italic;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal;color:#1e1b4b;flex:1`
+      `font-size:${b.fontSize || FS.quote}px;font-family:${docFont()}`,
+      'fb-rich-flow fb-rich-quote'
     );
 
     const src = document.createElement('div');
@@ -1212,7 +1225,8 @@ const FILL_CT = {
     src.setAttribute('role', 'textbox');
     src.setAttribute('aria-label', 'Source / auteur de la citation — éditable');
     src.setAttribute('data-ph', '— Auteur, Œuvre');
-    src.style.cssText = `font-size:9px;color:#6b7280;font-family:${docFont()};outline:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis`;
+    src.className = 'fb-quote-src';
+    src.style.fontFamily = docFont();
     src.textContent = b.quoteSource || '';
     src.oninput = () => { b.quoteSource = src.textContent.trim(); saveSession(); };
     src.onmousedown = e => e.stopPropagation();
@@ -1223,20 +1237,23 @@ const FILL_CT = {
 
   note(ct, b) {
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;gap:5px;align-items:flex-start';
+    wrap.className = 'fb-note-wrap';
     const ref = document.createElement('sup');
-    ref.style.cssText = `font-size:8px;color:${LINK_COLOR};font-family:${docFont()};flex-shrink:0;font-weight:700`;
+    ref.className = 'fb-note-ref';
+    ref.style.color = LINK_COLOR;
+    ref.style.fontFamily = docFont();
     ref.textContent = b.noteRef || '1';
     const txt = _mkRichDiv(b,
       'Note — texte éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS.note}px;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal;color:#374151`
+      `font-size:${b.fontSize || FS.note}px;font-family:${docFont()}`,
+      'fb-rich-flow fb-rich-note'
     );
     wrap.appendChild(ref); wrap.appendChild(txt);
     ct.appendChild(wrap);
     /* Indicateur de lien vers le bloc ancre (si note ancrée) */
     if (b.anchorBlockId) {
       const anchorHint = document.createElement('div');
-      anchorHint.style.cssText = 'font-size:9px;color:#9ca3af;margin-top:2px;cursor:pointer';
+      anchorHint.className = 'fb-note-anchor-hint';
       anchorHint.textContent = '\u2191 Aller \u00e0 l\u2019ancre dans le texte';
       anchorHint.title = 'Cliquer pour sélectionner le bloc texte parent';
       anchorHint.onclick = e => { e.stopPropagation(); sel(b.anchorBlockId); switchTab('bloc'); };
@@ -1247,23 +1264,25 @@ const FILL_CT = {
 
   hr(ct) {
     const line = Object.assign(document.createElement('div'), { ariaHidden: 'true' });
-    line.style.cssText = 'width:100%;height:1px;background:#d1d5db;margin-top:calc(50% - 1px)';
+    line.className = 'fb-hr-line';
     line.setAttribute('aria-hidden', 'true');
     ct.appendChild(line);
     ct.appendChild(utag('HR', 'u-sep'));
   },
 
   aside(ct, b) {
-    const st = ASIDE_STYLES[b.asideStyle || 'info'];
+    const style = b.asideStyle || 'info';
+    const st = ASIDE_STYLES[style];
     const wrap = document.createElement('div');
-    wrap.style.cssText = `background:${st.bg};border-left:3px solid ${st.border};padding:6px 8px;height:100%;display:flex;gap:6px;border-radius:0 3px 3px 0`;
+    wrap.className = 'fb-aside-wrap fb-aside-wrap--' + style;
     const icon = document.createElement('span');
-    icon.style.cssText = `color:${st.iconColor};font-size:12px;flex-shrink:0;margin-top:1px`;
+    icon.className = 'fb-aside-icon fb-aside-icon--' + style;
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = st.icon;
     const txt = _mkRichDiv(b,
       'Encadré — contenu éditable. Sélectionner du texte pour le mettre en forme.',
-      `font-size:${b.fontSize || FS.aside}px;font-family:${docFont()};line-height:1.6;outline:none;white-space:normal;color:#1a1a1a`
+      `font-size:${b.fontSize || FS.aside}px;font-family:${docFont()}`,
+      'fb-rich-flow fb-rich-aside'
     );
     wrap.appendChild(icon); wrap.appendChild(txt);
     ct.appendChild(wrap); ct.appendChild(utag('ASIDE', 'u-as'));
@@ -1271,13 +1290,13 @@ const FILL_CT = {
 
   code(ct, b) {
     const pre = document.createElement('pre');
-    pre.className = 'ua-code';
-    pre.style.cssText = 'height:100%;overflow:hidden;margin:0;';
+    pre.className = 'ua-code fb-code-pre';
 
     const code = document.createElement('code');
     code.contentEditable = 'true';
     code.setAttribute('aria-label', 'Bloc de code — contenu éditable');
-    code.style.cssText = `font-size:${FS.code}px;outline:none;white-space:pre-wrap;display:block;`;
+    code.className = 'fb-code-el';
+    code.style.fontSize = FS.code + 'px';
 
     code.textContent = b.content || '';
     code.oninput = () => { b.content = code.textContent; };
@@ -2131,19 +2150,16 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   zBar.id = 'mob-zoom-bar';
   zBar.setAttribute('role', 'toolbar');
   zBar.setAttribute('aria-label', 'Niveau de zoom');
-  zBar.style.cssText = 'position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:#1e293b;color:#e2e8f0;border-radius:22px;padding:5px 12px;z-index:8000;box-shadow:0 4px 16px rgba(0,0,0,.3);font-size:12px;user-select:none';
 
   const mkZBtn = (label, txt, fn) => {
     const b = document.createElement('button');
-    b.type = 'button'; b.setAttribute('aria-label', label); b.textContent = txt;
-    b.style.cssText = 'background:none;border:none;color:#e2e8f0;font-size:17px;cursor:pointer;min-width:36px;min-height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center';
+    b.type = 'button'; b.className = 'mob-zoom-btn'; b.setAttribute('aria-label', label); b.textContent = txt;
     b.addEventListener('click', fn);
     return b;
   };
   const zLbl = document.createElement('span');
   zLbl.id = 'mob-zoom-lbl';
   zLbl.textContent = '100%';
-  zLbl.style.cssText = 'min-width:40px;text-align:center;font-weight:600';
   zBar.append(
     mkZBtn('Dézoomer', '−', () => applyZoom(_zoom - ZSTEP)),
     zLbl,
@@ -2172,12 +2188,11 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   /* ── 6. BANNIÈRE INFO — première visite sur mobile ── */
   if (IS_TOUCH && window.matchMedia('(max-width: 768px)').matches && !sessionStorage.getItem('mob_ok')) {
     const ban = document.createElement('div');
+    ban.id = 'mob-info-banner';
     ban.setAttribute('role', 'alert');
-    ban.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#1e3a5f;color:#fff;padding:9px 42px 9px 12px;font-size:11px;line-height:1.5;z-index:10000;box-shadow:0 2px 8px rgba(0,0,0,.3)';
     ban.innerHTML = '📱 <strong>Mode mobile</strong> — tapez un bloc dans la barre latérale pour l\'ajouter. Pincez le canvas pour zoomer.';
     const cls = document.createElement('button');
-    cls.type = 'button'; cls.setAttribute('aria-label', 'Fermer'); cls.textContent = '×';
-    cls.style.cssText = 'position:absolute;top:4px;right:8px;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;min-width:32px;min-height:32px;line-height:1';
+    cls.type = 'button'; cls.className = 'mob-info-banner-close'; cls.setAttribute('aria-label', 'Fermer'); cls.textContent = '×';
     cls.addEventListener('click', () => { ban.remove(); sessionStorage.setItem('mob_ok', '1'); });
     ban.appendChild(cls); document.body.appendChild(ban);
   }

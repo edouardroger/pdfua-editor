@@ -124,13 +124,12 @@ function makeDsfrColorSelect(id, value, onChange) {
   /* Swatch de couleur à droite du select */
   const swatch = document.createElement('span');
   swatch.id = id + '-swatch';
-  swatch.style.cssText = `display:inline-block;width:20px;height:20px;border-radius:3px;` +
-    `border:1px solid #e5e7eb;flex-shrink:0;background:${resolved}`;
+  swatch.className = 'dsfr-color-swatch';
+  swatch.style.background = resolved;
 
   const sel = document.createElement('select');
   sel.id = id;
-  sel.style.cssText = 'flex:1;font-size:11px;padding:3px 5px;border:1px solid #e5e7eb;' +
-    'border-radius:5px;background:#fff;color:#1a1a1a';
+  sel.className = 'dsfr-color-select';
 
   /* Grouper par famille */
   const groups = {};
@@ -154,7 +153,7 @@ function makeDsfrColorSelect(id, value, onChange) {
   };
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px';
+  wrap.className = 'dsfr-color-wrap';
   wrap.append(sel, swatch);
   return wrap;
 }

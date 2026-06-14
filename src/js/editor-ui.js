@@ -103,7 +103,7 @@ function renderChartInCt(ct, b) {
   svg.setAttribute('height', h);
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('aria-hidden', 'true');
-  svg.style.cssText = 'display:block;overflow:visible';
+  svg.setAttribute('class', 'fb-chart-svg');
   /* defs injecté dynamiquement par _mkPat */
 
   const titleH = b.chartTitle ? 14 : 0;
@@ -460,8 +460,9 @@ function renderFreeformInCt(ct, b) {
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('aria-hidden', 'true');
-  svg.style.cssText = `opacity:${opacity};display:block;overflow:visible;` +
-    (rotation ? `transform:rotate(${rotation}deg);transform-origin:50% 50%` : '');
+  svg.setAttribute('class', 'fb-freeform-svg');
+  svg.style.opacity = opacity;
+  if (rotation) { svg.style.transform = `rotate(${rotation}deg)`; svg.style.transformOrigin = '50% 50%'; }
 
   if (pts.length >= 2) {
     const pathEl = document.createElementNS(_SVG_NS, 'path');
@@ -518,13 +519,12 @@ function startFreeformDraw(blockId) {
 
   /* Overlay couvrant toute la page (clics + déplacements) */
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:absolute;inset:0;z-index:300;cursor:crosshair;' +
-    'background:rgba(59,130,246,0.03);';
+  overlay.className = 'ff-overlay';
   pg.appendChild(overlay);
 
   /* SVG de prévisualisation au-dessus de tout */
   const previewSvg = document.createElementNS(_SVG_NS, 'svg');
-  previewSvg.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:301;overflow:visible';
+  previewSvg.setAttribute('class', 'ff-preview-svg');
   previewSvg.setAttribute('width', PW);
   previewSvg.setAttribute('height', PH);
   pg.appendChild(previewSvg);

@@ -122,9 +122,9 @@ function rebuildGridOverlays() {
     /* Taille physique = taille CSS × dpr → rendu net sur écrans Retina */
     canvas.width = cw * dpr;
     canvas.height = ch * dpr;
-    canvas.style.cssText =
-      `position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0.45;` +
-      `width:${cw}px;height:${ch}px`;
+    canvas.className = 'grid-overlay-canvas';
+    canvas.style.width = cw + 'px';
+    canvas.style.height = ch + 'px';
 
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
@@ -352,7 +352,8 @@ function _reattachNoteAnchors() {
     const editEl = getRichEditEl(b.id); if (!editEl) return;
     editEl.querySelectorAll('sup[data-note-id]').forEach(sup => {
       const noteId = sup.dataset.noteId;
-      sup.style.cssText = `color:${LINK_COLOR};cursor:pointer;font-size:0.65em`;
+      sup.className = 'note-anchor';
+      sup.style.color = LINK_COLOR;
       sup.onclick = e => { e.stopPropagation(); sel(noteId); switchTab('bloc'); };
       const noteBlock = blocks.find(x => x.id === noteId);
       if (noteBlock) sup.title = 'Note ' + (noteBlock.noteRef || '') + ' — cliquer pour sélectionner';
