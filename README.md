@@ -2,6 +2,8 @@
 
 Éditeur WYSIWYG pour créer des documents PDF conformes PDF/UA.
 
+<img width="1468" height="860" alt="" src="https://github.com/user-attachments/assets/329cc04c-79f0-44e7-8f01-20f37123f085" />
+
 ---
 
 ## Lancement
