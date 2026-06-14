@@ -97,8 +97,8 @@
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" onclick="openModal('ua-modal')" title="Afficher le panneau PDF/UA" aria-label="Afficher le panneau PDF/UA">
-        <span class="dot" aria-hidden="true"></span>
+      <button id="tb-ua-status" type="button" onclick="openModal('ua-modal')" title="Afficher le panneau PDF/UA"
+        aria-label="Afficher le panneau PDF/UA">
         <span id="tb-ua-label">PDF/UA</span>
       </button>
 
@@ -793,7 +793,8 @@
     <div class="ua-modal-inner">
       <div class="ua-modal-hd">
         <h2 id="ua-modal-title">Conformité PDF/UA</h2>
-        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA" onclick="closeModal('ua-modal')">
+        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA"
+          onclick="closeModal('ua-modal')">
           <span aria-hidden="true">×</span>
         </button>
       </div>
@@ -914,18 +915,23 @@
       const badge = document.getElementById('tb-ua-status');
       const label = document.getElementById('tb-ua-label');
       if (!badge || !label) return;
+
       const errs = document.querySelectorAll('#ual .ua-err').length;
       const warns = document.querySelectorAll('#ual .ua-warn').length;
-      const items = document.querySelectorAll('#ual .ua-item').length;
-      if (!items) { badge.className = ''; label.textContent = 'PDF/UA'; return; }
-      // Puce rouge si erreur OU alerte, verte si tout OK
-      if (errs || warns) {
-        badge.className = 'err';
-        const n = errs + warns;
-        label.textContent = n + ' anomalie' + (n > 1 ? 's' : '');
+
+      // Réinitialisation des classes
+      badge.classList.remove('ok', 'err');
+
+      if (errs === 0 && warns === 0) {
+        const items = document.querySelectorAll('#ual .ua-item').length;
+        if (items === 0) {
+          badge.className = '';
+          label.textContent = 'PDF/UA';
+        } else {
+          badge.classList.add('ok');
+        }
       } else {
-        badge.className = 'ok';
-        label.textContent = 'Conforme';
+        badge.classList.add('err');
       }
     };
   </script>

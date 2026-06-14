@@ -501,13 +501,10 @@ body {
   color: var(--ui-txt-sec);
 }
 
-#tb-ua-status .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ui-txt-disabled);
-  flex-shrink: 0;
-  transition: background .2s;
+#tb-ua-status::before {
+  content: '●';
+  font-size: 10px;
+  transition: all .2s;
 }
 
 #tb-ua-status.ok {
@@ -516,20 +513,15 @@ body {
   background: var(--ui-ok-dim);
 }
 
-#tb-ua-status.ok .dot {
-  background: var(--ui-ok);
-  box-shadow: 0 0 4px var(--ui-ok);
-}
-
 #tb-ua-status.err {
   color: var(--ui-err);
   border-color: var(--ui-err-border);
   background: var(--ui-err-dim);
 }
 
-#tb-ua-status.err .dot {
-  background: var(--ui-err);
-  box-shadow: 0 0 4px var(--ui-err);
+#tb-ua-status.err::before {
+  content: '✕';
+  font-weight: bold;
 }
 
 /* Hamburger — masqué par défaut */
