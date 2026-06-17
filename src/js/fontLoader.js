@@ -70,9 +70,19 @@ window.FONT_LIST = [
 
 const _fontCache = {};
 
-const _font = {
-  toBase64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
+/* Convertit un ArrayBuffer en chaîne base64 par blocs de 8 192 octets.
+   Évite le stack overflow que causerait String.fromCharCode(...largeArray). */
+function _bufToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  const CHUNK = 8192;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
+  }
+  return btoa(bin);
+}
 
+const _font = {
   async fetch(url) {
     if (_fontCache[url]) return _fontCache[url];
     const res = await fetch(url);
@@ -92,17 +102,16 @@ const _font = {
     return { regular, bold, italic, bolditalic, format };
   },
 
-  injectStyles(id, label, b64, format) {
+  injectStyles(id, label, buffers, format) {
     if (document.getElementById(`ff-${id}`)) return;
     const mime = `font/${format}`;
-
     const style = document.createElement('style');
     style.id = `ff-${id}`;
     style.textContent = `
-      @font-face { font-family: '${label}'; font-weight: 400; font-style: normal; src: url('data:${mime};base64,${b64.regular}') format('${format}'); }
-      @font-face { font-family: '${label}'; font-weight: 700; font-style: normal; src: url('data:${mime};base64,${b64.bold}') format('${format}'); }
-      @font-face { font-family: '${label}'; font-weight: 400; font-style: italic; src: url('data:${mime};base64,${b64.italic}') format('${format}'); }
-      @font-face { font-family: '${label}'; font-weight: 700; font-style: italic; src: url('data:${mime};base64,${b64.bolditalic}') format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 400; font-style: normal;  src: url('data:${mime};base64,${_bufToBase64(buffers.regular)}')    format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 700; font-style: normal;  src: url('data:${mime};base64,${_bufToBase64(buffers.bold)}')       format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 400; font-style: italic;  src: url('data:${mime};base64,${_bufToBase64(buffers.italic)}')     format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 700; font-style: italic;  src: url('data:${mime};base64,${_bufToBase64(buffers.bolditalic)}') format('${format}'); }
     `;
     document.head.appendChild(style);
   }
@@ -114,9 +123,8 @@ window.loadFont = async function (id) {
 
   try {
     const { format, ...rawBuffers } = await _font.load(def);
-    const b64 = Object.fromEntries(Object.entries(rawBuffers).map(([k, v]) => [k, _font.toBase64(v)]));
 
-    _font.injectStyles(id, def.label, b64, format);
+    _font.injectStyles(id, def.label, rawBuffers, format);
 
     window.FONTS = { id: def.id, label: def.label, cssFamily: def.cssFamily, ...rawBuffers };
     if (typeof window.refreshBlockFonts === 'function') window.refreshBlockFonts();
