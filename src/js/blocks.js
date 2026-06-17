@@ -1097,6 +1097,7 @@ const FILL_CT = {
 
     _rebuildLi();
     lst.style.fontSize = (b.fontSize || FS.list) + 'px';
+    lst.style.fontFamily = docFont();
     if (b.listNoBullet) lst.classList.add('list-no-bullet');
     else lst.classList.remove('list-no-bullet');
     ct.appendChild(lst);
@@ -1167,6 +1168,8 @@ const FILL_CT = {
     const tbl = document.createElement('table');
     tbl.setAttribute('aria-label', 'Tableau éditable');
     tbl.className = 'fb-table-el';
+    tbl.style.fontFamily = docFont();
+    tbl.style.fontSize = (b.fontSize || FS.table) + 'px';
     const thead = tbl.createTHead();
     const tbody = tbl.createTBody();
     (b.tableData || []).forEach((row, ri) => {

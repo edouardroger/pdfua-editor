@@ -1,28 +1,75 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   fontLoader.js — Chargement dynamique des polices pour l'éditeur PDF/UA
-   API publique :
-     window.FONT_LIST — catalogue des polices
-     window.FONTS — polices actives { regular, bold, cssFamily, id }
-     window.loadFont(id) — charge et active une police
+   fontLoader.js — Chargement dynamique des polices
    ═══════════════════════════════════════════════════════════════════════ */
 
 window.FONT_LIST = [
   {
-    id: 'marianne',
-    label: 'Marianne',
-    cssFamily: "'Marianne', sans-serif",
+    id: 'marianne', label: 'Marianne', cssFamily: "'Marianne', sans-serif",
     urls: {
-      regular: 'fonts/Marianne-Regular.ttf',
-      bold: 'fonts/Marianne-Bold.ttf',
-      italic: 'fonts/Marianne-RegularItalic.ttf',
-      bolditalic: 'fonts/Marianne-BoldItalic.ttf'
-    },
+      regular: 'https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/fonts/Marianne-Regular.woff2',
+      bold: 'https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/fonts/Marianne-Bold.woff2',
+      italic: 'https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/fonts/Marianne-Regular_Italic.woff2',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/fonts/Marianne-Bold_Italic.woff2'
+    }
   },
-];
+  {
+    id: 'open-sans', label: 'Open Sans', cssFamily: "'Open Sans', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-700-italic.woff',
+    }
+  },
+  {
+    id: 'roboto', label: 'Roboto', cssFamily: "'Roboto', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-700-italic.woff',
+    }
+  },
+  {
+    id: 'lato', label: 'Lato', cssFamily: "'Lato', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-700-italic.woff',
+    }
+  },
+  {
+    id: 'montserrat', label: 'Montserrat', cssFamily: "'Montserrat', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-700-italic.woff',
+    }
+  },
+  {
+    id: 'source-sans-3', label: 'Source Sans 3', cssFamily: "'Source Sans 3', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-700-italic.woff',
+    }
+  },
+  {
+    id: 'noto-sans', label: 'Noto Sans', cssFamily: "'Noto Sans', sans-serif",
+    urls: {
+      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-700-italic.woff',
+    }
+  }
+].sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
 
 const _fontCache = {};
 
-/* ── Utilitaires privés ────────────────────────────────────────────────── */
 const _font = {
   toBase64: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
 
@@ -30,109 +77,72 @@ const _font = {
     if (_fontCache[url]) return _fontCache[url];
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Chargement police échoué : ${url} (${res.status})`);
-    const buf = await res.arrayBuffer();
-    return _fontCache[url] = buf;
+    return (_fontCache[url] = await res.arrayBuffer());
   },
 
-  async loadBuffers(def) {
+  async load(def) {
     const [regular, bold, italic, bolditalic] = await Promise.all([
       this.fetch(def.urls.regular),
       this.fetch(def.urls.bold),
       this.fetch(def.urls.italic),
-      this.fetch(def.urls.bolditalic),
+      this.fetch(def.urls.bolditalic)
     ]);
-    return { regular, bold, italic, bolditalic };
+
+    const format = def.urls.regular.includes('.woff2') ? 'woff2' : 'woff';
+    return { regular, bold, italic, bolditalic, format };
   },
 
-  injectStyles(id, label, b64Regular, b64Bold, b64Italic, b64BoldItalic) {
-    if (document.getElementById('ff-' + id)) return;
+  injectStyles(id, label, b64, format) {
+    if (document.getElementById(`ff-${id}`)) return;
+    const mime = `font/${format}`;
 
     const style = document.createElement('style');
-    style.id = 'ff-' + id;
+    style.id = `ff-${id}`;
     style.textContent = `
-    @font-face {
-      font-family: '${label}';
-      font-weight: 400;
-      font-style: normal;
-      src: url('data:font/truetype;base64,${b64Regular}') format('truetype');
-    }
-    @font-face {
-      font-family: '${label}';
-      font-weight: 700;
-      font-style: normal;
-      src: url('data:font/truetype;base64,${b64Bold}') format('truetype');
-    }
-    @font-face {
-      font-family: '${label}';
-      font-weight: 400;
-      font-style: italic;
-      src: url('data:font/truetype;base64,${b64Italic}') format('truetype');
-    }
-    @font-face {
-      font-family: '${label}';
-      font-weight: 700;
-      font-style: italic;
-      src: url('data:font/truetype;base64,${b64BoldItalic}') format('truetype');
-    }
+      @font-face { font-family: '${label}'; font-weight: 400; font-style: normal; src: url('data:${mime};base64,${b64.regular}') format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 700; font-style: normal; src: url('data:${mime};base64,${b64.bold}') format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 400; font-style: italic; src: url('data:${mime};base64,${b64.italic}') format('${format}'); }
+      @font-face { font-family: '${label}'; font-weight: 700; font-style: italic; src: url('data:${mime};base64,${b64.bolditalic}') format('${format}'); }
     `;
     document.head.appendChild(style);
   }
 };
 
-/* ── API Publique ──────────────────────────────────────────────────────── */
 window.loadFont = async function (id) {
   const def = window.FONT_LIST.find(f => f.id === id);
   if (!def) throw new Error('Police inconnue : ' + id);
 
-  const { regular, bold, italic, bolditalic } = await _font.loadBuffers(def);
+  try {
+    const { format, ...rawBuffers } = await _font.load(def);
+    const b64 = Object.fromEntries(Object.entries(rawBuffers).map(([k, v]) => [k, _font.toBase64(v)]));
 
-  _font.injectStyles(
-    id,
-    def.label,
-    _font.toBase64(regular),
-    _font.toBase64(bold),
-    _font.toBase64(italic),
-    _font.toBase64(bolditalic)
-  );
+    _font.injectStyles(id, def.label, b64, format);
 
-  window.FONTS = {
-    id: def.id,
-    label: def.label,
-    cssFamily: def.cssFamily,
-    regular,
-    bold,
-    italic,
-    bolditalic
-  };
+    window.FONTS = { id: def.id, label: def.label, cssFamily: def.cssFamily, ...rawBuffers };
+    if (typeof window.refreshBlockFonts === 'function') window.refreshBlockFonts();
 
-  if (typeof window.refreshBlockFonts === 'function') {
-    window.refreshBlockFonts();
+    const sel = document.getElementById('m-font');
+    if (sel && sel.value !== id) sel.value = id;
+
+    return window.FONTS;
+  } catch (err) {
+    if (typeof announce === 'function') announce('⚠ Impossible de charger la police « ' + def.label + ' »');
+    throw err;
   }
-
-  const sel = document.getElementById('m-font');
-  if (sel && sel.value !== id) sel.value = id;
-
-  return window.FONTS;
 };
 
-/* ── Initialisation au démarrage ────────────────────────────────────────── */
 (async () => {
   const sel = document.getElementById('m-font');
-
   if (sel) {
-    sel.innerHTML = '';
     window.FONT_LIST.forEach(f => {
       const opt = document.createElement('option');
-      opt.value = f.id;
-      opt.textContent = f.label;
+      opt.value = f.id; opt.textContent = f.label;
       sel.appendChild(opt);
     });
   }
-
   try {
     await window.loadFont('marianne');
-    console.info('[fontLoader] Police chargée :', window.FONTS.label);
   } catch (err) {
-    console.error('[fontLoader] Erreur chargement police par défaut :', err);
+    console.error('[fontLoader] Erreur initiale :', err);
   }
 })();
