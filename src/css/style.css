@@ -165,9 +165,9 @@
 /* ── Mode sombre ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --ui-bg-void: #0d0d0f;
-    --ui-bg-base: #111114;
-    --ui-bg-surface: #18181c;
+    --ui-bg-void: #272729;
+    --ui-bg-base: #272729;
+    --ui-bg-surface: #191818;
     --ui-bg-raised: #1e1e24;
     --ui-bg-hover: #25252d;
     --ui-bg-active: #2c2c36;
