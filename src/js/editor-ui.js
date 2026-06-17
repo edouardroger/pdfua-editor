@@ -105,6 +105,7 @@ function renderChartInCt(ct, b) {
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('class', 'fb-chart-svg');
   /* defs injecté dynamiquement par _mkPat */
+  svg.style.fontFamily = window.FONTS?.cssFamily || 'sans-serif';
 
   const titleH = b.chartTitle ? 14 : 0;
   const legItemHpre = Math.max(9, Math.min((b.w - CT_PAD * 2) / 18, 16));
@@ -1045,29 +1046,55 @@ function closeModal(modalId) {
   if (previousFocus) previousFocus.focus();
 }
 
-// Global : Écouteur pour Échap et Focus Trap
+// Global : Écouteurs clavier (Modales, Éditeur, Tableaux...)
 document.addEventListener('keydown', e => {
-  const openModal = document.querySelector('.modal.open');
-  if (!openModal) return;
 
-  // 1. Gestion de Échap
-  if (e.key === 'Escape') {
-    closeModal(openModal.id);
-    return;
+  // ── 1. Raccourcis de l'éditeur (actifs quand on tape dans le canvas) ──
+  if (e.ctrlKey && (e.key === 'Delete' || e.key === 'Backspace')) {
+    const activeElement = document.activeElement;
+    if (activeElement && activeElement.closest('.fb-table-el')) {
+      e.preventDefault();
+
+      const currentRow = activeElement.closest('tr');
+      const tbody = activeElement.closest('tbody');
+
+      if (currentRow && tbody) {
+        if (tbody.querySelectorAll('tr').length <= 1) {
+          if (typeof announce === 'function') announce('⚠ Impossible de supprimer la dernière ligne du tableau.');
+          return;
+        }
+        currentRow.remove();
+        if (typeof window.updTree === 'function') window.updTree();
+        else if (typeof window.refreshBlockData === 'function') window.refreshBlockData();
+      }
+      return; // On arrête l'exécution ici car on a traité le raccourci
+    }
   }
 
-  // 2. Focus Trap générique
-  if (e.key === 'Tab') {
-    const focusables = openModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
+  // ── 2. Gestion des Modales (Échap, Focus Trap) ──
+  const openModal = document.querySelector('.modal.open');
+  if (openModal) {
+    // Gestion de Échap
+    if (e.key === 'Escape') {
+      closeModal(openModal.id);
+      return;
+    }
 
-    if (e.shiftKey && document.activeElement === first) {
-      last.focus();
-      e.preventDefault();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      first.focus();
-      e.preventDefault();
+    // Focus Trap générique
+    if (e.key === 'Tab') {
+      const focusables = openModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (focusables.length === 0) return;
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        last.focus();
+        e.preventDefault();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        first.focus();
+        e.preventDefault();
+      }
     }
   }
 });
