@@ -1008,6 +1008,77 @@ document.addEventListener('click', e => {
 /* La fermeture par touche "Échap" est gérée nativement par le navigateur.
    La touche "Tab" est nativement contrainte à l'intérieur du <dialog>. */
 
+/* ── Panneau latéral droit en mobile ──────────────────────────────────
+   Sur mobile (≤ 640px), #panel bascule en bas:
+   - 48px visibles en bas (poignée + onglets)
+   - .sheet-open l'ouvre en plein écran (calc(50vh + 48px))
+   Le panneau s'ouvre :
+     a) par un tap/clic sur la zone .ptabs visible
+     b) par un swipe vers le haut sur la poignée
+   Il se ferme :
+     a) par un tap/clic en dehors (viewport, sidebar)
+     b) par un swipe vers le bas sur le panneau ouvert
+────────────────────────────────────────────────────────────────────────── */
+(function initMobilePanel() {
+  const MQ = window.matchMedia('(max-width: 640px)');
+  const panel = document.getElementById('panel');
+  const ptabs = panel?.querySelector('.ptabs');
+  if (!panel || !ptabs) return;
+
+  function _isMobile() { return MQ.matches; }
+
+  window.toggleMobilePanel = function (forceOpen) {
+    if (!_isMobile()) return;
+    const open = forceOpen !== undefined ? forceOpen : !panel.classList.contains('sheet-open');
+    panel.classList.toggle('sheet-open', open);
+    panel.setAttribute('aria-expanded', String(open));
+  };
+
+  /* Ouvrir au clic/tap sur les onglets ou la poignée */
+  ptabs.addEventListener('click', e => {
+    if (!_isMobile()) return;
+    /* Si la sheet est fermée, le premier clic l'ouvre sans changer d'onglet */
+    if (!panel.classList.contains('sheet-open')) {
+      e.stopPropagation();
+      toggleMobilePanel(true);
+    }
+    /* Si ouverte, laisser switchTab() gérer normalement */
+  });
+
+  /* Fermer au clic en dehors du panel */
+  document.addEventListener('click', e => {
+    if (!_isMobile()) return;
+    if (panel.classList.contains('sheet-open') && !panel.contains(e.target)) {
+      toggleMobilePanel(false);
+    }
+  });
+
+  /* Swipe vertical sur le panel : haut = ouvre, bas = ferme */
+  let _swipeStartY = null;
+  panel.addEventListener('touchstart', e => {
+    if (!_isMobile()) return;
+    _swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    if (!_isMobile() || _swipeStartY === null) return;
+    const dy = e.changedTouches[0].clientY - _swipeStartY;
+    _swipeStartY = null;
+    if (dy < -40) toggleMobilePanel(true);   /* swipe haut → ouvrir */
+    else if (dy > 40) toggleMobilePanel(false); /* swipe bas  → fermer */
+  }, { passive: true });
+
+  /* Fermer quand la sidebar s'ouvre (évite deux overlays empilés) */
+  const hamburger = document.getElementById('tb-hamburger');
+  hamburger?.addEventListener('click', () => {
+    if (_isMobile()) toggleMobilePanel(false);
+  });
+
+  /* Adapter au resize (portrait ↔ paysage) */
+  MQ.addEventListener('change', () => {
+    if (!MQ.matches) panel.classList.remove('sheet-open');
+  });
+})();
+
 /* ── CLAVIER GLOBAL UNIFIÉ ────────────────────────────────────────────── */
 document.addEventListener('keydown', e => {
   const active = document.activeElement;
@@ -1042,6 +1113,14 @@ document.addEventListener('keydown', e => {
       return;
     }
 
+    /* Ctrl+B / Ctrl+I / Ctrl+U — mise en forme inline (capture déléguée ici
+       pour centraliser tous les raccourcis globaux en un seul listener) */
+    if ((e.ctrlKey || e.metaKey) && isEditing && active.isContentEditable) {
+      if (e.key === 'b') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('bold'); return; }
+      if (e.key === 'i') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('italic'); return; }
+      if (e.key === 'u') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('underline'); return; }
+    }
+
     if ((e.key === 'Delete' || e.key === 'Backspace') && typeof sid !== 'undefined' && sid && !isEditing) {
       e.preventDefault();
       if (typeof rmB === 'function') rmB(sid);
@@ -1050,8 +1129,11 @@ document.addEventListener('keydown', e => {
       e.preventDefault();
       if (typeof dupB === 'function') dupB(sid);
     }
-    if (e.key === 'Escape' && typeof sid !== 'undefined' && sid) {
-      if (typeof desel === 'function') desel();
+    if (e.key === 'Escape') {
+      /* Fermer la sidebar mobile si ouverte */
+      if (typeof toggleMobileSidebar === 'function') toggleMobileSidebar(false);
+      /* Désélectionner le bloc actif */
+      if (typeof sid !== 'undefined' && sid && typeof desel === 'function') desel();
     }
   }
 });

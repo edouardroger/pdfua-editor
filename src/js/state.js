@@ -3,6 +3,7 @@
 // État global du document
 let blocks = [];           // liste de tous les blocs
 let sid = null;            // id du bloc sélectionné
+let selectedBlock = null;  // référence directe au bloc sélectionné (optimisation)
 let cnt = 0;               // compteur d'id
 let numPages = 1;          // nombre de pages A4 créées
 let pageOrientations = ['portrait']; // orientation par index de page ['portrait'|'landscape', …]
@@ -74,11 +75,11 @@ const History = {
     this._lock = true;
     blocks.forEach(b => document.getElementById('el-' + b.id)?.remove());
     blocks = prev.blocks; cnt = prev.cnt;
-    _ordCacheKey = ''; // invalider le cache de tri après réassignation de blocks
+    _ordCache = null;
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
     blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
-    sid = null; desel(); updUA(); updTree(); saveSession();
+    sid = null; selectedBlock = null; desel(); updUA(); updTree(); saveSession();
     this._lock = false;
     announce('Action annulée.');
   },
@@ -292,7 +293,7 @@ function saveSession() {
         pageOrientations: pageOrientations.slice(0, MAX_PAGES),
       }));
     } catch { /* quota dépassé ou désactivé */ }
-  }, 80);
+  }, 500);
 }
 
 function loadSession() {
@@ -316,7 +317,7 @@ function loadSession() {
       return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 0);
 
-    _ordCacheKey = '';
+    _ordCache = null;
 
     /* Borner pageOrientations à MAX_PAGES (point 6) */
     if (Array.isArray(saved.pageOrientations)) {
@@ -820,7 +821,7 @@ async function openProject(input) {
     document.querySelectorAll('.canvas-page').forEach((pg, i) => { if (i > 0) pg.remove(); });
     document.querySelectorAll('.page-label').forEach((l, i) => { if (i > 0) l.remove(); });
     blocks = []; cnt = 0; numPages = 1; pageOrientations = ['portrait']; sid = null;
-    _ordCacheKey = '';
+    _ordCache = null;
 
     /* Sanitiser les méta — champs texte uniquement */
     if (project.meta && typeof project.meta === 'object') {
@@ -862,7 +863,7 @@ async function openProject(input) {
       return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 0);
 
-    _ordCacheKey = '';
+    _ordCache = null;
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
     _restorePages();

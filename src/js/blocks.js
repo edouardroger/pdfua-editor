@@ -581,17 +581,8 @@ document.addEventListener('mousedown', e => {
   }
 });
 
-/* Raccourcis clavier Ctrl+B / Ctrl+I dans les blocs rich */
-document.addEventListener('keydown', e => {
-  if (!sid) return;
-  const b = blocks.find(x => x.id === sid);
-  if (!b || !RICH_TYPES.has(b.type)) return;
-  const active = document.activeElement;
-  if (!active || !active.isContentEditable) return;
-  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); applyFmt('bold'); }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); applyFmt('italic'); }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'u') { e.preventDefault(); applyFmt('underline'); }
-}, true); // capture phase pour priorité
+/* Raccourcis Ctrl+B / Ctrl+I / Ctrl+U — gérés dans le listener keydown unifié
+   de editor-ui.js pour centraliser tous les raccourcis globaux. */
 
 /* ── FONCTIONS SIMPLES — Pas d'abstraction ── */
 
@@ -684,6 +675,8 @@ function switchTab(name) {
     panel.classList.toggle('on', on); on ? panel.removeAttribute('hidden') : panel.setAttribute('hidden', '');
   });
   TAB_EFFECTS[name]?.();
+  /* Sur mobile, ouvrir le bottom sheet dès qu'un onglet est activé */
+  if (typeof toggleMobilePanel === 'function') toggleMobilePanel(true);
 }
 
 /* Clic */
@@ -2109,15 +2102,18 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
     });
   }).observe(tagt, { childList: true, subtree: true });
 
-  /* ── 4. BARRE DE FORMAT — repositionnement fallback sur iOS ── */
+  /* ── 4. BARRE DE FORMAT — repositionnement fallback sur iOS ──
+     Le selectionchange global (hors initMobile) appelle déjà positionFmtBar().
+     Ce second listener ne couvre que le cas iOS où getBoundingClientRect()
+     retourne un rect vide — on recentre alors la barre manuellement. */
   document.addEventListener('selectionchange', () => {
     const fb = document.getElementById('fmt-bar');
     if (!fb || !fb.classList.contains('visible')) return;
     const s = window.getSelection();
     if (!s || s.isCollapsed || !s.rangeCount) return;
     const rect = s.getRangeAt(0).getBoundingClientRect();
-    if (rect.width || rect.height) return; /* déjà correct */
-    /* Fallback : centrer en haut de l'écran */
+    if (rect.width || rect.height) return; /* déjà correct, positionFmtBar() suffit */
+    /* Fallback iOS : centrer en haut de l'écran */
     const bw = fb.offsetWidth || 200;
     fb.style.left = Math.max(8, (window.innerWidth - bw) / 2) + 'px';
     fb.style.top = (80 + window.scrollY) + 'px';
@@ -2245,25 +2241,13 @@ function initPanelListeners() {
   }
 
   /* ── Ordre de lecture ── */
-  (function () {
-    const brow = document.querySelector('#tp-bloc .ps:has(#oi) .brow');
-    if (brow) {
-      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
-      btnUp?.addEventListener('click', () => chOrd(-1));
-      btnDown?.addEventListener('click', () => chOrd(1));
-    }
-    on('btn-sync-order', 'click', () => syncOrderToPosition());
-  })();
+  on('btn-ord-up', 'click', () => chOrd(-1));
+  on('btn-ord-down', 'click', () => chOrd(1));
+  on('btn-sync-order', 'click', () => syncOrderToPosition());
 
   /* ── Calque ── */
-  (function () {
-    const brow = document.querySelector('#tp-bloc .ps:has(#z-level-lbl) .brow');
-    if (brow) {
-      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
-      btnUp?.addEventListener('click', () => chZ(1));
-      btnDown?.addEventListener('click', () => chZ(-1));
-    }
-  })();
+  on('btn-z-up', 'click', () => chZ(1));
+  on('btn-z-down', 'click', () => chZ(-1));
 
   /* ── Image ── */
   on('bav', 'input', function () { bprop('alt', this.value); });

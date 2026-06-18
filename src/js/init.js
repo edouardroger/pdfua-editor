@@ -103,8 +103,3 @@ window.toggleMobileSidebar = function (forceState) {
 
 document.getElementById('tb-hamburger')?.addEventListener('click', () => toggleMobileSidebar());
 document.getElementById('sidebar-overlay')?.addEventListener('click', () => toggleMobileSidebar(false));
-/* Échap ferme la sidebar (complément du listener unifié d'editor-ui.js
-   qui gère les modales et raccourcis éditeur — la sidebar n'est pas une .modal). */
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') toggleMobileSidebar(false);
-});
