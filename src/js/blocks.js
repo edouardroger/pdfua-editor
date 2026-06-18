@@ -581,8 +581,17 @@ document.addEventListener('mousedown', e => {
   }
 });
 
-/* Raccourcis Ctrl+B / Ctrl+I / Ctrl+U — gérés dans le listener keydown unifié
-   de editor-ui.js pour centraliser tous les raccourcis globaux. */
+/* Raccourcis clavier Ctrl+B / Ctrl+I dans les blocs rich */
+document.addEventListener('keydown', e => {
+  if (!sid) return;
+  const b = blocks.find(x => x.id === sid);
+  if (!b || !RICH_TYPES.has(b.type)) return;
+  const active = document.activeElement;
+  if (!active || !active.isContentEditable) return;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); applyFmt('bold'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); applyFmt('italic'); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'u') { e.preventDefault(); applyFmt('underline'); }
+}, true); // capture phase pour priorité
 
 /* ── FONCTIONS SIMPLES — Pas d'abstraction ── */
 
@@ -675,8 +684,6 @@ function switchTab(name) {
     panel.classList.toggle('on', on); on ? panel.removeAttribute('hidden') : panel.setAttribute('hidden', '');
   });
   TAB_EFFECTS[name]?.();
-  /* Sur mobile, ouvrir le bottom sheet dès qu'un onglet est activé */
-  if (typeof toggleMobilePanel === 'function') toggleMobilePanel(true);
 }
 
 /* Clic */
@@ -800,10 +807,33 @@ function el(tag, { cls, style, attrs = {}, html, text, on = {} } = {}) {
 }
 
 /* ── CONSTRUIRE L'ÉLÉMENT ── */
+/* ── Libellé aria dynamique d'un bloc ── */
+function _blockAriaLabel(b) {
+  const pageIdx = Math.floor(b.y / PH) + 1;
+  const pos = `page ${pageIdx}, x\u202f${Math.round(b.x)}\u202fpx, y\u202f${Math.round(b.y % PH)}\u202fpx`;
+  const content = b.content ? ' — ' + b.content.replace(/\n/g, ' ').slice(0, 40) : '';
+  return `${labelForType(b.type)}${content}. ${pos}. Entrée pour éditer, flèches pour déplacer.`;
+}
+
+/* ── Met à jour le aria-label du wrapper après déplacement ── */
+function _updateBlockAriaLabel(b) {
+  const w = document.getElementById('el-' + b.id);
+  if (w) w.setAttribute('aria-label', _blockAriaLabel(b));
+}
+
 function buildEl(b) {
   const label = labelForType(b.type), localY = b.y % PH;
   const isDecorative = b.type === 'shape' || b.type === 'freeform';
-  const wrapper = el('div', { cls: 'fb' + (isDecorative ? ' shape-block' : ''), style: `left:${b.x}px;top:${localY}px;width:${b.w}px;height:${b.h}px;z-index:${b.zIndex || 0}`, attrs: { id: 'el-' + b.id } });
+  const wrapper = el('div', {
+    cls: 'fb' + (isDecorative ? ' shape-block' : ''),
+    style: `left:${b.x}px;top:${localY}px;width:${b.w}px;height:${b.h}px;z-index:${b.zIndex || 0}`,
+    attrs: {
+      id: 'el-' + b.id,
+      tabindex: '0',
+      role: 'group',
+      'aria-label': _blockAriaLabel(b),
+    },
+  });
   const bar = el('div', { cls: 'fb-bar', attrs: { 'aria-hidden': 'true' } });
   bar.append(
     el('span', { cls: 'fb-bar-lbl', text: label }),
@@ -821,6 +851,28 @@ function buildEl(b) {
     attachRot(rot, wrapper, b); wrapper.appendChild(rot);
   }
   wrapper.addEventListener('mousedown', e => { if (e.target.closest('.fb-bar') || e.target === rsz) return; sel(b.id); });
+
+  /* Clavier : focus sur le wrapper = sélection + déplacement aux flèches */
+  wrapper.addEventListener('keydown', e => {
+    /* Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc */
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      sel(b.id);
+      if (typeof switchTab === 'function') switchTab('bloc');
+      return;
+    }
+    /* Flèches : déplacer le bloc (délégué à moveBlockByKey dans editor-ui.js) */
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      /* Ne pas interférer si le focus est à l'intérieur d'un champ de saisie */
+      const active = document.activeElement;
+      const isInField = active && active !== wrapper &&
+        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
+         active.tagName === 'SELECT' || active.isContentEditable);
+      if (isInField) return;
+      e.preventDefault();
+      if (typeof moveBlockByKey === 'function') moveBlockByKey(b.id, e.key, e.shiftKey, e.ctrlKey || e.metaKey);
+    }
+  });
 
   /* Touch : tap sur le bloc = sélection (iOS ne déclenche pas toujours mousedown) */
   (function () {
@@ -1357,7 +1409,14 @@ function sel(id) {
     document.getElementById('el-' + sid)?.classList.remove('sel');
   }
   sid = id;
-  document.getElementById('el-' + id)?.classList.add('sel');
+  const wrapper = document.getElementById('el-' + id);
+  wrapper?.classList.add('sel');
+  /* Déplacer le focus clavier sur le wrapper si ce n'est pas déjà lui
+     (ni un de ses enfants) qui a le focus — évite d'interrompre l'édition
+     en cours dans un contenteditable du même bloc */
+  if (wrapper && !wrapper.contains(document.activeElement)) {
+    wrapper.focus({ preventScroll: true });
+  }
   updBP();
 }
 
@@ -2102,18 +2161,15 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
     });
   }).observe(tagt, { childList: true, subtree: true });
 
-  /* ── 4. BARRE DE FORMAT — repositionnement fallback sur iOS ──
-     Le selectionchange global (hors initMobile) appelle déjà positionFmtBar().
-     Ce second listener ne couvre que le cas iOS où getBoundingClientRect()
-     retourne un rect vide — on recentre alors la barre manuellement. */
+  /* ── 4. BARRE DE FORMAT — repositionnement fallback sur iOS ── */
   document.addEventListener('selectionchange', () => {
     const fb = document.getElementById('fmt-bar');
     if (!fb || !fb.classList.contains('visible')) return;
     const s = window.getSelection();
     if (!s || s.isCollapsed || !s.rangeCount) return;
     const rect = s.getRangeAt(0).getBoundingClientRect();
-    if (rect.width || rect.height) return; /* déjà correct, positionFmtBar() suffit */
-    /* Fallback iOS : centrer en haut de l'écran */
+    if (rect.width || rect.height) return; /* déjà correct */
+    /* Fallback : centrer en haut de l'écran */
     const bw = fb.offsetWidth || 200;
     fb.style.left = Math.max(8, (window.innerWidth - bw) / 2) + 'px';
     fb.style.top = (80 + window.scrollY) + 'px';
@@ -2241,13 +2297,25 @@ function initPanelListeners() {
   }
 
   /* ── Ordre de lecture ── */
-  on('btn-ord-up', 'click', () => chOrd(-1));
-  on('btn-ord-down', 'click', () => chOrd(1));
-  on('btn-sync-order', 'click', () => syncOrderToPosition());
+  (function () {
+    const brow = document.querySelector('#tp-bloc .ps:has(#oi) .brow');
+    if (brow) {
+      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
+      btnUp?.addEventListener('click', () => chOrd(-1));
+      btnDown?.addEventListener('click', () => chOrd(1));
+    }
+    on('btn-sync-order', 'click', () => syncOrderToPosition());
+  })();
 
   /* ── Calque ── */
-  on('btn-z-up', 'click', () => chZ(1));
-  on('btn-z-down', 'click', () => chZ(-1));
+  (function () {
+    const brow = document.querySelector('#tp-bloc .ps:has(#z-level-lbl) .brow');
+    if (brow) {
+      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
+      btnUp?.addEventListener('click', () => chZ(1));
+      btnDown?.addEventListener('click', () => chZ(-1));
+    }
+  })();
 
   /* ── Image ── */
   on('bav', 'input', function () { bprop('alt', this.value); });

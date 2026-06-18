@@ -833,15 +833,78 @@ function utag(txt, cls) {
   return s;
 }
 
-/* ══════════════════════════════════════════════════════
-   useDrag — helper partagé pour mousedown→mousemove→up
-   Paramètres :
-     handle  : élément recevant le mousedown
-     onStart : (e) → ctx   — calculs initiaux, retourne un contexte
-     onMove  : (e, ctx) → void
-     onEnd   : (e, ctx) → void  (appelé au mouseup)
-     guard   : (e) → bool  — si true, ignorer le mousedown
-   ══════════════════════════════════════════════════════ */
+/* ── DÉPLACEMENT AU CLAVIER ─────────────────────────────────────────────
+   Appelée depuis le listener keydown du wrapper .fb (blocks.js : buildEl)
+   et depuis le listener keydown unifié (ci-dessous).
+
+   Pas de modificateur     → pas (ou grille si activée)
+   Shift                   → grand pas (10 × pas de base ou taille de grille)
+   Ctrl/⌘                  → redimensionnement (largeur/hauteur) au lieu du déplacement
+
+   Le pas de base est égal à la taille de la grille si le magnétisme est actif,
+   sinon 1 px (précision pixel) ou 2 px (Shift = 20 px).
+────────────────────────────────────────────────────────────────────────── */
+function moveBlockByKey(id, key, shift, resize) {
+  const b = blocks.find(x => x.id === id);
+  if (!b) return;
+
+  const step = gridEnabled ? gridSize : 1;
+  const big = gridEnabled ? gridSize * 10 : 10;
+  const delta = shift ? big : step;
+
+  const pageIdx = Math.floor(b.y / PH);
+  const pw = pageW(pageIdx);
+  const ph = pageH(pageIdx);
+  const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+
+  snapshotState();
+
+  if (resize) {
+    /* Ctrl/⌘ + flèche : redimensionner */
+    const minW = isDecorative ? 1 : 80;
+    const minH = isDecorative ? 1 : 28;
+    const maxW = pw - b.x;
+    if (key === 'ArrowRight') b.w = Math.min(maxW, snapVal(b.w + delta));
+    if (key === 'ArrowLeft') b.w = Math.max(minW, snapVal(b.w - delta));
+    if (key === 'ArrowDown') b.h = snapVal(b.h + delta);
+    if (key === 'ArrowUp') b.h = Math.max(minH, snapVal(b.h - delta));
+  } else {
+    /* Flèche seule ou Shift+flèche : déplacer */
+    if (key === 'ArrowRight') b.x = isDecorative ? snapVal(b.x + delta) : Math.min(pw - b.w, snapVal(b.x + delta));
+    if (key === 'ArrowLeft') b.x = isDecorative ? snapVal(b.x - delta) : Math.max(0, snapVal(b.x - delta));
+    if (key === 'ArrowDown') b.y = snapVal(b.y + delta);
+    if (key === 'ArrowUp') b.y = Math.max(pageIdx * PH, snapVal(b.y - delta));
+  }
+
+  /* Mettre à jour le DOM */
+  const domEl = document.getElementById('el-' + b.id);
+  if (domEl) {
+    domEl.style.left = b.x + 'px';
+    domEl.style.top = (b.y % PH) + 'px';
+    domEl.style.width = b.w + 'px';
+    domEl.style.height = b.h + 'px';
+    /* Si le bloc a changé de page (déplacement vers le bas) */
+    const newPageIdx = Math.floor(b.y / PH);
+    if (newPageIdx !== pageIdx) {
+      const pg = getCanvasPage(newPageIdx);
+      if (pg) pg.appendChild(domEl);
+    }
+  }
+
+  /* Mettre à jour le aria-label du wrapper */
+  if (typeof _updateBlockAriaLabel === 'function') _updateBlockAriaLabel(b);
+
+  updBP();
+
+  /* Replanifier les notes si nécessaire */
+  const hasNoteAnchors = b.type !== 'note' && RICH_TYPES.has(b.type) &&
+    document.getElementById('ct-' + b.id)?.querySelector('sup[data-note-id]');
+  if (hasNoteAnchors || b.type === 'note') renumberNotes();
+
+  updTree();
+  saveSession();
+}
+
 function useDrag(handle, { onStart, onMove, onEnd, guard } = {}) {
   handle.addEventListener('mousedown', e => {
     if (guard?.(e)) return;
@@ -960,8 +1023,6 @@ function announce(msg) {
   });
 }
 /* ── GESTION GÉNÉRIQUE DES MODALES (<dialog>) ── */
-/* ── GESTION GÉNÉRIQUE DES MODALES (<dialog>) ── */
-
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal && !modal.open) {
@@ -1008,77 +1069,6 @@ document.addEventListener('click', e => {
 /* La fermeture par touche "Échap" est gérée nativement par le navigateur.
    La touche "Tab" est nativement contrainte à l'intérieur du <dialog>. */
 
-/* ── Panneau latéral droit en mobile ──────────────────────────────────
-   Sur mobile (≤ 640px), #panel bascule en bas:
-   - 48px visibles en bas (poignée + onglets)
-   - .sheet-open l'ouvre en plein écran (calc(50vh + 48px))
-   Le panneau s'ouvre :
-     a) par un tap/clic sur la zone .ptabs visible
-     b) par un swipe vers le haut sur la poignée
-   Il se ferme :
-     a) par un tap/clic en dehors (viewport, sidebar)
-     b) par un swipe vers le bas sur le panneau ouvert
-────────────────────────────────────────────────────────────────────────── */
-(function initMobilePanel() {
-  const MQ = window.matchMedia('(max-width: 640px)');
-  const panel = document.getElementById('panel');
-  const ptabs = panel?.querySelector('.ptabs');
-  if (!panel || !ptabs) return;
-
-  function _isMobile() { return MQ.matches; }
-
-  window.toggleMobilePanel = function (forceOpen) {
-    if (!_isMobile()) return;
-    const open = forceOpen !== undefined ? forceOpen : !panel.classList.contains('sheet-open');
-    panel.classList.toggle('sheet-open', open);
-    panel.setAttribute('aria-expanded', String(open));
-  };
-
-  /* Ouvrir au clic/tap sur les onglets ou la poignée */
-  ptabs.addEventListener('click', e => {
-    if (!_isMobile()) return;
-    /* Si la sheet est fermée, le premier clic l'ouvre sans changer d'onglet */
-    if (!panel.classList.contains('sheet-open')) {
-      e.stopPropagation();
-      toggleMobilePanel(true);
-    }
-    /* Si ouverte, laisser switchTab() gérer normalement */
-  });
-
-  /* Fermer au clic en dehors du panel */
-  document.addEventListener('click', e => {
-    if (!_isMobile()) return;
-    if (panel.classList.contains('sheet-open') && !panel.contains(e.target)) {
-      toggleMobilePanel(false);
-    }
-  });
-
-  /* Swipe vertical sur le panel : haut = ouvre, bas = ferme */
-  let _swipeStartY = null;
-  panel.addEventListener('touchstart', e => {
-    if (!_isMobile()) return;
-    _swipeStartY = e.touches[0].clientY;
-  }, { passive: true });
-  panel.addEventListener('touchend', e => {
-    if (!_isMobile() || _swipeStartY === null) return;
-    const dy = e.changedTouches[0].clientY - _swipeStartY;
-    _swipeStartY = null;
-    if (dy < -40) toggleMobilePanel(true);   /* swipe haut → ouvrir */
-    else if (dy > 40) toggleMobilePanel(false); /* swipe bas  → fermer */
-  }, { passive: true });
-
-  /* Fermer quand la sidebar s'ouvre (évite deux overlays empilés) */
-  const hamburger = document.getElementById('tb-hamburger');
-  hamburger?.addEventListener('click', () => {
-    if (_isMobile()) toggleMobilePanel(false);
-  });
-
-  /* Adapter au resize (portrait ↔ paysage) */
-  MQ.addEventListener('change', () => {
-    if (!MQ.matches) panel.classList.remove('sheet-open');
-  });
-})();
-
 /* ── CLAVIER GLOBAL UNIFIÉ ────────────────────────────────────────────── */
 document.addEventListener('keydown', e => {
   const active = document.activeElement;
@@ -1113,14 +1103,6 @@ document.addEventListener('keydown', e => {
       return;
     }
 
-    /* Ctrl+B / Ctrl+I / Ctrl+U — mise en forme inline (capture déléguée ici
-       pour centraliser tous les raccourcis globaux en un seul listener) */
-    if ((e.ctrlKey || e.metaKey) && isEditing && active.isContentEditable) {
-      if (e.key === 'b') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('bold'); return; }
-      if (e.key === 'i') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('italic'); return; }
-      if (e.key === 'u') { e.preventDefault(); if (typeof applyFmt === 'function') applyFmt('underline'); return; }
-    }
-
     if ((e.key === 'Delete' || e.key === 'Backspace') && typeof sid !== 'undefined' && sid && !isEditing) {
       e.preventDefault();
       if (typeof rmB === 'function') rmB(sid);
@@ -1129,11 +1111,16 @@ document.addEventListener('keydown', e => {
       e.preventDefault();
       if (typeof dupB === 'function') dupB(sid);
     }
-    if (e.key === 'Escape') {
-      /* Fermer la sidebar mobile si ouverte */
-      if (typeof toggleMobileSidebar === 'function') toggleMobileSidebar(false);
-      /* Désélectionner le bloc actif */
-      if (typeof sid !== 'undefined' && sid && typeof desel === 'function') desel();
+    /* Flèches : déplacer (ou Ctrl+flèche = redimensionner) le bloc sélectionné */
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) &&
+      typeof sid !== 'undefined' && sid && !isEditing) {
+      e.preventDefault();
+      if (typeof moveBlockByKey === 'function') {
+        moveBlockByKey(sid, e.key, e.shiftKey, e.ctrlKey || e.metaKey);
+      }
+    }
+    if (e.key === 'Escape' && typeof sid !== 'undefined' && sid) {
+      if (typeof desel === 'function') desel();
     }
   }
 });

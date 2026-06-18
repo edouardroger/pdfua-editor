@@ -870,6 +870,13 @@ body {
   z-index: 50;
 }
 
+.fb:focus-visible {
+  outline: 3px solid var(--ui-focus);
+  outline-offset: 2px;
+  overflow: visible;
+  z-index: 50;
+}
+
 .fb:hover .fb-bar,
 .fb.sel .fb-bar,
 .fb:focus-within .fb-bar {
@@ -909,7 +916,7 @@ body {
 }
 
 .fb.shape-block .fb-bar {
-  background: var(--ui-fb-bar-bg);
+  background: rgba(249, 250, 251, .85);
 }
 
 .fb.shape-block .fb-ct {

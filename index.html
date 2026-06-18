@@ -94,8 +94,8 @@
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" title="Afficher le panneau PDF/UA" aria-label="Afficher le panneau PDF/UA"
-        data-open-modal="ua-modal">
+      <button id="tb-ua-status" type="button" title="Afficher le panneau PDF/UA"
+        aria-label="Afficher le panneau PDF/UA" data-open-modal="ua-modal">
         <span id="tb-ua-label">PDF/UA</span>
       </button>
 
@@ -330,10 +330,12 @@
         </div>
 
         <!-- Aide rapide -->
-        <div class="sb-hint" aria-label="Aide clavier">
+        <div class="sb-hint" role="note" aria-label="Aide clavier">
           Glisser → page &nbsp;·&nbsp; <kbd>Suppr</kbd> suppr.
+          <br><kbd>↑↓←→</kbd> déplacer &nbsp;·&nbsp; <kbd>Shift+↑↓←→</kbd> ×10
+          <br><kbd>Ctrl+↑↓←→</kbd> redimensionner
           <br><kbd>Ctrl+B</kbd> gras &nbsp;·&nbsp; <kbd>Ctrl+I</kbd> italique &nbsp;·&nbsp; <kbd>Ctrl+U</kbd> souligné
-          <br><kbd>Ctrl+D</kbd> dupliquer
+          <br><kbd>Ctrl+D</kbd> dupliquer &nbsp;·&nbsp; <kbd>Échap</kbd> désélectionner
         </div>
 
       </div><!-- /.sb-scroll -->
@@ -485,8 +487,8 @@
           <div class="ps">
             <h3 class="ps-title">Ordre de lecture PDF/UA</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button" id="btn-ord-up">↑ Avancer</button>
-              <button class="sb" type="button" id="btn-ord-down">↓ Reculer</button>
+              <button class="sb" type="button">↑ Avancer</button>
+              <button class="sb" type="button">↓ Reculer</button>
             </div>
             <p id="oi" class="muted mt-5" aria-live="polite" aria-atomic="true"></p>
             <button class="sb sb-full-mt" type="button" id="btn-sync-order"
@@ -498,8 +500,8 @@
           <div class="ps">
             <h3 class="ps-title">Calque (superposition)</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button" id="btn-z-up">↑ Au-dessus</button>
-              <button class="sb" type="button" id="btn-z-down">↓ En dessous</button>
+              <button class="sb" type="button">↑ Au-dessus</button>
+              <button class="sb" type="button">↓ En dessous</button>
             </div>
             <p id="z-level-lbl" class="muted mt-5" aria-live="polite">Normal (0)</p>
             <p class="field-hint">N'affecte pas l'ordre de lecture PDF.</p>
