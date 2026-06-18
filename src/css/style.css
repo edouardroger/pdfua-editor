@@ -165,8 +165,8 @@
 /* ── Mode sombre ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --ui-bg-void: #272729;
-    --ui-bg-base: #272729;
+    --ui-bg-void: #212121;
+    --ui-bg-base: #1d1d1d;
     --ui-bg-surface: #191818;
     --ui-bg-raised: #1e1e24;
     --ui-bg-hover: #25252d;
@@ -909,7 +909,7 @@ body {
 }
 
 .fb.shape-block .fb-bar {
-  background: rgba(249, 250, 251, .85);
+  background: var(--ui-fb-bar-bg);
 }
 
 .fb.shape-block .fb-ct {
