@@ -2201,3 +2201,152 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   }
 
 })(); /* fin initMobile */
+
+/* ══════════════════════════════════════════════════════════════
+   INIT PANEL LISTENERS
+   Branche tous les listeners du panneau droit (onglet Bloc,
+   Méta, Export, Grille). Appelée depuis init.js après le
+   démarrage, quand le DOM est disponible.
+   Regroupée ici car toutes les fonctions cibles (bprop, rr,
+   updUA, toggleGrid, etc.) sont définies dans blocks.js.
+   ══════════════════════════════════════════════════════════════ */
+function initPanelListeners() {
+  const g = id => document.getElementById(id);
+  const on = (id, evt, fn) => g(id)?.addEventListener(evt, fn);
+
+  /* ── Méta ── */
+  on('m-title', 'input', () => updUA());
+  on('m-lang', 'change', () => updUA());
+  on('m-font', 'change', function () { window.loadFont(this.value).catch(err => console.error(err)); });
+
+  /* ── Grille ── */
+  on('grid-snap', 'change', function () { toggleGrid(this.checked, undefined, undefined); });
+  on('grid-show', 'change', function () { toggleGrid(undefined, this.checked, undefined); });
+  on('grid-size', 'change', function () { toggleGrid(undefined, undefined, parseInt(this.value)); });
+
+  /* ── Géométrie ── */
+  on('bx', 'input', () => applyPos());
+  on('by', 'input', () => applyPos());
+  on('bw', 'input', () => applySz());
+  on('bh', 'input', () => applySz());
+
+  /* ── Typographie ── */
+  on('bfontsize', 'input', function () {
+    bprop('fontSize', this.value ? +this.value : undefined); rr(sid);
+  });
+  document.querySelector('#bp-fontsize .sb[title="Remettre la taille par défaut"]')
+    ?.addEventListener('click', () => { bprop('fontSize', undefined); g('bfontsize').value = ''; rr(sid); });
+
+  /* ── Alignement ── */
+  const alignRow = g('lbl-align');
+  if (alignRow) {
+    const dirs = ['l', 'c', 'r', 't'];
+    [...alignRow.querySelectorAll('.sb')].forEach((btn, i) => btn.addEventListener('click', () => qa(dirs[i])));
+  }
+
+  /* ── Ordre de lecture ── */
+  (function () {
+    const brow = document.querySelector('#tp-bloc .ps:has(#oi) .brow');
+    if (brow) {
+      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
+      btnUp?.addEventListener('click', () => chOrd(-1));
+      btnDown?.addEventListener('click', () => chOrd(1));
+    }
+    on('btn-sync-order', 'click', () => syncOrderToPosition());
+  })();
+
+  /* ── Calque ── */
+  (function () {
+    const brow = document.querySelector('#tp-bloc .ps:has(#z-level-lbl) .brow');
+    if (brow) {
+      const [btnUp, btnDown] = brow.querySelectorAll('.sb');
+      btnUp?.addEventListener('click', () => chZ(1));
+      btnDown?.addEventListener('click', () => chZ(-1));
+    }
+  })();
+
+  /* ── Image ── */
+  on('bav', 'input', function () { bprop('alt', this.value); });
+  on('bimglink', 'input', function () { bprop('imgLinkUrl', this.value); rr(sid); });
+
+  /* ── Lien ── */
+  on('blt', 'input', function () { bprop('linkText', this.value); });
+  on('blu', 'input', function () { bprop('linkUrl', this.value); });
+
+  /* ── Retrait de première ligne ── */
+  on('btextindent', 'input', function () {
+    g('btextindent-val').textContent = this.value + ' pt';
+    bprop('textIndent', parseInt(this.value)); rr(sid);
+  });
+
+  /* ── Liste ── */
+  on('blistnobullet', 'change', function () { bprop('listNoBullet', this.checked); rr(sid); });
+
+  /* ── Titre ── */
+  on('bhlv', 'change', function () { bprop('type', this.value); rr(sid); });
+
+  /* ── Signet ── */
+  on('bbookmark', 'change', function () { bprop('bookmark', this.checked); });
+
+  /* ── Citation ── */
+  on('bqsrc', 'input', function () { bprop('quoteSource', this.value); });
+
+  /* ── Note ── */
+  on('bnref', 'input', function () { bprop('noteRef', this.value); });
+
+  /* ── Formulaire ── */
+  on('bform-label', 'input', function () { bprop('formLabel', this.value); rr(sid); });
+  on('bform-placeholder', 'input', function () { bprop('formPlaceholder', this.value); rr(sid); });
+  on('bform-default', 'input', function () { bprop('formDefaultValue', this.value); rr(sid); });
+  on('bform-options', 'input', function () { bprop('formOptions', this.value); rr(sid); });
+  on('bform-checked', 'change', function () { bprop('formChecked', this.checked); rr(sid); });
+  on('bform-required', 'change', function () { bprop('formRequired', this.checked); rr(sid); });
+  on('bform-readonly', 'change', function () { bprop('formReadonly', this.checked); rr(sid); });
+
+  /* ── Encadré ── */
+  on('basidestyle', 'change', function () { bprop('asideStyle', this.value); rr(sid); });
+
+  /* ── Forme décorative ── */
+  on('bshapekind', 'change', function () { bprop('shapeKind', this.value); rr(sid); });
+  on('bshapetransparent', 'change', function () { bprop('shapeFillNone', this.checked); rr(sid); });
+  on('bshapeopacity', 'input', function () {
+    g('bshapeopacity-val').textContent = Math.round(this.value * 100) + '%';
+    bprop('shapeOpacity', parseFloat(this.value)); rr(sid);
+  });
+  on('bshaperotation', 'input', function () {
+    g('bshaperotation-val').textContent = this.value + '°';
+    bprop('shapeRotation', parseInt(this.value)); rr(sid);
+  });
+  on('bshapeborder', 'change', function () { bprop('shapeBorderEnabled', this.checked); rr(sid); });
+  on('bshapeborderwidth', 'input', function () {
+    g('bshapeborderwidth-val').textContent = this.value + 'px';
+    bprop('shapeBorderWidth', parseInt(this.value)); rr(sid);
+  });
+
+  /* ── Forme libre ── */
+  on('bffopacity', 'input', function () {
+    g('bffopacity-val').textContent = Math.round(this.value * 100) + '%';
+    bprop('shapeOpacity', parseFloat(this.value)); rr(sid);
+  });
+  on('bffrotation', 'input', function () {
+    g('bffrotation-val').textContent = this.value + '°';
+    bprop('shapeRotation', parseInt(this.value)); rr(sid);
+  });
+  on('bffstroke', 'input', function () {
+    g('bffstroke-val').textContent = this.value + 'px';
+    bprop('strokeWidth', parseInt(this.value)); rr(sid);
+  });
+  on('bfffill', 'change', function () { bprop('shapeFilled', this.checked); rr(sid); });
+  on('bffclosed', 'change', function () { bprop('pathClosed', this.checked); rr(sid); });
+  document.querySelector('#bp-freeform .sb-full')?.addEventListener('click', () => editFreeformPath(sid));
+
+  /* ── Graphique ── */
+  on('bchartkind', 'change', function () { bprop('chartKind', this.value); rr(sid); });
+  on('bcharttitle', 'input', function () { bprop('chartTitle', this.value); rr(sid); });
+  on('bchartalt', 'input', function () { bprop('alt', this.value); });
+  on('bchartadd', 'click', () => chartAddRow());
+
+  /* ── Export ── */
+  on('pg-enabled', 'change', () => updUA());
+  on('toc-enabled', 'change', () => updUA());
+}

@@ -1841,29 +1841,31 @@ fieldset legend {
   .tn .tg {
     color: #93bbf7;
   }
-
-  /* 9.01:1 ✓ AAA sur fond sombre */
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MODALE PDF/UA
+   MODALES GÉNÉRIQUES NATIVES (<dialog>)
 ══════════════════════════════════════════════════════════════ */
-#ua-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
+dialog.modal {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
+}
+
+dialog.modal::backdrop {
   background: var(--ui-overlay);
-  z-index: 1001;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: calc(var(--ui-topbar-h) + 8px) 12px 0 0;
+  backdrop-filter: blur(2px);
+  /* Touche moderne optionnelle */
 }
 
-#ua-modal.open {
-  display: flex;
+/* Modale PDF/UA (Positionnée comme un panneau à droite) */
+#ua-modal {
+  margin: calc(var(--ui-topbar-h) + 8px) 12px auto auto;
 }
 
-.ua-modal-inner {
+#ua-modal .ua-modal-inner {
   background: var(--ui-bg-surface);
   border: 1px solid var(--ui-border-mid);
   border-radius: var(--ui-r-lg);
@@ -1873,13 +1875,13 @@ fieldset legend {
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--ui-shadow-md);
-  animation: ua-slide-in .15s ease;
+  animation: ua-slide-in .2s ease-out;
 }
 
 @keyframes ua-slide-in {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-10px);
   }
 
   to {
@@ -1888,7 +1890,32 @@ fieldset legend {
   }
 }
 
-.ua-modal-hd {
+/* Modale Prévisualisation (Centrée) */
+#prev-modal {
+  margin: auto;
+}
+
+#prev-modal::backdrop {
+  background: var(--ui-overlay-lg);
+}
+
+#prev-modal .prev-inner {
+  background: var(--ui-bg-surface);
+  border: 1px solid var(--ui-border-mid);
+  border-radius: var(--ui-r-lg);
+  width: 90vw;
+  max-width: 1000px;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--ui-shadow-lg);
+  animation: ua-slide-in .2s ease-out;
+}
+
+/* Styles communs des entêtes et boutons de fermeture */
+.ua-modal-hd,
+.prev-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1897,16 +1924,18 @@ fieldset legend {
   flex-shrink: 0;
 }
 
-.ua-modal-hd h2 {
-  font-size: 12px;
+.ua-modal-hd h2,
+.prev-modal-title {
+  font-size: 13px;
   font-weight: 500;
   color: var(--ui-txt-primary);
   margin: 0;
 }
 
-.ua-modal-close {
-  width: 24px;
-  height: 24px;
+.ua-modal-close,
+.prev-close {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1915,32 +1944,25 @@ fieldset legend {
   border-radius: var(--ui-r-sm);
   color: var(--ui-txt-sec);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   transition: all .1s;
 }
 
-.ua-modal-close:hover {
+.ua-modal-close:hover,
+.prev-close:hover {
   background: var(--ui-bg-hover);
   color: var(--ui-txt-primary);
   border-color: var(--ui-border-str);
 }
 
+/* Corps de la modale PDF/UA */
 .ua-modal-body {
   flex: 1;
   overflow-y: auto;
   padding: 14px;
   scrollbar-width: thin;
   scrollbar-color: var(--ui-border-mid) transparent;
-}
-
-.ua-modal-body::-webkit-scrollbar {
-  width: 3px;
-}
-
-.ua-modal-body::-webkit-scrollbar-thumb {
-  background: var(--ui-border-mid);
-  border-radius: 3px;
 }
 
 .ua-modal-body h3 {
@@ -1957,80 +1979,7 @@ fieldset legend {
   margin-top: 14px;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   MODALE PRÉVISUALISATION
-══════════════════════════════════════════════════════════════ */
-#prev-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: var(--ui-overlay-lg);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-
-#prev-modal[aria-hidden="false"],
-#prev-modal.open {
-  display: flex;
-}
-
-#prev-modal[aria-hidden="true"] {
-  display: none !important;
-}
-
-.prev-inner {
-  background: var(--ui-bg-surface);
-  border: 1px solid var(--ui-border-mid);
-  border-radius: var(--ui-r-lg);
-  width: 90vw;
-  max-width: 1000px;
-  height: 88vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: var(--ui-shadow-lg);
-}
-
-.prev-hd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--ui-border-weak);
-  flex-shrink: 0;
-}
-
-.prev-modal-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ui-txt-sec);
-  margin: 0;
-}
-
-.prev-close {
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ui-bg-raised);
-  border: 1px solid var(--ui-border-mid);
-  border-radius: var(--ui-r-sm);
-  color: var(--ui-txt-sec);
-  cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  min-width: 44px;
-  min-height: 44px;
-  transition: all .1s;
-}
-
-.prev-close:hover {
-  background: var(--ui-bg-hover);
-  color: var(--ui-txt-primary);
-}
-
+/* Iframe de prévisualisation */
 #pif {
   flex: 1;
   border: none;

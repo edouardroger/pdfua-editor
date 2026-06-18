@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
-  script-src 'self' 'unsafe-inline';
+  script-src 'self';
   style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
   font-src 'self' https://cdn.jsdelivr.net data:;
   img-src 'self' data: blob:;
@@ -25,7 +25,6 @@
   <link rel="stylesheet" href="dist/style.min.css">
   <meta name="description"
     content="Éditeur PDF/UA — Créez des documents PDF accessibles (PDF/UA) directement dans votre navigateur.">
-  <meta name="author" content="Édouard Roger">
 </head>
 
 <body>
@@ -52,21 +51,20 @@
         <h2 id="tb-actions-label" class="sr-only">Actions rapides</h2>
 
         <div class="tb-group" role="group" aria-label="Fichier">
-          <button class="tb-btn" type="button" onclick="saveProject()" title="Sauvegarder le projet (.pdfua)">
+          <button class="tb-btn" type="button" title="Sauvegarder le projet (.pdfua)">
             <span class="ico-sm" aria-hidden="true">↓</span> Sauvegarder
           </button>
-          <button class="tb-btn" type="button" onclick="document.getElementById('open-project-input').click()"
-            title="Ouvrir un projet">
+          <button class="tb-btn" type="button" title="Ouvrir un projet">
             <span class="ico-sm" aria-hidden="true">↑</span> Ouvrir
           </button>
-          <input type="file" id="open-project-input" accept=".pdfua" style="display:none" onchange="openProject(this)"
+          <input type="file" id="open-project-input" accept=".pdfua" style="display:none"
             aria-label="Ouvrir un fichier projet .pdfua">
         </div>
 
         <div class="tb-sep" role="separator"></div>
 
         <div class="tb-group" role="group" aria-label="Historique">
-          <button class="tb-btn" type="button" onclick="undoLast()" title="Annuler (Ctrl+Z)">
+          <button class="tb-btn" type="button" title="Annuler (Ctrl+Z)">
             <span class="ico-sm" aria-hidden="true">↩</span> Annuler
           </button>
         </div>
@@ -74,14 +72,13 @@
         <div class="tb-sep" role="separator"></div>
 
         <div class="tb-group" role="group" aria-label="Export">
-          <button class="tb-btn primary" type="button" onclick="genPDF()" id="btn-gen" title="Générer le PDF/UA">
+          <button class="tb-btn primary" type="button" id="btn-gen" title="Générer le PDF/UA">
             <span class="ico-sm" aria-hidden="true">⬇</span> Générer PDF
           </button>
-          <button class="tb-btn" type="button" onclick="prevPDF()" id="btn-prev"
-            title="Prévisualiser dans le navigateur">
+          <button class="tb-btn" type="button" id="btn-prev" title="Prévisualiser dans le navigateur">
             <span class="ico-sm" aria-hidden="true">◉</span> Aperçu
           </button>
-          <button class="tb-btn" type="button" onclick="exportCode()" id="btn-exp" title="Exporter le code JS PDFKit">
+          <button class="tb-btn" type="button" id="btn-exp" title="Exporter le code JS PDFKit">
             <span class="ico-sm" aria-hidden="true">{}</span> Code JS
           </button>
         </div>
@@ -90,15 +87,15 @@
 
       <!-- Bouton hamburger — visible uniquement sur mobile, ouvre le drawer sidebar -->
       <button id="tb-hamburger" class="tb-btn tb-hamburger" type="button" aria-label="Ouvrir la palette de blocs"
-        aria-expanded="false" aria-controls="sidebar" onclick="toggleMobileSidebar()">
+        aria-expanded="false" aria-controls="sidebar">
         <span aria-hidden="true">☰</span>
       </button>
 
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" onclick="openModal('ua-modal')" title="Afficher le panneau PDF/UA"
-        aria-label="Afficher le panneau PDF/UA">
+      <button id="tb-ua-status" type="button" title="Afficher le panneau PDF/UA"
+        aria-label="Afficher le panneau PDF/UA" data-open-modal="ua-modal">
         <span id="tb-ua-label">PDF/UA</span>
       </button>
 
@@ -343,7 +340,7 @@
 
       <!-- Bouton ajouter page -->
       <div class="sb-footer">
-        <button id="btn-add-page" type="button" onclick="addCanvasPage()">
+        <button id="btn-add-page" type="button">
           + Ajouter une page
         </button>
       </div>
@@ -384,11 +381,11 @@
 
           <label for="m-title">Titre <span aria-label="obligatoire">*</span></label>
           <input id="m-title" type="text" placeholder="Mon document" autocomplete="off" aria-required="true"
-            aria-describedby="m-title-hint" oninput="updUA()">
+            aria-describedby="m-title-hint">
           <p id="m-title-hint" class="field-hint">Requis PDF/UA</p>
 
           <label for="m-lang">Langue <span aria-label="obligatoire">*</span></label>
-          <select id="m-lang" aria-required="true" onchange="updUA()">
+          <select id="m-lang" aria-required="true">
             <option value="">— choisir —</option>
             <option value="fr-FR" selected>Français (fr-FR)</option>
             <option value="en-GB" lang="en-gb">English (en-GB)</option>
@@ -398,8 +395,7 @@
           </select>
 
           <label for="m-font">Police</label>
-          <select id="m-font" aria-describedby="m-font-hint"
-            onchange="window.loadFont(this.value).catch(err => console.error(err))">
+          <select id="m-font" aria-describedby="m-font-hint">
           </select>
           <p id="m-font-hint" class="field-hint">Appliquée au WYSIWYG et au PDF</p>
 
@@ -415,15 +411,15 @@
           <div id="grid-panel">
             <fieldset>
               <div class="ck-row">
-                <input type="checkbox" id="grid-snap" onchange="toggleGrid(this.checked,undefined,undefined)">
+                <input type="checkbox" id="grid-snap">
                 <label for="grid-snap">Aimanter sur la grille</label>
               </div>
               <div class="ck-row">
-                <input type="checkbox" id="grid-show" onchange="toggleGrid(undefined,this.checked,undefined)">
+                <input type="checkbox" id="grid-show">
                 <label for="grid-show">Afficher la grille</label>
               </div>
               <label for="grid-size" class="mt-8">Taille de cellule</label>
-              <select id="grid-size" onchange="toggleGrid(undefined,undefined,parseInt(this.value))">
+              <select id="grid-size">
                 <option value="10">10 px — Fin</option>
                 <option value="20" selected>20 px — Normal</option>
                 <option value="40">40 px — Large</option>
@@ -449,19 +445,19 @@
             <div class="g2">
               <div>
                 <label for="bx">X (px)</label>
-                <input type="number" id="bx" min="0" oninput="applyPos()">
+                <input type="number" id="bx" min="0">
               </div>
               <div>
                 <label for="by">Y (px)</label>
-                <input type="number" id="by" min="0" oninput="applyPos()">
+                <input type="number" id="by" min="0">
               </div>
               <div>
                 <label for="bw">Largeur</label>
-                <input type="number" id="bw" min="80" oninput="applySz()">
+                <input type="number" id="bw" min="80">
               </div>
               <div>
                 <label for="bh">Hauteur</label>
-                <input type="number" id="bh" min="28" oninput="applySz()">
+                <input type="number" id="bh" min="28">
               </div>
             </div>
           </div>
@@ -470,11 +466,8 @@
             <h3 class="ps-title">Typographie</h3>
             <label for="bfontsize">Taille de police (pt)</label>
             <div class="d-flex gap-6 items-center">
-              <input type="number" id="bfontsize" min="6" max="96" step="1"
-                oninput="bprop('fontSize', this.value ? +this.value : undefined); rr(sid)">
-              <button class="sb" type="button"
-                onclick="bprop('fontSize', undefined); document.getElementById('bfontsize').value=''; rr(sid)"
-                title="Remettre la taille par défaut">↺ Défaut</button>
+              <input type="number" id="bfontsize" min="6" max="96" step="1">
+              <button class="sb" type="button" title="Remettre la taille par défaut">↺ Défaut</button>
             </div>
             <p class="field-hint">Vide = taille par défaut du type.</p>
           </div>
@@ -482,21 +475,21 @@
           <div class="ps">
             <h3 class="ps-title">Alignement</h3>
             <div class="brow" id="lbl-align" role="group" aria-label="Alignement rapide">
-              <button class="sb" type="button" onclick="qa('l')">⇤ Gauche</button>
-              <button class="sb" type="button" onclick="qa('c')">⊙ Centre</button>
-              <button class="sb" type="button" onclick="qa('r')">⇥ Droite</button>
-              <button class="sb" type="button" onclick="qa('t')">⇡ Haut</button>
+              <button class="sb" type="button">⇤ Gauche</button>
+              <button class="sb" type="button">⊙ Centre</button>
+              <button class="sb" type="button">⇥ Droite</button>
+              <button class="sb" type="button">⇡ Haut</button>
             </div>
           </div>
 
           <div class="ps">
             <h3 class="ps-title">Ordre de lecture PDF/UA</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button" onclick="chOrd(-1)">↑ Avancer</button>
-              <button class="sb" type="button" onclick="chOrd(1)">↓ Reculer</button>
+              <button class="sb" type="button">↑ Avancer</button>
+              <button class="sb" type="button">↓ Reculer</button>
             </div>
             <p id="oi" class="muted mt-5" aria-live="polite" aria-atomic="true"></p>
-            <button class="sb sb-full-mt" type="button" onclick="syncOrderToPosition()"
+            <button class="sb sb-full-mt" type="button" id="btn-sync-order"
               title="Sync ordre ↔ position : recalcule selon la position (haut→bas)">
               <span aria-hidden="true">⟳</span> Sync ordre ↔ position
             </button>
@@ -505,8 +498,8 @@
           <div class="ps">
             <h3 class="ps-title">Calque (superposition)</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button" onclick="chZ(1)">↑ Au-dessus</button>
-              <button class="sb" type="button" onclick="chZ(-1)">↓ En dessous</button>
+              <button class="sb" type="button">↑ Au-dessus</button>
+              <button class="sb" type="button">↓ En dessous</button>
             </div>
             <p id="z-level-lbl" class="muted mt-5" aria-live="polite">Normal (0)</p>
             <p class="field-hint">N'affecte pas l'ordre de lecture PDF.</p>
@@ -516,28 +509,26 @@
           <div class="ps hidden" id="bp-alt">
             <h3 class="ps-title">Image</h3>
             <label for="bav">Texte alternatif <span aria-label="obligatoire">*</span></label>
-            <textarea id="bav" placeholder="Description de l'image…" aria-required="true" aria-describedby="bav-hint"
-              oninput="bprop('alt',this.value)"></textarea>
+            <textarea id="bav" placeholder="Description de l'image…" aria-required="true"
+              aria-describedby="bav-hint"></textarea>
             <p id="bav-hint" class="field-hint">Laisser vide pour image décorative.</p>
             <label for="bimglink" class="mt-8">URL du lien <span class="field-hint-inline">(optionnel)</span></label>
-            <input id="bimglink" type="url" placeholder="https://…" oninput="bprop('imgLinkUrl',this.value);rr(sid)"
-              aria-describedby="bimglink-hint">
+            <input id="bimglink" type="url" placeholder="https://…" aria-describedby="bimglink-hint">
             <p id="bimglink-hint" class="field-hint">Image cliquable (Link › Figure).</p>
           </div>
 
           <div class="ps hidden" id="bp-lnk">
             <h3 class="ps-title">Lien hypertexte</h3>
             <label for="blt">Texte du lien</label>
-            <input id="blt" type="text" placeholder="Cliquez ici" oninput="bprop('linkText',this.value)">
+            <input id="blt" type="text" placeholder="Cliquez ici">
             <label for="blu">URL</label>
-            <input id="blu" type="url" placeholder="https://…" oninput="bprop('linkUrl',this.value)">
+            <input id="blu" type="url" placeholder="https://…">
           </div>
 
           <div class="ps hidden" id="bp-indent">
             <h3 class="ps-title">Retrait de première ligne</h3>
             <label for="btextindent">Retrait — <span id="btextindent-val">0 pt</span></label>
             <input type="range" id="btextindent" min="0" max="80" step="4" value="0"
-              oninput="document.getElementById('btextindent-val').textContent=this.value+' pt';bprop('textIndent',parseInt(this.value));rr(sid)"
               aria-describedby="btextindent-hint">
             <p id="btextindent-hint" class="field-hint">Décale la première ligne du paragraphe vers la droite.</p>
           </div>
@@ -545,7 +536,7 @@
           <div class="ps hidden" id="bp-list">
             <h3 class="ps-title">Liste</h3>
             <div class="ck-row">
-              <input type="checkbox" id="blistnobullet" onchange="bprop('listNoBullet', this.checked); rr(sid);">
+              <input type="checkbox" id="blistnobullet">
               <label for="blistnobullet">Masquer les puces / numéros</label>
             </div>
           </div>
@@ -553,7 +544,7 @@
           <div class="ps hidden" id="bp-hlv">
             <h3 class="ps-title">Titre</h3>
             <label for="bhlv">Niveau de titre</label>
-            <select id="bhlv" onchange="bprop('type',this.value);rr(sid)">
+            <select id="bhlv">
               <option value="h1">H1 — Titre principal</option>
               <option value="h2">H2 — Titre de section</option>
               <option value="h3">H3 — Titre de sous-section</option>
@@ -566,8 +557,7 @@
           <div class="ps hidden" id="bp-bookmark">
             <h3 class="ps-title">Signet PDF</h3>
             <div class="ck-row">
-              <input type="checkbox" id="bbookmark" onchange="bprop('bookmark', this.checked)"
-                aria-describedby="bbookmark-hint">
+              <input type="checkbox" id="bbookmark" aria-describedby="bbookmark-hint">
               <label for="bbookmark">Inclure dans les signets</label>
             </div>
             <p id="bbookmark-hint" class="field-hint">Visible dans le panneau de navigation du lecteur PDF.</p>
@@ -576,46 +566,44 @@
           <div class="ps hidden" id="bp-quote">
             <h3 class="ps-title">Citation</h3>
             <label for="bqsrc">Source / auteur</label>
-            <input id="bqsrc" type="text" placeholder="— Auteur, Œuvre" oninput="bprop('quoteSource',this.value)">
+            <input id="bqsrc" type="text" placeholder="— Auteur, Œuvre">
           </div>
 
           <div class="ps hidden" id="bp-note">
             <h3 class="ps-title">Note de bas de page</h3>
             <label for="bnref">Numéro / référence</label>
-            <input id="bnref" type="text" placeholder="1" oninput="bprop('noteRef',this.value)">
+            <input id="bnref" type="text" placeholder="1">
           </div>
 
           <div class="ps hidden" id="bp-form">
             <h3 class="ps-title">Champ de formulaire</h3>
             <label for="bform-label">Libellé <span aria-label="obligatoire">*</span></label>
-            <input id="bform-label" type="text" placeholder="Libellé du champ"
-              oninput="bprop('formLabel',this.value);rr(sid)" aria-required="true" aria-describedby="bform-label-hint">
+            <input id="bform-label" type="text" placeholder="Libellé du champ" aria-required="true"
+              aria-describedby="bform-label-hint">
             <p id="bform-label-hint" class="field-hint">Visible et lu par les lecteurs d'écran (PDF/UA §7.18).</p>
 
             <div id="bform-row-placeholder">
               <label for="bform-placeholder">Texte indicatif</label>
-              <input id="bform-placeholder" type="text" placeholder="Saisir…"
-                oninput="bprop('formPlaceholder',this.value);rr(sid)">
+              <input id="bform-placeholder" type="text" placeholder="Saisir…">
             </div>
             <div id="bform-row-default">
               <label for="bform-default">Valeur par défaut</label>
-              <input id="bform-default" type="text" oninput="bprop('formDefaultValue',this.value);rr(sid)">
+              <input id="bform-default" type="text">
             </div>
             <div id="bform-row-options">
               <label for="bform-options">Options <span class="field-hint-inline">(une par ligne)</span></label>
-              <textarea id="bform-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"
-                oninput="bprop('formOptions',this.value);rr(sid)"></textarea>
+              <textarea id="bform-options" rows="4" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
             </div>
             <div id="bform-row-checked" class="ck-row">
-              <input type="checkbox" id="bform-checked" onchange="bprop('formChecked',this.checked);rr(sid)">
+              <input type="checkbox" id="bform-checked">
               <label for="bform-checked">Coché par défaut</label>
             </div>
             <div id="bform-row-required" class="ck-row">
-              <input type="checkbox" id="bform-required" onchange="bprop('formRequired',this.checked);rr(sid)">
+              <input type="checkbox" id="bform-required">
               <label for="bform-required">Champ obligatoire</label>
             </div>
             <div id="bform-row-readonly" class="ck-row">
-              <input type="checkbox" id="bform-readonly" onchange="bprop('formReadonly',this.checked);rr(sid)">
+              <input type="checkbox" id="bform-readonly">
               <label for="bform-readonly">Lecture seule</label>
             </div>
             <p class="field-hint mt-6">Génère une annotation AcroForm conforme PDF/UA.</p>
@@ -624,7 +612,7 @@
           <div class="ps hidden" id="bp-aside">
             <h3 class="ps-title">Encadré</h3>
             <label for="basidestyle">Style</label>
-            <select id="basidestyle" onchange="bprop('asideStyle',this.value);rr(sid)">
+            <select id="basidestyle">
               <option value="info">Information (bleu)</option>
               <option value="warn">Avertissement (orange)</option>
               <option value="tip">Astuce (vert)</option>
@@ -635,7 +623,7 @@
           <div class="ps hidden" id="bp-shape">
             <h3 class="ps-title">Forme décorative</h3>
             <label for="bshapekind">Type</label>
-            <select id="bshapekind" onchange="bprop('shapeKind',this.value);rr(sid)">
+            <select id="bshapekind">
               <option value="circle">● Cercle</option>
               <option value="halfcircle">◑ Demi-cercle</option>
               <option value="star">★ Étoile 5 branches</option>
@@ -650,25 +638,22 @@
             <label for="bshapecolor">Couleur de remplissage</label>
             <div id="bshapecolor-wrap"></div>
             <div class="ck-row ck-row-spaced">
-              <input type="checkbox" id="bshapetransparent" onchange="bprop('shapeFillNone',this.checked);rr(sid)">
+              <input type="checkbox" id="bshapetransparent">
               <label for="bshapetransparent">Sans remplissage</label>
             </div>
             <label for="bshapeopacity">Opacité — <span id="bshapeopacity-val">100%</span></label>
-            <input type="range" id="bshapeopacity" min="0.05" max="1" step="0.05" value="1"
-              oninput="document.getElementById('bshapeopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)">
+            <input type="range" id="bshapeopacity" min="0.05" max="1" step="0.05" value="1">
             <label for="bshaperotation">Rotation — <span id="bshaperotation-val">0°</span></label>
-            <input type="range" id="bshaperotation" min="0" max="359" step="1" value="0"
-              oninput="document.getElementById('bshaperotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)">
+            <input type="range" id="bshaperotation" min="0" max="359" step="1" value="0">
             <p class="ps-subtitle">Bordure</p>
             <div class="ck-row">
-              <input type="checkbox" id="bshapeborder" onchange="bprop('shapeBorderEnabled',this.checked);rr(sid)">
+              <input type="checkbox" id="bshapeborder">
               <label for="bshapeborder">Afficher la bordure</label>
             </div>
             <label for="bshapebordercolor">Couleur de la bordure</label>
             <div id="bshapebordercolor-wrap"></div>
             <label for="bshapeborderwidth">Épaisseur — <span id="bshapeborderwidth-val">2px</span></label>
-            <input type="range" id="bshapeborderwidth" min="1" max="20" step="1" value="2"
-              oninput="document.getElementById('bshapeborderwidth-val').textContent=this.value+'px';bprop('shapeBorderWidth',parseInt(this.value));rr(sid)">
+            <input type="range" id="bshapeborderwidth" min="1" max="20" step="1" value="2">
             <p class="field-hint">Exportée comme artefact décoratif (non lu par les AT).</p>
           </div>
 
@@ -677,45 +662,42 @@
             <label for="bffcolor">Couleur</label>
             <div id="bffcolor-wrap"></div>
             <label for="bffopacity">Opacité — <span id="bffopacity-val">100%</span></label>
-            <input type="range" id="bffopacity" min="0.05" max="1" step="0.05" value="1"
-              oninput="document.getElementById('bffopacity-val').textContent=Math.round(this.value*100)+'%';bprop('shapeOpacity',parseFloat(this.value));rr(sid)">
+            <input type="range" id="bffopacity" min="0.05" max="1" step="0.05" value="1">
             <label for="bffrotation">Rotation — <span id="bffrotation-val">0°</span></label>
-            <input type="range" id="bffrotation" min="0" max="359" step="1" value="0"
-              oninput="document.getElementById('bffrotation-val').textContent=this.value+'°';bprop('shapeRotation',parseInt(this.value));rr(sid)">
+            <input type="range" id="bffrotation" min="0" max="359" step="1" value="0">
             <label for="bffstroke">Épaisseur du tracé — <span id="bffstroke-val">2px</span></label>
-            <input type="range" id="bffstroke" min="1" max="20" step="1" value="2"
-              oninput="document.getElementById('bffstroke-val').textContent=this.value+'px';bprop('strokeWidth',parseInt(this.value));rr(sid)">
+            <input type="range" id="bffstroke" min="1" max="20" step="1" value="2">
             <div class="bp-ff-row">
               <div class="ck-row">
-                <input type="checkbox" id="bfffill" onchange="bprop('shapeFilled',this.checked);rr(sid)">
+                <input type="checkbox" id="bfffill">
                 <label for="bfffill">Remplir</label>
               </div>
               <div class="ck-row">
-                <input type="checkbox" id="bffclosed" onchange="bprop('pathClosed',this.checked);rr(sid)" checked>
+                <input type="checkbox" id="bffclosed" checked>
                 <label for="bffclosed">Fermer</label>
               </div>
             </div>
-            <button type="button" onclick="editFreeformPath(sid)" class="sb sb-full">✏ Retracer</button>
+            <button type="button" class="sb sb-full">✏ Retracer</button>
           </div>
 
           <div class="ps hidden" id="bp-chart">
             <h3 class="ps-title">Graphique</h3>
             <label for="bchartkind">Type</label>
-            <select id="bchartkind" onchange="bprop('chartKind',this.value);rr(sid)">
+            <select id="bchartkind">
               <option value="pie">◕ Camembert</option>
               <option value="donut">◎ Anneau</option>
               <option value="bar">▬ Barres</option>
               <option value="line">↗ Courbes</option>
             </select>
             <label for="bcharttitle">Titre</label>
-            <input id="bcharttitle" type="text" placeholder="Titre…" oninput="bprop('chartTitle',this.value);rr(sid)">
+            <input id="bcharttitle" type="text" placeholder="Titre…">
             <label for="bchartalt">Texte alternatif <span aria-label="obligatoire">*</span></label>
-            <textarea id="bchartalt" placeholder="Description pour les lecteurs d'écran…" aria-required="true"
-              oninput="bprop('alt',this.value)"></textarea>
+            <textarea id="bchartalt" placeholder="Description pour les lecteurs d'écran…"
+              aria-required="true"></textarea>
             <p class="field-hint">Requis PDF/UA.</p>
             <label>Données <span class="field-hint-inline">(Étiquette, Valeur par ligne)</span></label>
             <div id="bchartrows"></div>
-            <button type="button" id="bchartadd" class="sb" onclick="chartAddRow()">+
+            <button type="button" id="bchartadd" class="sb">+
               Ajouter une série</button>
           </div>
 
@@ -733,7 +715,7 @@
         <div class="ps">
           <h3 class="ps-title">Numérotation des pages</h3>
           <div class="ck-row">
-            <input type="checkbox" id="pg-enabled" onchange="updUA()">
+            <input type="checkbox" id="pg-enabled">
             <label for="pg-enabled">Activer la pagination</label>
           </div>
           <div class="ck-row">
@@ -761,7 +743,7 @@
         <div class="ps">
           <h3 class="ps-title">Table des matières</h3>
           <div class="ck-row">
-            <input type="checkbox" id="toc-enabled" onchange="updUA()">
+            <input type="checkbox" id="toc-enabled">
             <label for="toc-enabled">Générer une TdM</label>
           </div>
           <label for="toc-title">Titre de la TdM</label>
@@ -785,158 +767,57 @@
 
   </div><!-- /#app -->
 
-
-  <!-- ════════════════════════════════════════
-       MODALE PDF/UA
-  ════════════════════════════════════════ -->
-  <div id="ua-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="ua-modal-title">
+  <dialog id="ua-modal" class="modal" aria-labelledby="ua-modal-title">
     <div class="ua-modal-inner">
       <div class="ua-modal-hd">
         <h2 id="ua-modal-title">Conformité PDF/UA</h2>
-        <button class="ua-modal-close" type="button" aria-label="Fermer le panneau PDF/UA"
-          onclick="closeModal('ua-modal')">
+        <button class="ua-modal-close" type="button" data-close-modal aria-label="Fermer le panneau PDF/UA">
           <span aria-hidden="true">×</span>
         </button>
       </div>
       <div class="ua-modal-body">
-
         <h3>Checklist</h3>
         <div id="ual" role="status" aria-live="polite" aria-atomic="false" aria-label="Checklist de conformité PDF/UA">
         </div>
 
         <div class="ua-modal-section">
           <h3>Arbre de structure</h3>
-          <p class="muted ua-tree-hint">Ordre de lecture logique.
-            <kbd>Entrée</kbd>
-            pour sélectionner.
-          </p>
+          <p class="muted ua-tree-hint">Ordre de lecture logique. <kbd>Entrée</kbd> pour sélectionner.</p>
           <div id="tagt" role="tree" aria-label="Arbre des tags PDF/UA"></div>
         </div>
 
         <div class="ua-modal-section">
           <h3>À propos</h3>
-          <p class="muted ua-about">PDF/UA (ISO 14289) requiert titre, langue, tags structurés, textes
-            alternatifs et ordre de lecture logique.</p>
+          <p class="muted ua-about">PDF/UA (ISO 14289) requiert titre, langue, tags structurés, textes alternatifs et
+            ordre de lecture logique.</p>
         </div>
-
       </div>
     </div>
-  </div>
+  </dialog>
 
-  <!-- ════════════════════════════════════════
-       MODAL PRÉVISUALISATION
-  ════════════════════════════════════════ -->
-  <div id="prev-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="prev-modal-title"
-    aria-describedby="prev-modal-desc" onclick="closeModal('prev-modal')">
+  <dialog id="prev-modal" class="modal" aria-labelledby="prev-modal-title" aria-describedby="prev-modal-desc">
     <div class="prev-inner">
       <div class="prev-hd">
         <h2 id="prev-modal-title" class="prev-modal-title">Prévisualisation PDF</h2>
-        <button id="prev-close-btn" class="prev-close" type="button" onclick="closePv()"
-          aria-label="Fermer la prévisualisation (Échap)">
+        <button class="prev-close" type="button" data-close-modal aria-label="Fermer la prévisualisation">
           <span aria-hidden="true">×</span>
         </button>
       </div>
-      <p id="prev-modal-desc" class="sr-only">
-        Prévisualisation du document PDF généré. Appuyer sur Échap pour fermer.
+      <p id="prev-modal-desc" class="sr-only">Prévisualisation du document PDF généré. Appuyer sur Échap pour fermer.
       </p>
-      <iframe id="pif" title="Prévisualisation PDF" aria-label="Document PDF en prévisualisation"></iframe>
+      <iframe id="pif" title="Prévisualisation PDF" aria-label="Prévisualisation PDF"></iframe>
     </div>
-  </div>
+  </dialog>
 
   <!-- Toast notifications -->
   <div id="toast" role="status" aria-live="polite" aria-atomic="true" aria-relevant="additions text"></div>
 
   <!-- Overlay fond sidebar mobile -->
-  <div id="sidebar-overlay" aria-hidden="true" onclick="toggleMobileSidebar(false)"></div>
-
-  <!-- Patch badge topbar UA — branché après chargement du bundle -->
-  <script>
-    /* Met à jour le badge de statut PDF/UA dans la topbar.
-       Appelé depuis updUA() dans blocks.js après chaque vérification. */
-    /* Met à jour le H2 sr-only du panneau selon l'onglet actif */
-    const _origSwitchTab = window.switchTab;
-    document.addEventListener('DOMContentLoaded', () => {
-      const patchST = setInterval(() => {
-        if (
-          typeof window.switchTab === 'function' &&
-          window.switchTab !== window._patchedST
-        ) {
-          const _orig = window.switchTab;
-
-          window.switchTab = function (name) {
-            _orig(name);
-
-            const labels = {
-              meta: 'Document',
-              bloc: 'Bloc sélectionné',
-              ua: 'PDF/UA',
-              export: 'Paramètres'
-            };
-
-            const h2 = document.getElementById('panel-heading');
-            if (h2) {
-              h2.textContent = 'Panneau — ' + (labels[name] || name);
-            }
-          };
-
-          window._patchedST = window.switchTab;
-          clearInterval(patchST);
-        }
-      }, 100);
-    });
-
-    /* ── Mobile : toggle sidebar drawer ── */
-    window.toggleMobileSidebar = function (forceState) {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      const btn = document.getElementById('tb-hamburger');
-      const isOpen = sidebar.classList.contains('mobile-open');
-      const open = forceState !== undefined ? forceState : !isOpen;
-      sidebar.classList.toggle('mobile-open', open);
-      overlay.classList.toggle('visible', open);
-      btn.setAttribute('aria-expanded', String(open));
-      if (open) {
-        // focus premier élément de la sidebar
-        const first = sidebar.querySelector('.bsrc');
-        if (first) first.focus();
-      }
-    };
-
-    /* Fermer drawer au clic en dehors (overlay gère déjà ce cas) */
-
-    /* Échap ferme le drawer sidebar */
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        toggleMobileSidebar(false);
-      }
-    });
-
-    window._patchUABadge = function () {
-      const badge = document.getElementById('tb-ua-status');
-      const label = document.getElementById('tb-ua-label');
-      if (!badge || !label) return;
-
-      const errs = document.querySelectorAll('#ual .ua-err').length;
-      const warns = document.querySelectorAll('#ual .ua-warn').length;
-
-      // Réinitialisation des classes
-      badge.classList.remove('ok', 'err');
-
-      if (errs === 0 && warns === 0) {
-        const items = document.querySelectorAll('#ual .ua-item').length;
-        if (items === 0) {
-          badge.className = '';
-          label.textContent = 'PDF/UA';
-        } else {
-          badge.classList.add('ok');
-        }
-      } else {
-        badge.classList.add('err');
-      }
-    };
-  </script>
+  <div id="sidebar-overlay" aria-hidden="true"></div>
 
   <script defer src="dist/editor.min.js"></script>
+
+
 
 </body>
 

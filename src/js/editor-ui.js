@@ -927,67 +927,17 @@ function attachRot(handle, el, b) {
 }
 
 
-/* ── MODALE — motif ARIA dialog (WAI-ARIA 1.2 §3.15) ── */
-const modal = document.getElementById('prev-modal');
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-let prevOpener = null;
-
+/* ── MODALE PRÉVISUALISATION ── */
 function openPv() {
-  prevOpener = document.activeElement;
-  modal.setAttribute('aria-hidden', 'false');
-  document.getElementById('app').setAttribute('aria-hidden', 'true');
-  requestAnimationFrame(() => {
-    const f = [...modal.querySelectorAll(FOCUSABLE)].filter(e => !e.disabled && e.offsetParent !== null);
-    if (f.length) f[0].focus();
-  });
+  openModal('prev-modal');
 }
 function closePv() {
-  modal.setAttribute('aria-hidden', 'true');
-  document.getElementById('app').removeAttribute('aria-hidden');
-  prevOpener?.focus(); prevOpener = null;
+  closeModal('prev-modal');
   setTimeout(() => { document.getElementById('pif').src = 'about:blank'; }, 300);
 }
 
-modal.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { e.preventDefault(); closePv(); return; }
-  if (e.key !== 'Tab') return;
-  const focusables = [...modal.querySelectorAll(FOCUSABLE)].filter(el => !el.disabled && el.offsetParent !== null);
-  if (!focusables.length) { e.preventDefault(); return; }
-  const [first, last] = [focusables[0], focusables[focusables.length - 1]];
-  if (e.shiftKey ? document.activeElement === first : document.activeElement === last) {
-    e.preventDefault(); (e.shiftKey ? last : first).focus();
-  }
-});
-
-/* Clic sur l'arrière-plan = fermeture */
-modal.addEventListener('click', e => { if (e.target === modal) closePv(); });
-
 /* ── CLAVIER GLOBAL ── */
-document.addEventListener('keydown', e => {
-  /* Ne pas interférer quand la modale est ouverte (aria-hidden="false") */
-  if (modal.getAttribute('aria-hidden') !== 'true') return;
-
-  const active = document.activeElement;
-  const isEditing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
-    active.tagName === 'SELECT' || active.isContentEditable);
-
-  /* Ctrl+Z / ⌘Z — annulation (autorisé même en édition) */
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-    /* Dans un bloc rich, laisser le navigateur gérer son propre undo natif */
-    if (isEditing && active.isContentEditable) return;
-    e.preventDefault();
-    undoLast();
-    return;
-  }
-
-  if ((e.key === 'Delete' || e.key === 'Backspace') && sid && !isEditing) {
-    e.preventDefault(); rmB(sid);
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === 'd' && sid && !isEditing) {
-    e.preventDefault(); dupB(sid);
-  }
-  if (e.key === 'Escape' && sid) { desel(); }
-});
+/* Géré dans le listener unifié ci-dessous avec openModal/closeModal. */
 
 /* Clic sur le fond de la page = désélection */
 pageWrap.addEventListener('mousedown', e => { if (e.target === pageWrap) desel(); });
@@ -1009,97 +959,99 @@ function announce(msg) {
     }, 4000);
   });
 }
-
-/* ── GESTION GÉNÉRIQUE DES MODALES (Ouverture, Fermeture, Trap, Échap) ── */
-/* ── GESTION GÉNÉRIQUE DES MODALES (Avec gestion de la pile de focus) ── */
-const focusStack = []; // Pile pour retenir le focus de chaque modale ouverte
+/* ── GESTION GÉNÉRIQUE DES MODALES (<dialog>) ── */
+/* ── GESTION GÉNÉRIQUE DES MODALES (<dialog>) ── */
 
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (!modal) return;
-
-  // On sauvegarde l'élément qui avait le focus AVANT d'ouvrir cette modale
-  focusStack.push(document.activeElement);
-
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-  document.getElementById('app').setAttribute('aria-hidden', 'true');
-
-  const first = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-  if (first) first.focus();
+  if (modal && !modal.open) {
+    modal.showModal();
+    document.body.style.overflow = 'hidden'; // Empêche le scroll du body en arrière-plan
+  }
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (!modal) return;
-
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-
-  // Si c'est la dernière modale, on réactive l'app principale
-  if (!document.querySelector('.modal.open')) {
-    document.getElementById('app').removeAttribute('aria-hidden');
+  if (modal && modal.open) {
+    modal.close();
+    // Restaure le scroll si plus aucune modale n'est ouverte
+    if (!document.querySelector('dialog[open]')) {
+      document.body.style.overflow = '';
+    }
   }
-
-  // On récupère le dernier élément qui avait le focus pour cette modale précise
-  const previousFocus = focusStack.pop();
-  if (previousFocus) previousFocus.focus();
 }
 
-// Global : Écouteurs clavier (Modales, Éditeur, Tableaux...)
+/* Écouteur global UNIQUE pour l'ouverture et la fermeture des modales */
+document.addEventListener('click', e => {
+  // 1. Clic sur un bouton d'ouverture
+  const openBtn = e.target.closest('[data-open-modal]');
+  if (openBtn) {
+    const modalId = openBtn.getAttribute('data-open-modal');
+    openModal(modalId);
+    return; // On arrête l'exécution ici
+  }
+
+  // 2. Clic sur un bouton de fermeture
+  const closeBtn = e.target.closest('[data-close-modal]');
+  if (closeBtn) {
+    const modal = closeBtn.closest('dialog');
+    if (modal) closeModal(modal.id);
+    return; // On arrête l'exécution ici
+  }
+
+  // 3. Clic sur le fond grisé (backdrop) pour fermer
+  if (e.target.tagName === 'DIALOG' && e.target.open) {
+    closeModal(e.target.id);
+  }
+});
+
+/* La fermeture par touche "Échap" est gérée nativement par le navigateur.
+   La touche "Tab" est nativement contrainte à l'intérieur du <dialog>. */
+
+/* ── CLAVIER GLOBAL UNIFIÉ ────────────────────────────────────────────── */
 document.addEventListener('keydown', e => {
+  const active = document.activeElement;
+  const isEditing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
+    active.tagName === 'SELECT' || active.isContentEditable);
 
-  // ── 1. Raccourcis de l'éditeur (actifs quand on tape dans le canvas) ──
+  /* 1. Ctrl+Delete/Backspace dans un tableau : supprimer la ligne courante */
   if (e.ctrlKey && (e.key === 'Delete' || e.key === 'Backspace')) {
-    const activeElement = document.activeElement;
-    if (activeElement && activeElement.closest('.fb-table-el')) {
+    if (active && active.closest('.fb-table-el')) {
       e.preventDefault();
-
-      const currentRow = activeElement.closest('tr');
-      const tbody = activeElement.closest('tbody');
-
+      const currentRow = active.closest('tr');
+      const tbody = active.closest('tbody');
       if (currentRow && tbody) {
         if (tbody.querySelectorAll('tr').length <= 1) {
           if (typeof announce === 'function') announce('⚠ Impossible de supprimer la dernière ligne du tableau.');
           return;
         }
         currentRow.remove();
-        if (typeof window.updTree === 'function') window.updTree();
-        else if (typeof window.refreshBlockData === 'function') window.refreshBlockData();
+        if (typeof updTree === 'function') updTree();
       }
-      return; // On arrête l'exécution ici car on a traité le raccourci
+      return;
     }
   }
 
-  // ── 2. Gestion des Modales (Échap, Focus Trap) ──
-  const openModal = document.querySelector('.modal.open');
-  if (openModal) {
-    // Gestion de Échap
-    if (e.key === 'Escape') {
-      closeModal(openModal.id);
+  /* 2. Raccourcis éditeur (uniquement si aucune modale n'est ouverte) */
+  if (!document.querySelector('dialog[open]')) {
+    /* Ctrl+Z / ⌘Z */
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      if (isEditing && active.isContentEditable) return;
+      e.preventDefault();
+      if (typeof undoLast === 'function') undoLast();
       return;
     }
 
-    // Focus Trap générique
-    if (e.key === 'Tab') {
-      const focusables = openModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (focusables.length === 0) return;
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        last.focus();
-        e.preventDefault();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        first.focus();
-        e.preventDefault();
-      }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && typeof sid !== 'undefined' && sid && !isEditing) {
+      e.preventDefault();
+      if (typeof rmB === 'function') rmB(sid);
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && typeof sid !== 'undefined' && sid && !isEditing) {
+      e.preventDefault();
+      if (typeof dupB === 'function') dupB(sid);
+    }
+    if (e.key === 'Escape' && typeof sid !== 'undefined' && sid) {
+      if (typeof desel === 'function') desel();
     }
   }
-});
-
-// Fermeture au clic sur le fond (backdrop)
-document.querySelectorAll('.modal').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
 });
