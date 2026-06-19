@@ -94,8 +94,8 @@
       <div class="tb-spacer"></div>
 
       <!-- Badge statut conformité — ouvre la modale PDF/UA -->
-      <button id="tb-ua-status" type="button" title="Afficher le panneau PDF/UA"
-        aria-label="Afficher le panneau PDF/UA" data-open-modal="ua-modal">
+      <button id="tb-ua-status" type="button" title="Afficher le panneau PDF/UA" aria-label="Afficher le panneau PDF/UA"
+        data-open-modal="ua-modal">
         <span id="tb-ua-label">PDF/UA</span>
       </button>
 
@@ -380,7 +380,9 @@
 
         <div class="ps">
           <h3 class="ps-title">Identification</h3>
-
+          <p class="field-hint" id="mandatory-legend-form">
+            Les champs signalés par un astérisque (<span aria-hidden="true">*</span>) sont obligatoires.
+          </p>
           <label for="m-title">Titre <span aria-label="obligatoire">*</span></label>
           <input id="m-title" type="text" placeholder="Mon document" autocomplete="off" aria-required="true"
             aria-describedby="m-title-hint">
@@ -412,6 +414,7 @@
           <h3 class="ps-title">Grille magnétique</h3>
           <div id="grid-panel">
             <fieldset>
+              <legend class="sr-only">Options d'affichage et de magnétisme de la grille</legend>
               <div class="ck-row">
                 <input type="checkbox" id="grid-snap">
                 <label for="grid-snap">Aimanter sur la grille</label>
@@ -477,18 +480,18 @@
           <div class="ps">
             <h3 class="ps-title">Alignement</h3>
             <div class="brow" id="lbl-align" role="group" aria-label="Alignement rapide">
-              <button class="sb" type="button">⇤ Gauche</button>
-              <button class="sb" type="button">⊙ Centre</button>
-              <button class="sb" type="button">⇥ Droite</button>
-              <button class="sb" type="button">⇡ Haut</button>
+              <button class="sb" type="button"><span aria-hidden="true">⇤</span> Gauche</button>
+              <button class="sb" type="button"><span aria-hidden="true">⊙</span> Centre</button>
+              <button class="sb" type="button"><span aria-hidden="true">⇥</span> Droite</button>
+              <button class="sb" type="button"><span aria-hidden="true">⇡</span> Haut</button>
             </div>
           </div>
 
           <div class="ps">
             <h3 class="ps-title">Ordre de lecture PDF/UA</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button">↑ Avancer</button>
-              <button class="sb" type="button">↓ Reculer</button>
+              <button class="sb" type="button"><span aria-hidden="true">↑</span> Avancer</button>
+              <button class="sb" type="button"><span aria-hidden="true">↓</span> Reculer</button>
             </div>
             <p id="oi" class="muted mt-5" aria-live="polite" aria-atomic="true"></p>
             <button class="sb sb-full-mt" type="button" id="btn-sync-order"
@@ -500,8 +503,8 @@
           <div class="ps">
             <h3 class="ps-title">Calque (superposition)</h3>
             <div class="brow" role="group">
-              <button class="sb" type="button">↑ Au-dessus</button>
-              <button class="sb" type="button">↓ En dessous</button>
+              <button class="sb" type="button"><span aria-hidden="true">↑</span> Au-dessus</button>
+              <button class="sb" type="button"><span aria-hidden="true">↓</span> En dessous</button>
             </div>
             <p id="z-level-lbl" class="muted mt-5" aria-live="polite">Normal (0)</p>
             <p class="field-hint">N'affecte pas l'ordre de lecture PDF.</p>
@@ -560,7 +563,7 @@
             <h3 class="ps-title">Signet PDF</h3>
             <div class="ck-row">
               <input type="checkbox" id="bbookmark" aria-describedby="bbookmark-hint">
-              <label for="bbookmark">Inclure dans les signets</label>
+              <label for="bbookmark"><span aria-hidden="true">✓</span> Inclure dans les signets</label>
             </div>
             <p id="bbookmark-hint" class="field-hint">Visible dans le panneau de navigation du lecteur PDF.</p>
           </div>
@@ -641,7 +644,7 @@
             <div id="bshapecolor-wrap"></div>
             <div class="ck-row ck-row-spaced">
               <input type="checkbox" id="bshapetransparent">
-              <label for="bshapetransparent">Sans remplissage</label>
+              <label for="bshapetransparent"><span aria-hidden="true">✓</span> Sans remplissage</label>
             </div>
             <label for="bshapeopacity">Opacité — <span id="bshapeopacity-val">100%</span></label>
             <input type="range" id="bshapeopacity" min="0.05" max="1" step="0.05" value="1">
@@ -650,7 +653,7 @@
             <p class="ps-subtitle">Bordure</p>
             <div class="ck-row">
               <input type="checkbox" id="bshapeborder">
-              <label for="bshapeborder">Afficher la bordure</label>
+              <label for="bshapeborder"><span aria-hidden="true">✓</span> Afficher la bordure</label>
             </div>
             <label for="bshapebordercolor">Couleur de la bordure</label>
             <div id="bshapebordercolor-wrap"></div>
@@ -672,11 +675,11 @@
             <div class="bp-ff-row">
               <div class="ck-row">
                 <input type="checkbox" id="bfffill">
-                <label for="bfffill">Remplir</label>
+                <label for="bfffill"><span aria-hidden="true">✓</span> Remplir</label>
               </div>
               <div class="ck-row">
                 <input type="checkbox" id="bffclosed" checked>
-                <label for="bffclosed">Fermer</label>
+                <label for="bffclosed"><span aria-hidden="true">✓</span> Fermer</label>
               </div>
             </div>
             <button type="button" class="sb sb-full">✏ Retracer</button>
@@ -718,11 +721,11 @@
           <h3 class="ps-title">Numérotation des pages</h3>
           <div class="ck-row">
             <input type="checkbox" id="pg-enabled">
-            <label for="pg-enabled">Activer la pagination</label>
+            <label for="pg-enabled"><span aria-hidden="true">✓</span> Activer la pagination</label>
           </div>
           <div class="ck-row">
             <input type="checkbox" id="pg-skip-first" checked>
-            <label for="pg-skip-first">Masquer sur la 1ʳᵉ page</label>
+            <label for="pg-skip-first"><span aria-hidden="true">✓</span> Masquer sur la 1<sup>ère</sup> page</label>
           </div>
           <label for="pg-position">Position</label>
           <select id="pg-position">
@@ -746,7 +749,7 @@
           <h3 class="ps-title">Table des matières</h3>
           <div class="ck-row">
             <input type="checkbox" id="toc-enabled">
-            <label for="toc-enabled">Générer une TdM</label>
+            <label for="toc-enabled"><span aria-hidden="true">✓</span> Générer une TdM</label>
           </div>
           <label for="toc-title">Titre de la TdM</label>
           <input id="toc-title" type="text" placeholder="Table des matières">
@@ -758,7 +761,7 @@
           </select>
           <div class="ck-row toc-mt">
             <input type="checkbox" id="toc-after-first" checked>
-            <label for="toc-after-first">Insérer après la 1ʳᵉ page</label>
+            <label for="toc-after-first"><span aria-hidden="true">✓</span> Insérer après la 1ʳᵉ page</label>
           </div>
           <p class="field-hint">Page supplémentaire avec liens internes (TOC › TOCI).</p>
         </div>

@@ -834,7 +834,7 @@ function buildEl(b) {
       'aria-label': _blockAriaLabel(b),
     },
   });
-  const bar = el('div', { cls: 'fb-bar', attrs: { 'aria-hidden': 'true' } });
+  const bar = el('div', { cls: 'fb-bar' });
   bar.append(
     el('span', { cls: 'fb-bar-lbl', text: label }),
     el('button', { cls: 'fb-dup', html: '<span aria-hidden="true">⧉</span>', attrs: { type: 'button', 'aria-label': 'Dupliquer le bloc ' + label }, on: { click: e => { e.stopPropagation(); dupB(b.id); } } }),
@@ -936,14 +936,17 @@ const FILL_CT = {
 
   'form-text'(ct, b) {
     ct.className += ' fb-form-ct';
+    const inputId = 'preview-inp-' + b.id;
     const lbl = document.createElement('label');
     lbl.className = 'fb-form-lbl';
     lbl.style.fontFamily = docFont();
+    lbl.htmlFor = inputId; // Association au champ
     lbl.textContent = (b.formLabel || 'Libellé') + (b.formRequired ? ' *' : '');
     const inp = document.createElement('input');
-    inp.type = 'text'; inp.placeholder = b.formPlaceholder || '';
+    inp.id = inputId; // Affectation de l'ID
+    inp.type = 'text';
+    inp.placeholder = b.formPlaceholder || '';
     inp.value = b.formDefaultValue || ''; inp.readOnly = true;
-    /* DSFR : fond #eeeeee, arrondi haut 4px, bordure bas 2px #3a3a3a */
     inp.className = 'fb-form-input';
     inp.style.fontFamily = docFont();
     if (b.formReadonly) inp.dataset.readonly = 'true';
@@ -952,11 +955,14 @@ const FILL_CT = {
 
   'form-textarea'(ct, b) {
     ct.className += ' fb-form-ct';
+    const inputId = 'preview-ta-' + b.id;
     const lbl = document.createElement('label');
     lbl.className = 'fb-form-lbl';
     lbl.style.fontFamily = docFont();
+    lbl.htmlFor = inputId;
     lbl.textContent = (b.formLabel || 'Libellé') + (b.formRequired ? ' *' : '');
     const ta = document.createElement('textarea');
+    ta.id = inputId;
     ta.placeholder = b.formPlaceholder || ''; ta.value = b.formDefaultValue || ''; ta.readOnly = true;
     ta.className = 'fb-form-textarea';
     ta.style.fontFamily = docFont();

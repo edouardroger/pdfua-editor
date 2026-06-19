@@ -10,8 +10,11 @@ function exportCode() {
   const title = tf?.value || '';
   if (!title.trim()) {
     announce("⚠ Veuillez définir un titre avant d'exporter le code.");
-    switchTab('meta'); tf.focus(); tf.classList.add('input-error');
-    setTimeout(() => tf.classList.remove('input-error'), 2500);
+    switchTab('meta'); tf.focus(); tf.classList.add('input-error'); tf.setAttribute('aria-invalid', 'true');
+    setTimeout(() => {
+      tf.classList.remove('input-error');
+      tf.removeAttribute('aria-invalid');
+    }, 2500);
     return;
   }
   const g = id => document.getElementById(id)?.value || '';
