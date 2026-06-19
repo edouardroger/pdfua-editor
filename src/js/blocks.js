@@ -854,21 +854,26 @@ function buildEl(b) {
 
   /* Clavier : focus sur le wrapper = sélection + déplacement aux flèches */
   wrapper.addEventListener('keydown', e => {
-    /* Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc */
+
+    /* 1. On protège la saisie : ne pas interférer si le focus est à l'intérieur d'un champ */
+    const active = document.activeElement;
+    const isInField = active && active !== wrapper &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
+        active.tagName === 'SELECT' || active.isContentEditable);
+
+    /* On sort immédiatement si l'utilisateur est en train d'écrire */
+    if (isInField) return;
+
+    /* 2. Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc */
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       sel(b.id);
       if (typeof switchTab === 'function') switchTab('bloc');
       return;
     }
-    /* Flèches : déplacer le bloc (délégué à moveBlockByKey dans editor-ui.js) */
+
+    /* 3. Flèches : déplacer le bloc (délégué à moveBlockByKey dans editor-ui.js) */
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-      /* Ne pas interférer si le focus est à l'intérieur d'un champ de saisie */
-      const active = document.activeElement;
-      const isInField = active && active !== wrapper &&
-        (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
-         active.tagName === 'SELECT' || active.isContentEditable);
-      if (isInField) return;
       e.preventDefault();
       if (typeof moveBlockByKey === 'function') moveBlockByKey(b.id, e.key, e.shiftKey, e.ctrlKey || e.metaKey);
     }
