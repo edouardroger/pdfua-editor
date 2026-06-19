@@ -85,10 +85,7 @@ class PDFBuilder {
   // ─────────────────────────────────────────────────────────────────────
 
   _prepareBlocks() {
-    this.sortedBlocks = ordB().slice().sort((a, b) => {
-      const pa = Math.floor(a.y / PH), pb = Math.floor(b.y / PH);
-      return pa !== pb ? pa - pb : a.y - b.y;
-    });
+    this.sortedBlocks = ordB().slice();
 
     this.blocksByPage = new Map();
     for (const b of this.sortedBlocks) {
@@ -445,13 +442,7 @@ class PDFBuilder {
     const RE_HEADING = /^h[1-6]$/;
     const lastAtLevel = { 0: doc.outline };
 
-    // Tri stable : page canvas d'abord, puis Y au sein d'une même page
-    const headings = blocks
-      .filter(b => RE_HEADING.test(b.type))
-      .sort((a, b) => {
-        const pa = Math.floor(a.y / PH), pb = Math.floor(b.y / PH);
-        return pa !== pb ? pa - pb : a.y - b.y;
-      });
+    const headings = this.sortedBlocks.filter(b => b.type.match(/^h[1-6]$/));
 
     for (const b of headings) {
       const lv = parseInt(b.type[1]);
@@ -525,8 +516,12 @@ async function _requireTitleAndBuild(actionLabel) {
     switchTab('meta');
     tf.focus();
     tf.classList.add('input-error');
-    setTimeout(() => tf.classList.remove('input-error'), 2500);
-    return null;
+    tf.setAttribute('aria-invalid', 'true');
+    setTimeout(() => {
+      tf.classList.remove('input-error');
+      tf.removeAttribute('aria-invalid');
+    }, 2500);
+    return;
   }
   const doc = await buildPDF();
   const stream = doc.pipe(blobStream());
