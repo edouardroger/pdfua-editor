@@ -122,7 +122,7 @@ async function cleanCSS(cssSource) {
         'canvas-page', 'sel', 'moving', 'drop-target',
         'grid-check-row',
         'sheet-open',
-        'input-error', 'muted', 'page-orient-btn', 'page-delete-btn'
+        'input-error', 'muted', 'page-orient-btn', 'page-delete-btn', 'field-error', 'field-error-msg'
       ],
       greedy: [
         /^u-/, /^fb-/, /^chart-/,
