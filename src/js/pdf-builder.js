@@ -511,16 +511,43 @@ buildPDF._noteStructs = {};
 /** Vérifie que le titre est défini, lance le build et retourne { doc, stream, title }. */
 async function _requireTitleAndBuild(actionLabel) {
   const tf = document.getElementById('m-title');
+  /* Nettoyer un message d'erreur précédent s'il existe encore */
+  const prevErr = document.getElementById('m-title-error');
+  if (prevErr) prevErr.remove();
+  const existingDesc = tf.getAttribute('aria-describedby') || '';
+  if (existingDesc.includes('m-title-error')) {
+    tf.setAttribute('aria-describedby', existingDesc.replace(/\s*m-title-error\s*/g, ' ').trim());
+  }
+
   if (!tf.value.trim()) {
-    announce('⚠ Veuillez définir un titre avant de ' + actionLabel + '.');
+    announce('⚠ Veuillez définir un titre avant de ' + actionLabel + '.', 'assertive');
     switchTab('meta');
     tf.focus();
     tf.classList.add('input-error');
     tf.setAttribute('aria-invalid', 'true');
-    setTimeout(() => {
+
+    /* Message d'erreur persistant visible ET lisible par les AT via aria-describedby */
+    const errMsg = document.createElement('p');
+    errMsg.id = 'm-title-error';
+    errMsg.className = 'field-error';
+    errMsg.setAttribute('role', 'alert');
+    errMsg.textContent = 'Le titre est obligatoire pour ' + actionLabel + '.';
+    tf.insertAdjacentElement('afterend', errMsg);
+    const baseDesc = (tf.getAttribute('aria-describedby') || 'm-title-hint').trim();
+    tf.setAttribute('aria-describedby', baseDesc + ' m-title-error');
+
+    const clearErr = () => {
       tf.classList.remove('input-error');
       tf.removeAttribute('aria-invalid');
-    }, 2500);
+      const e = document.getElementById('m-title-error');
+      if (e) e.remove();
+      const desc = (tf.getAttribute('aria-describedby') || '')
+        .replace(/\s*m-title-error\s*/g, ' ').trim();
+      if (desc) tf.setAttribute('aria-describedby', desc);
+      else tf.removeAttribute('aria-describedby');
+    };
+    tf.addEventListener('input', clearErr, { once: true });
+    setTimeout(clearErr, 8000);
     return;
   }
   const doc = await buildPDF();

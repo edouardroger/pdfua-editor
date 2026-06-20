@@ -183,6 +183,7 @@ function getRichEditEl(blockId) {
 }
 let fmtBar = null, linkModal = null;
 let _savedRange = null;      // Range sauvegardée avant ouverture de la modale lien
+let _linkModalTrigger = null; // Élément déclencheur pour restaurer le focus à la fermeture
 let _noteSavedSid = null;    // sid sauvegardé au mousedown du bouton †
 let _noteSavedRange = null;  // sélection sauvegardée au mousedown du bouton †
 
@@ -199,6 +200,8 @@ function initFmtBar() {
     btn.className = 'fmt-btn';
     btn.id = 'fmt-' + id;
     btn.setAttribute('aria-label', label);
+    // Les boutons de bascule exposent leur état via aria-pressed
+    if (cmd || id === 'link') btn.setAttribute('aria-pressed', 'false');
     btn.innerHTML = content;
     if (cmd) btn.onclick = e => { e.preventDefault(); e.stopPropagation(); applyFmt(cmd); };
     return btn;
@@ -265,8 +268,8 @@ function initFmtBar() {
   document.getElementById('link-cancel').onclick = closeLinkModal;
   document.getElementById('link-confirm').onclick = confirmLink;
   linkModal.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeLinkModal();
-    if (e.key === 'Enter') { e.preventDefault(); confirmLink(); }
+    if (e.key === 'Escape') { closeLinkModal(); return; }
+    if (e.key === 'Enter') { e.preventDefault(); confirmLink(); return; }
   });
 }
 
@@ -317,11 +320,22 @@ function positionFmtBar() {
   fmtBar.classList.add('visible');
 
   /* Marquer les boutons actifs selon l'état de la sélection */
-  document.getElementById('fmt-bold').classList.toggle('active', document.queryCommandState('bold'));
-  document.getElementById('fmt-italic').classList.toggle('active', document.queryCommandState('italic'));
-  document.getElementById('fmt-underline').classList.toggle('active', document.queryCommandState('underline'));
+  const boldBtn = document.getElementById('fmt-bold');
+  const italicBtn = document.getElementById('fmt-italic');
+  const underlineBtn = document.getElementById('fmt-underline');
+  const boldActive = document.queryCommandState('bold');
+  const italicActive = document.queryCommandState('italic');
+  const underlineActive = document.queryCommandState('underline');
+  boldBtn.classList.toggle('active', boldActive);
+  boldBtn.setAttribute('aria-pressed', String(boldActive));
+  italicBtn.classList.toggle('active', italicActive);
+  italicBtn.setAttribute('aria-pressed', String(italicActive));
+  underlineBtn.classList.toggle('active', underlineActive);
+  underlineBtn.setAttribute('aria-pressed', String(underlineActive));
   const anchor = sel.anchorNode && sel.anchorNode.parentElement;
-  document.getElementById('fmt-link').classList.toggle('active', !!anchor?.closest('a'));
+  const linkActive = !!anchor?.closest('a');
+  document.getElementById('fmt-link').classList.toggle('active', linkActive);
+  document.getElementById('fmt-link').setAttribute('aria-pressed', String(linkActive));
 }
 
 function hideFmtBar() {
@@ -353,6 +367,7 @@ function clearFmt() {
 function openLinkModal() {
   const sel = window.getSelection();
   _savedRange = (sel && !sel.isCollapsed) ? sel.getRangeAt(0).cloneRange() : null;
+  _linkModalTrigger = document.activeElement || null;
   if (_savedRange) {
     const anchor = sel.anchorNode?.parentElement?.closest('a');
     document.getElementById('link-url-input').value = anchor?.href || '';
@@ -371,6 +386,11 @@ function closeLinkModal() {
   document.getElementById('link-url-input').value = '';
   document.getElementById('link-text-input').value = '';
   _savedRange = null;
+  // Restaurer le focus sur l'élément déclencheur
+  if (_linkModalTrigger && typeof _linkModalTrigger.focus === 'function') {
+    _linkModalTrigger.focus({ preventScroll: true });
+  }
+  _linkModalTrigger = null;
 }
 
 function confirmLink() {
@@ -786,13 +806,13 @@ document.querySelectorAll('.bsrc').forEach(btn => {
 });
 
 /* ── AJOUTER UN BLOC ── */
-function addBlock(type, x, y, extraProps) {
+function addBlock(type, x, y, extraProps, { noFocus = false } = {}) {
   snapshotState();
   const d = DEFS[type] || { w: 200, h: 60 };
   const b = Object.assign(structuredClone(d), { id: uid(), type, x: Math.round(x), y: Math.round(y), order: blocks.length, content: d.content || '' }, extraProps || {});
   blocks.push(b);
   getCanvasPage(Math.floor(b.y / PH))?.appendChild(buildEl(b));
-  sel(b.id); switchTab('bloc'); updUA(); updTree(); saveSession();
+  sel(b.id, noFocus); switchTab('bloc'); updUA(); updTree(); saveSession();
   return b.id;
 }
 
@@ -832,6 +852,7 @@ function buildEl(b) {
       tabindex: '0',
       role: 'group',
       'aria-label': _blockAriaLabel(b),
+      'aria-selected': 'false',
     },
   });
   const bar = el('div', { cls: 'fb-bar' });
@@ -927,7 +948,26 @@ function _mkRichDiv(b, ariaLabel, style, className) {
   t.className = className || 'fb-rich-flow';
   if (style) t.style.cssText = style;
   if (b.richContent) t.innerHTML = b.richContent; else t.textContent = b.content || '';
-  t.oninput = () => { invalidateHtmlToRunsCache(b.richContent); b.richContent = t.innerHTML; b.content = htmlToPlain(t.innerHTML); };
+  /* aria-placeholder expose le texte indicatif du data-ph aux lecteurs d'écran.
+     Le pseudo-élément CSS ::before n'est pas lisible par les AT. */
+  const phText = b.content || '';
+  if (!phText) {
+    const typeLabel = b.type ? (b.type.startsWith('h') ? 'Saisir le titre' : 'Saisir le texte') : 'Saisir du texte';
+    t.setAttribute('aria-placeholder', typeLabel);
+  }
+  t.oninput = () => {
+    invalidateHtmlToRunsCache(b.richContent);
+    b.richContent = t.innerHTML;
+    b.content = htmlToPlain(t.innerHTML);
+    /* Mettre à jour aria-placeholder selon la vacuité du contenu */
+    if (t.textContent.trim() === '') {
+      if (!t.getAttribute('aria-placeholder')) {
+        t.setAttribute('aria-placeholder', 'Saisir du texte');
+      }
+    } else {
+      t.removeAttribute('aria-placeholder');
+    }
+  };
   t.onmousedown = e => e.stopPropagation();
   return t;
 }
@@ -1414,25 +1454,32 @@ const FILL_CT = {
 function fillCt(ct, b) { ct.innerHTML = ''; const fn = FILL_CT[b.type]; if (fn) fn(ct, b); }
 
 /* ── SÉLECTION ── */
-function sel(id) {
+function sel(id, noFocus = false) {
   /* Retirer la sélection du bloc précédent sans querySelectorAll global */
   if (sid && sid !== id) {
-    document.getElementById('el-' + sid)?.classList.remove('sel');
+    const prevWrapper = document.getElementById('el-' + sid);
+    prevWrapper?.classList.remove('sel');
+    prevWrapper?.setAttribute('aria-selected', 'false');
   }
   sid = id;
   const wrapper = document.getElementById('el-' + id);
   wrapper?.classList.add('sel');
-  /* Déplacer le focus clavier sur le wrapper si ce n'est pas déjà lui
-     (ni un de ses enfants) qui a le focus — évite d'interrompre l'édition
-     en cours dans un contenteditable du même bloc */
-  if (wrapper && !wrapper.contains(document.activeElement)) {
+  /* Exposer l'état "sélectionné" aux AT via aria-selected */
+  wrapper?.setAttribute('aria-selected', 'true');
+  /* Déplacer le focus clavier sur le wrapper, sauf si noFocus est vrai
+     (cas du chargement initial, pour ne pas voler le focus à la page). */
+  if (!noFocus && wrapper && !wrapper.contains(document.activeElement)) {
     wrapper.focus({ preventScroll: true });
   }
   updBP();
 }
 
 function desel() {
-  if (sid) document.getElementById('el-' + sid)?.classList.remove('sel');
+  if (sid) {
+    const prevWrapper = document.getElementById('el-' + sid);
+    prevWrapper?.classList.remove('sel');
+    prevWrapper?.setAttribute('aria-selected', 'false');
+  }
   sid = null;
   $('bp-none').style.display = 'block';
   $('bp-fields').style.display = 'none';
@@ -1879,10 +1926,24 @@ function updBP() {
   $('bp-none').style.display = b ? 'none' : 'block';
   const _zLbl = $('z-level-lbl'); if (_zLbl && b) _zLbl.textContent = getZLabel(b.zIndex || 0);
   $('bp-fields').style.display = b ? 'block' : 'none';
-  if (!b) return;
+  if (!b) {
+    /* Annoncer la désélection */
+    const sa = $('sel-announce');
+    if (sa) sa.textContent = '';
+    return;
+  }
   $('bx').value = Math.round(b.x); $('by').value = Math.round(b.y);
   $('bw').value = Math.round(b.w); $('bh').value = Math.round(b.h);
-  $('oi').textContent = `Page ${Math.floor(b.y / PH) + 1} — Position lecture : ${ordB().findIndex(x => x.id === b.id) + 1} / ${blocks.length}`;
+  const pageNum = Math.floor(b.y / PH) + 1;
+  const readPos = ordB().findIndex(x => x.id === b.id) + 1;
+  $('oi').textContent = `Page ${pageNum} — Position lecture : ${readPos} / ${blocks.length}`;
+  /* Annoncer la sélection dans la région live sr-only pour les AT */
+  const sa = $('sel-announce');
+  if (sa) {
+    const label = labelForType(b.type);
+    const preview = b.content ? ' : ' + b.content.replace(/\n/g, ' ').slice(0, 40) : '';
+    sa.textContent = `${label}${preview} sélectionné — page ${pageNum}, position ${readPos} sur ${blocks.length}.`;
+  }
   PANEL_BINDINGS.forEach(({ panel, types, fill }) => { const on = types.includes(b.type); $(panel).style.display = on ? 'block' : 'none'; if (on) fill(b); });
 }
 
@@ -1919,7 +1980,7 @@ function updUA() {
   document.getElementById('ual').innerHTML = chks.map(ck => {
     const status = ck.ok ? 'ua-ok' : ck.warn ? 'ua-warn' : 'ua-err';
     const label = ck.ok ? 'Conforme : ' : (ck.warn ? 'Avertissement : ' : 'Non conforme : ');
-    return `<div class="ua-item ${status}"><div class="ua-dot" aria-hidden="true"></div>` +
+    return `<div class="ua-item ${status}">` +
       `<span class="sr-only">${label}</span><span>${ck.l}</span></div>`;
   }).join('');
   window._patchUABadge?.();

@@ -15,8 +15,8 @@ if (sessionRestored && blocks.length > 0) {
     announce('Session restaurée (' + blocks.length + ' bloc' + (blocks.length > 1 ? 's' : '') + ').');
   });
 } else {
-  addBlock('h1', MAR, MAR);
-  addBlock('p', MAR, MAR + 105);
+  addBlock('h1', MAR, MAR, {}, { noFocus: true });
+  addBlock('p', MAR, MAR + 105, {}, { noFocus: true });
 }
 
 /* Différer les passes lourdest */
@@ -54,10 +54,20 @@ window._patchUABadge = function () {
   badge.classList.remove('ok', 'err');
   if (errs === 0 && warns === 0) {
     const items = document.querySelectorAll('#ual .ua-item').length;
-    if (items === 0) { badge.className = ''; label.textContent = 'PDF/UA'; }
-    else badge.classList.add('ok');
+    if (items === 0) {
+      badge.className = '';
+      label.textContent = 'PDF/UA';
+      badge.setAttribute('aria-label', 'Afficher le panneau PDF/UA — statut inconnu');
+    } else {
+      badge.classList.add('ok');
+      badge.setAttribute('aria-label', 'Afficher le panneau PDF/UA — conforme (' + items + ' critères validés)');
+    }
   } else {
     badge.classList.add('err');
+    const detail = [];
+    if (errs > 0) detail.push(errs + ' erreur' + (errs > 1 ? 's' : ''));
+    if (warns > 0) detail.push(warns + ' avertissement' + (warns > 1 ? 's' : ''));
+    badge.setAttribute('aria-label', 'Afficher le panneau PDF/UA — non conforme : ' + detail.join(', '));
   }
 };
 

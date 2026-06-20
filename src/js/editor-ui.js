@@ -1008,9 +1008,12 @@ pageWrap.addEventListener('mousedown', e => { if (e.target === pageWrap) desel()
 pageWrap.addEventListener('touchend', e => { if (e.target === pageWrap && e.changedTouches.length === 1) desel(); }, { passive: true });
 
 /* ── RÉGION LIVE — ANNONCES AT ── */
-function announce(msg) {
+function announce(msg, priority) {
   const t = document.getElementById('toast');
   clearTimeout(t._timer);
+  // Erreurs et avertissements → assertive pour interrompre les AT immédiatement
+  const isUrgent = /^⚠|erreur|impossible/i.test(msg);
+  t.setAttribute('aria-live', (priority === 'assertive' || isUrgent) ? 'assertive' : 'polite');
   /* Vider d'abord pour forcer la re-lecture par les AT, puis injecter */
   t.textContent = '';
   t.style.display = 'block';
@@ -1019,6 +1022,8 @@ function announce(msg) {
     t._timer = setTimeout(() => {
       t.style.display = 'none';
       t.textContent = '';
+      // Réinitialiser en polite après disparition
+      t.setAttribute('aria-live', 'polite');
     }, 4000);
   });
 }
@@ -1027,18 +1032,32 @@ function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal && !modal.open) {
     modal.showModal();
-    document.body.style.overflow = 'hidden'; // Empêche le scroll du body en arrière-plan
+    document.body.style.overflow = 'hidden';
+    // Déplacer le focus sur le premier élément interactif de la modale
+    requestAnimationFrame(() => {
+      const first = modal.querySelector(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (first) first.focus();
+    });
   }
 }
+
+/* Mémoire de l'élément déclencheur pour la restauration du focus */
+let _modalTrigger = null;
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal && modal.open) {
     modal.close();
-    // Restaure le scroll si plus aucune modale n'est ouverte
     if (!document.querySelector('dialog[open]')) {
       document.body.style.overflow = '';
     }
+    // Restaurer le focus sur l'élément qui avait ouvert la modale
+    if (_modalTrigger && typeof _modalTrigger.focus === 'function') {
+      _modalTrigger.focus({ preventScroll: true });
+    }
+    _modalTrigger = null;
   }
 }
 
@@ -1047,9 +1066,10 @@ document.addEventListener('click', e => {
   // 1. Clic sur un bouton d'ouverture
   const openBtn = e.target.closest('[data-open-modal]');
   if (openBtn) {
+    _modalTrigger = openBtn;
     const modalId = openBtn.getAttribute('data-open-modal');
     openModal(modalId);
-    return; // On arrête l'exécution ici
+    return;
   }
 
   // 2. Clic sur un bouton de fermeture

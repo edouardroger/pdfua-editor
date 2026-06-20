@@ -29,9 +29,9 @@
   /* ── Textes ── */
   --ui-txt-primary: #1a1a18;
   --ui-txt-sec: #3d3d3a;
-  --ui-txt-muted: #6b6b67;
-  --ui-txt-disabled: #a0a09c;
-  --ui-placeholder: #6b6b67;
+  --ui-txt-muted: #595955;
+  --ui-txt-disabled: #767673;
+  --ui-placeholder: #595955;
 
   /* ── Accent ── */
   --ui-accent: #964b00;
@@ -180,8 +180,8 @@
 
     --ui-txt-primary: #f0efe8;
     --ui-txt-sec: #b8b6b0;
-    --ui-txt-muted: #868686;
-    --ui-txt-disabled: #3e3c38;
+    --ui-txt-muted: #9e9e9a;
+    --ui-txt-disabled: #6a6866;
 
     --ui-accent: #f0b84a;
     --ui-accent-dim: rgba(240, 184, 74, .14);
@@ -211,7 +211,7 @@
     --ui-toast-color: #f0efe8;
     --ui-toast-border: rgba(255, 255, 255, .14);
     --ui-pif-bg: #1a1a1e;
-    --ui-placeholder: #82807e;
+    --ui-placeholder: #9e9e9a;
 
     /* Blocs PDF — toujours fond blanc / texte sombre (représentent un vrai document) */
     --ui-fb-bg: #ffffff;
@@ -290,6 +290,43 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
+   PRÉFÉRENCE MOUVEMENT RÉDUIT
+   Désactive toutes les animations et transitions non essentielles
+   pour les utilisateurs qui en ont besoin (WCAG 2.3.3 / 2.3.4).
+   Le feedback de focus (:focus-visible) est préservé car fonctionnel.
+══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Sidebar mobile, overlay et panneau bottom-sheet :
+     transitions de transform supprimées → apparition instantanée */
+  #sidebar,
+  #sidebar-overlay,
+  #panel {
+    transition: none !important;
+  }
+
+  /* Animations d'entrée des modales */
+  .ua-modal-inner,
+  .prev-inner {
+    animation: none !important;
+  }
+
+  /* Garder la visibilité de l'état actif même sans transition */
+  .fb.moving {
+    opacity: 0.85 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
    RESET & BASE
 ══════════════════════════════════════════════════════════════ */
 *,
@@ -330,12 +367,13 @@ body {
   top: 4px;
   background: var(--ui-focus);
   color: #fff;
-  padding: 4px 10px;
+  padding: 6px 14px;
   border-radius: var(--ui-r-md);
-  font-weight: 500;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: 13px;
   z-index: 9999;
   text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
 }
 
 .skip-link:focus {
@@ -344,7 +382,7 @@ body {
 
 :focus-visible {
   outline: 2px solid var(--ui-focus);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -454,6 +492,12 @@ body {
 
 .tb-btn:active {
   background: var(--ui-bg-active);
+}
+
+.tb-btn:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  /* background: var(--ui-bg-hover); */
 }
 
 .tb-btn .ico-sm {
@@ -611,6 +655,12 @@ body {
   background: var(--ui-bg-hover);
   border-color: var(--ui-border-mid);
   color: var(--ui-txt-primary);
+}
+
+.bsrc:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  border-color: var(--ui-focus);
 }
 
 .bsrc:active {
@@ -891,7 +941,7 @@ body {
 
 .fb.sel {
   border-color: var(--ui-fb-sel-border);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, .2);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, .35), 0 0 0 4px rgba(59, 130, 246, .10);
   z-index: 50;
   overflow: visible;
 }
@@ -1301,6 +1351,41 @@ body {
   animation: shake .35s ease;
 }
 
+/* Message d'erreur inline associé à un champ (non sr-only) */
+.field-error {
+  font-size: 11px;
+  color: var(--ui-err);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+}
+
+.field-error::before {
+  content: '⚠';
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* Message d'erreur inline persistant (accessible, non lié à la couleur seule) */
+.field-error-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 10.5px;
+  color: var(--ui-err);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.field-error-msg::before {
+  content: '⚠';
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 @keyframes shake {
 
   0%,
@@ -1370,6 +1455,12 @@ body {
 .fmt-btn.active {
   background: var(--ui-focus);
   color: #fff;
+}
+
+.fmt-btn:focus-visible {
+  outline: 2px solid var(--ui-focus);
+  outline-offset: 2px;
+  background: var(--ui-fmtbar-hover);
 }
 
 .fmt-sep {
@@ -1503,7 +1594,8 @@ body {
 .ptab:focus-visible,
 .rtab:focus-visible {
   outline: 2px solid var(--ui-focus);
-  outline-offset: -2px;
+  outline-offset: -3px;
+  border-radius: var(--ui-r-sm);
 }
 
 /* Panneaux */
@@ -1770,42 +1862,41 @@ fieldset legend {
   border-bottom: 1px solid var(--ui-border-weak);
   font-size: 11.5px;
   line-height: 1.4;
+  color: var(--ui-ok);
 }
 
 .ua-item:last-child {
   border-bottom: none;
 }
 
-.ua-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.ua-ok {
-  color: var(--ui-txt-sec);
-}
-
-.ua-ok .ua-dot {
-  background: var(--ui-ok);
+.ua-err {
+  color: var(--ui-err);
 }
 
 .ua-err {
   color: var(--ui-err);
 }
 
-.ua-err .ua-dot {
-  background: var(--ui-err);
-}
-
 .ua-warn {
   color: var(--ui-warn);
 }
 
-.ua-warn .ua-dot {
-  background: var(--ui-warn);
+.ua-item::before {
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+
+.ua-item.ua-ok::before {
+  content: '●';
+}
+
+.ua-item.ua-err::before {
+  content: '✕';
+}
+
+.ua-item.ua-warn::before {
+  content: '!';
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1831,8 +1922,13 @@ fieldset legend {
 }
 
 .tn:focus {
+  outline: none;
+}
+
+.tn:focus-visible {
   outline: 2px solid var(--ui-focus);
   outline-offset: 1px;
+  background: var(--ui-bg-hover);
 }
 
 .tn .tg {
@@ -2011,6 +2107,8 @@ dialog.modal::backdrop {
   display: none;
   box-shadow: var(--ui-shadow-md);
   max-width: 320px;
+  min-width: 200px;
+  word-break: break-word;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2270,8 +2368,8 @@ dialog.modal::backdrop {
   .ptabs::before {
     content: '';
     display: block;
-    width: 36px;
-    height: 4px;
+    width: 44px;
+    height: 6px;
     background: var(--ui-border-mid);
     border-radius: 2px;
     position: absolute;
@@ -2345,94 +2443,222 @@ dialog.modal::backdrop {
   }
 }
 
-/* ── Dark mode + mobile : ombres renforcées ── */
-@media (prefers-color-scheme: dark) {
-  #sidebar.mobile-open {
-    box-shadow: var(--ui-shadow-sidebar-dark);
+/* ══════════════════════════════════════════════════════════════
+   MODE CONTRASTE ÉLEVÉ (Windows High Contrast / forced-colors)
+   Garantit la visibilité des éléments interactifs en mode HCM.
+══════════════════════════════════════════════════════════════ */
+@media (forced-colors: active) {
+
+  /* Les blocs canvas utilisent ButtonText/Highlight natifs */
+  .fb {
+    border: 1px solid ButtonText;
   }
 
-  #panel {
-    box-shadow: var(--ui-shadow-sheet-dark);
-  }
-}
-
-/* ── Écrans tactiles — zones 44×44px (WCAG 2.5.5) ── */
-@media (hover: none) and (pointer: coarse) {
-  .bsrc {
-    cursor: default;
-  }
-
-  .fb-del,
-  .fb-dup {
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 8px !important;
-    font-size: 16px !important;
-    padding: 0 !important;
+  .fb.sel {
+    outline: 3px solid Highlight;
+    outline-offset: 1px;
+    border-color: Highlight;
   }
 
   .fb-bar {
-    height: 44px !important;
-    line-height: 44px !important;
+    background: ButtonFace;
+    border-color: ButtonText;
+    color: ButtonText;
+    forced-color-adjust: none;
   }
 
-  .fb-ct {
-    inset: 46px 6px 8px 6px !important;
+  .fb-del {
+    background: ButtonText;
+    color: ButtonFace;
+    forced-color-adjust: none;
   }
 
-  .fb-rsz {
-    width: 32px !important;
-    height: 32px !important;
+  .fb-dup {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
   }
 
-  .fb-rsz::before,
-  .fb-rot::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
+  /* Palette de blocs */
+  .bsrc {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+    forced-color-adjust: none;
   }
 
-  .fmt-btn {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    font-size: 16px !important;
+  .bsrc:focus-visible,
+  .bsrc:hover {
+    outline: 2px solid Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+    background: Highlight;
   }
 
-  .ptab,
-  .rtab {
-    min-height: 44px !important;
+  /* Onglets */
+  .ptab.on,
+  .rtab.on {
+    border-bottom-color: Highlight;
+    color: Highlight;
+    forced-color-adjust: none;
   }
 
-  .page-orient-btn,
-  .page-delete-btn {
-    min-height: 44px !important;
-    min-width: 44px !important;
-    padding: 8px 10px !important;
+  /* Badge PDF/UA */
+  #tb-ua-status {
+    forced-color-adjust: none;
+    border: 2px solid ButtonText;
   }
 
+  #tb-ua-status.ok {
+    border-color: Highlight;
+    color: Highlight;
+  }
+
+  #tb-ua-status.err {
+    border-color: LinkText;
+    color: LinkText;
+  }
+
+  /* Checklist items — les symboles (✓ ✕ !) restent visibles en HCM.
+     On s'assure que les couleurs utilisent les couleurs système. */
+
+  .ua-ok {
+    color: Highlight;
+  }
+
+  .ua-err {
+    color: LinkText;
+  }
+
+  .ua-warn {
+    color: ButtonText;
+  }
+
+  /* Formulaires */
   input[type="text"],
   input[type="number"],
   input[type="url"],
   select,
   textarea {
-    min-height: 36px;
-    font-size: 14px !important;
+    border: 1px solid ButtonText;
+    background: Field;
+    color: FieldText;
+    forced-color-adjust: none;
   }
 
-  input[type="range"] {
-    min-height: 28px;
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="url"]:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid Highlight;
   }
 
-  input[type="checkbox"],
-  input[type="radio"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
+  /* Boutons d'action */
+  .tb-btn.primary {
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+    forced-color-adjust: none;
   }
 
-  #link-modal {
-    width: min(94vw, 380px);
-    padding: 16px;
+  /* Toast */
+  #toast {
+    border: 2px solid ButtonText;
+    background: Canvas;
+    color: CanvasText;
+    forced-color-adjust: none;
+  }
+
+  /* ── Dark mode + mobile : ombres renforcées ── */
+  @media (prefers-color-scheme: dark) {
+    #sidebar.mobile-open {
+      box-shadow: var(--ui-shadow-sidebar-dark);
+    }
+
+    #panel {
+      box-shadow: var(--ui-shadow-sheet-dark);
+    }
+  }
+
+  /* ── Écrans tactiles — zones 44×44px (WCAG 2.5.5) ── */
+  @media (hover: none) and (pointer: coarse) {
+    .bsrc {
+      cursor: default;
+    }
+
+    .fb-del,
+    .fb-dup {
+      width: 44px !important;
+      height: 44px !important;
+      border-radius: 8px !important;
+      font-size: 16px !important;
+      padding: 0 !important;
+    }
+
+    .fb-bar {
+      height: 44px !important;
+      line-height: 44px !important;
+    }
+
+    .fb-ct {
+      inset: 46px 6px 8px 6px !important;
+    }
+
+    .fb-rsz {
+      width: 32px !important;
+      height: 32px !important;
+    }
+
+    .fb-rsz::before,
+    .fb-rot::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+    }
+
+    .fmt-btn {
+      min-width: 44px !important;
+      min-height: 44px !important;
+      font-size: 16px !important;
+    }
+
+    .ptab,
+    .rtab {
+      min-height: 44px !important;
+    }
+
+    .page-orient-btn,
+    .page-delete-btn {
+      min-height: 44px !important;
+      min-width: 44px !important;
+      padding: 8px 10px !important;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="url"],
+    select,
+    textarea {
+      min-height: 36px;
+      font-size: 14px !important;
+    }
+
+    input[type="range"] {
+      min-height: 28px;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    #link-modal {
+      width: min(94vw, 380px);
+      padding: 16px;
+    }
   }
 }
 
@@ -2672,14 +2898,19 @@ dialog.modal::backdrop {
   color: #1a1a1a;
 }
 
-.dsfr-color-swatch {
+/* .dsfr-color-swatch {
   display: inline-block;
   width: 20px;
   height: 20px;
   border-radius: 3px;
   border: 1px solid #e5e7eb;
   flex-shrink: 0;
-  /* background appliqué par JS (couleur sélectionnée) */
+} */
+.dsfr-color-swatch {
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 4px;
+  border: 2px solid var(--ui-border-mid);
 }
 
 /* ── Overlay canvas grille magnétique ── */
@@ -2964,7 +3195,8 @@ dialog.modal::backdrop {
 .fb-table-btn {
   margin-top: 3px;
   font-size: 9px;
-  padding: 2px 6px;
+  min-height: 28px;
+  padding: 4px 8px;
 }
 
 /* ── Citation ── */

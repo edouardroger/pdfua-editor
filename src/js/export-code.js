@@ -9,12 +9,29 @@ function exportCode() {
   const tf = document.getElementById('m-title');
   const title = tf?.value || '';
   if (!title.trim()) {
-    announce("⚠ Veuillez définir un titre avant d'exporter le code.");
-    switchTab('meta'); tf.focus(); tf.classList.add('input-error'); tf.setAttribute('aria-invalid', 'true');
-    setTimeout(() => {
+    announce("⚠ Veuillez définir un titre avant d'exporter le code.", 'assertive');
+    switchTab('meta');
+    tf.focus();
+    tf.classList.add('input-error');
+    tf.setAttribute('aria-invalid', 'true');
+    const prevErr = document.getElementById('m-title-error');
+    if (prevErr) prevErr.remove();
+    const errMsg = document.createElement('p');
+    errMsg.id = 'm-title-error';
+    errMsg.className = 'field-error';
+    errMsg.setAttribute('role', 'alert');
+    errMsg.textContent = 'Le titre est obligatoire pour exporter le code.';
+    tf.insertAdjacentElement('afterend', errMsg);
+    const baseDesc = (tf.getAttribute('aria-describedby') || 'm-title-hint').trim();
+    tf.setAttribute('aria-describedby', baseDesc + ' m-title-error');
+    const clearErr = () => {
       tf.classList.remove('input-error');
       tf.removeAttribute('aria-invalid');
-    }, 2500);
+      const e = document.getElementById('m-title-error');
+      if (e) e.remove();
+    };
+    tf.addEventListener('input', clearErr, { once: true });
+    setTimeout(clearErr, 8000);
     return;
   }
   const g = id => document.getElementById(id)?.value || '';
