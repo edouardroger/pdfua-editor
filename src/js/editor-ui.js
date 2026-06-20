@@ -1028,37 +1028,79 @@ function announce(msg, priority) {
   });
 }
 /* ── GESTION GÉNÉRIQUE DES MODALES (<dialog>) ── */
-function openModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal && !modal.open) {
-    modal.showModal();
-    document.body.style.overflow = 'hidden';
-    // Déplacer le focus sur le premier élément interactif de la modale
-    requestAnimationFrame(() => {
-      const first = modal.querySelector(
-        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      if (first) first.focus();
-    });
-  }
-}
+
+/* Sélecteur des éléments focusables dans une modale */
+const _FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
 
 /* Mémoire de l'élément déclencheur pour la restauration du focus */
 let _modalTrigger = null;
+/* Map modalId → gestionnaire keydown de focus trap */
+const _modalTrapHandlers = new Map();
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal || modal.open) return;
+
+  modal.showModal();
+  document.body.style.overflow = 'hidden';
+
+  /* Focus initial sur le premier élément interactif */
+  requestAnimationFrame(() => {
+    const focusables = [...modal.querySelectorAll(_FOCUSABLE)].filter(
+      el => !el.closest('[hidden]') && el.offsetParent !== null
+    );
+    if (focusables.length) focusables[0].focus();
+  });
+
+  function _trapHandler(e) {
+    if (e.key !== 'Tab') return;
+    const focusables = [...modal.querySelectorAll(_FOCUSABLE)].filter(
+      el => !el.closest('[hidden]') && el.offsetParent !== null
+    );
+    if (!focusables.length) { e.preventDefault(); return; }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first || !modal.contains(document.activeElement)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last || !modal.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
+  modal.addEventListener('keydown', _trapHandler);
+  _modalTrapHandlers.set(modalId, _trapHandler);
+}
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
-  if (modal && modal.open) {
-    modal.close();
-    if (!document.querySelector('dialog[open]')) {
-      document.body.style.overflow = '';
-    }
-    // Restaurer le focus sur l'élément qui avait ouvert la modale
-    if (_modalTrigger && typeof _modalTrigger.focus === 'function') {
-      _modalTrigger.focus({ preventScroll: true });
-    }
-    _modalTrigger = null;
+  if (!modal || !modal.open) return;
+
+  /* Retirer le focus trap */
+  const handler = _modalTrapHandlers.get(modalId);
+  if (handler) { modal.removeEventListener('keydown', handler); _modalTrapHandlers.delete(modalId); }
+
+  modal.close();
+  if (!document.querySelector('dialog[open]')) {
+    document.body.style.overflow = '';
   }
+  /* Restaurer le focus sur l'élément déclencheur */
+  if (_modalTrigger && typeof _modalTrigger.focus === 'function') {
+    _modalTrigger.focus({ preventScroll: true });
+  }
+  _modalTrigger = null;
 }
 
 /* Écouteur global UNIQUE pour l'ouverture et la fermeture des modales */
@@ -1077,7 +1119,7 @@ document.addEventListener('click', e => {
   if (closeBtn) {
     const modal = closeBtn.closest('dialog');
     if (modal) closeModal(modal.id);
-    return; // On arrête l'exécution ici
+    return;
   }
 
   // 3. Clic sur le fond grisé (backdrop) pour fermer
@@ -1086,8 +1128,17 @@ document.addEventListener('click', e => {
   }
 });
 
-/* La fermeture par touche "Échap" est gérée nativement par le navigateur.
-   La touche "Tab" est nativement contrainte à l'intérieur du <dialog>. */
+/* Synchro fermeture native (touche Échap) → nettoyer le trap et restaurer le focus */
+document.addEventListener('close', e => {
+  if (e.target.tagName !== 'DIALOG') return;
+  const handler = _modalTrapHandlers.get(e.target.id);
+  if (handler) { e.target.removeEventListener('keydown', handler); _modalTrapHandlers.delete(e.target.id); }
+  if (!document.querySelector('dialog[open]')) document.body.style.overflow = '';
+  if (_modalTrigger && typeof _modalTrigger.focus === 'function') {
+    _modalTrigger.focus({ preventScroll: true });
+  }
+  _modalTrigger = null;
+}, true /* capture : l'événement close ne remonte pas */);
 
 /* ── CLAVIER GLOBAL UNIFIÉ ────────────────────────────────────────────── */
 document.addEventListener('keydown', e => {

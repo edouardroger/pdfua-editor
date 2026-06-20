@@ -15,8 +15,8 @@ if (sessionRestored && blocks.length > 0) {
     announce('Session restaurée (' + blocks.length + ' bloc' + (blocks.length > 1 ? 's' : '') + ').');
   });
 } else {
-  addBlock('h1', MAR, MAR, {}, { noFocus: true });
-  addBlock('p', MAR, MAR + 105, {}, { noFocus: true });
+  addBlock('h1', MAR, MAR, {}, { noSelect: true });
+  addBlock('p', MAR, MAR + 105, {}, { noSelect: true });
 }
 
 /* Différer les passes lourdest */

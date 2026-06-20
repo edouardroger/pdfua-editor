@@ -749,7 +749,7 @@ document.querySelectorAll('.bsrc').forEach(btn => {
       const x = pageW(0) / 2 - d.w / 2;
       const y = MAR + blocks.filter(b => Math.floor(b.y / PH) === 0).length * 24;
       const extra = btn.dataset.shape ? { shapeKind: btn.dataset.shape } : {};
-      const newId = addBlock(btn.dataset.t, x, y, extra);
+      const newId = addBlock(btn.dataset.t, x, y, extra, { noFocus: false });
       if (btn.dataset.t === 'freeform' && newId) {
         requestAnimationFrame(() => startFreeformDraw(newId));
       }
@@ -799,20 +799,21 @@ document.querySelectorAll('.bsrc').forEach(btn => {
       const d = DEFS.freeform;
       const x = pageW(0) / 2 - d.w / 2;
       const y = MAR + 40;
-      const newId = addBlock('freeform', x, y, {});
+      const newId = addBlock('freeform', x, y, {}, { noFocus: false });
       if (newId) requestAnimationFrame(() => startFreeformDraw(newId));
     });
   }
 });
 
 /* ── AJOUTER UN BLOC ── */
-function addBlock(type, x, y, extraProps, { noFocus = false } = {}) {
+function addBlock(type, x, y, extraProps, { noFocus = true, noSelect = false } = {}) {
   snapshotState();
   const d = DEFS[type] || { w: 200, h: 60 };
   const b = Object.assign(structuredClone(d), { id: uid(), type, x: Math.round(x), y: Math.round(y), order: blocks.length, content: d.content || '' }, extraProps || {});
   blocks.push(b);
   getCanvasPage(Math.floor(b.y / PH))?.appendChild(buildEl(b));
-  sel(b.id, noFocus); switchTab('bloc'); updUA(); updTree(); saveSession();
+  if (!noSelect) { sel(b.id, noFocus); switchTab('bloc'); }
+  updUA(); updTree(); saveSession();
   return b.id;
 }
 
@@ -1976,13 +1977,15 @@ function updUA() {
     { l: 'Document non vide', ok: blocks.length > 0 },
   ];
 
-  /* Construire le HTML en une passe, une seule écriture DOM */
-  document.getElementById('ual').innerHTML = chks.map(ck => {
+  /* Construire le HTML en une passe, une seule écriture DOM.
+     Sémantique liste pour les AT (role list/listitem), visuel inchangé (.ua-item). */
+  const items = chks.map(ck => {
     const status = ck.ok ? 'ua-ok' : ck.warn ? 'ua-warn' : 'ua-err';
     const label = ck.ok ? 'Conforme : ' : (ck.warn ? 'Avertissement : ' : 'Non conforme : ');
-    return `<div class="ua-item ${status}">` +
-      `<span class="sr-only">${label}</span><span>${ck.l}</span></div>`;
+    return `<li class="ua-item ${status}">` +
+      `<span class="sr-only">${label}</span><span>${ck.l}</span></li>`;
   }).join('');
+  document.getElementById('ual').innerHTML = `<ul class="ua-list">${items}</ul>`;
   window._patchUABadge?.();
 }
 
@@ -2053,11 +2056,116 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
    Activées sur tous écrans ≤ 1100px ou pointer:coarse.
    Intégrées directement ici pour éviter un fichier supplémentaire.
    ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   BOTTOM SHEET — panneau droit en tiroir bas (≤ 640px)
+   ──────────────────────────────────────────────────────────────
+   Piloté par un MediaQueryList dynamique : fonctionne aussi lors
+   d'un redimensionnement en cours de session (DevTools mobile,
+   rotation d'écran) et ne dépend pas d'un flag figé au chargement.
+
+   Interactions :
+     • Tap ou clic sur .ptabs (poignée/onglets) → toggle
+     • Swipe vers le bas ≥ 60 px sur .ptabs     → fermeture
+     • switchTab()                               → ouverture auto
+     • sel() d'un bloc                          → ouverture auto
+     • Clic / tap sur fond du canvas            → fermeture
+     • Resize > 640px                           → fermeture + nettoyage
+══════════════════════════════════════════════════════════════ */
+(function initBottomSheet() {
+  const _panel = document.getElementById('panel');
+  const _ptabs = document.querySelector('.ptabs');
+  const _vp = document.getElementById('viewport');
+
+  /* ── Primitives ──
+     On teste window.innerWidth plutôt qu'une matchMedia : les DevTools mobiles
+     du navigateur redimensionnent le viewport (innerWidth), mais window.matchMedia
+     continue d'évaluer la largeur physique de la fenêtre hôte.
+     Le seuil 640 correspond au breakpoint CSS @media (max-width: 640px). */
+  function _isActive() { return window.innerWidth <= 640; }
+  function _isOpen() { return _panel ? _panel.classList.contains('sheet-open') : false; }
+
+  function openSheet() {
+    if (_panel && _isActive()) _panel.classList.add('sheet-open');
+  }
+  function closeSheet() {
+    if (_panel) _panel.classList.remove('sheet-open');
+  }
+
+  /* ── Tap / clic sur la poignée : fonctionne souris ET tactile ── */
+  let _swipeStartY = null;
+  let _swipeMoved = false;
+
+  if (_ptabs) {
+    /* Touch */
+    _ptabs.addEventListener('touchstart', e => {
+      _swipeStartY = e.touches[0].clientY;
+      _swipeMoved = false;
+    }, { passive: true });
+
+    _ptabs.addEventListener('touchmove', e => {
+      if (_swipeStartY === null) return;
+      if (Math.abs(e.touches[0].clientY - _swipeStartY) > 8) _swipeMoved = true;
+    }, { passive: true });
+
+    _ptabs.addEventListener('touchend', e => {
+      if (_swipeStartY === null) return;
+      const dy = e.changedTouches[0].clientY - _swipeStartY;
+      _swipeStartY = null;
+      if (!_isActive()) return;
+      if (dy > 60) { closeSheet(); return; }   /* swipe bas  */
+      if (!_swipeMoved) { _isOpen() ? closeSheet() : openSheet(); } /* tap */
+    }, { passive: true });
+
+    /* Clic souris (DevTools mobile, desktop narrow) */
+    _ptabs.addEventListener('click', e => {
+      /* Ne pas interférer avec un clic sur un onglet lui-même (géré par switchTab) */
+      if (e.target.closest('.rtab')) return;
+      if (!_isActive()) return;
+      _isOpen() ? closeSheet() : openSheet();
+    });
+  }
+
+  /* ── Clic / tap sur le fond du canvas → fermeture ── */
+  function _onViewportClick(e) {
+    if (!_isActive()) return;
+    if (e.target === _vp ||
+      e.target.id === 'page-wrap' ||
+      e.target.classList.contains('canvas-page')) {
+      closeSheet();
+    }
+  }
+  if (_vp) {
+    _vp.addEventListener('click', _onViewportClick);
+    _vp.addEventListener('touchend', _onViewportClick, { passive: true });
+  }
+
+  /* ── Patch switchTab : ouvre le panneau à chaque changement d'onglet ── */
+  const _origSwitchTab = switchTab;
+  switchTab = function (name) {
+    _origSwitchTab(name);
+    openSheet();
+  };
+
+  /* ── Patch sel() : ouvre le panneau à chaque sélection de bloc ── */
+  const _origSel = sel;
+  sel = function (id, noFocus) {
+    _origSel(id, noFocus);
+    openSheet();
+  };
+
+  /* ── Quand on repasse > 640px : fermer proprement ──
+     resize est fiable pour innerWidth (fonctionne aussi avec les DevTools). */
+  window.addEventListener('resize', () => {
+    if (!_isActive()) closeSheet();
+  }, { passive: true });
+
+})();
+
 (function initMobile() {
 
   const IS_TOUCH = window.matchMedia('(pointer: coarse)').matches ||
     ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-  const IS_NARROW = window.matchMedia('(max-width: 1100px)').matches;
+  const IS_NARROW = window.innerWidth <= 1100;
   if (!IS_TOUCH && !IS_NARROW) return;
 
   function _normTouch(e, touch) {
@@ -2200,16 +2308,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
     }
   }).observe(document.body, { childList: true, subtree: true });
 
-  /* ── 3. SCROLL AUTOMATIQUE vers le bloc sélectionné ── */
-  const _origSel = sel;
-  /* sel() est défini dans editor-ui.js — on ne peut pas la surcharger ici
-     car elle n'est pas encore définie au moment de l'exécution de ce bloc IIFE.
-     On l'enveloppe après le chargement complet. */
-  document.addEventListener('DOMContentLoaded', () => {
-    if (typeof sel !== 'function') return;
-    /* sel est une fonction locale dans editor-ui.js, non exposée sur window —
-       on patch via le nœud d'arbre (onClick) plutôt que la fonction directe. */
-  }, { once: true });
+  /* ── 3. SCROLL AUTOMATIQUE vers le bloc sélectionné ──
 
   /* L'arbre de tags utilise n.onclick → on le surcharge dans updTree.
      On réécrit la partie onclick après chaque reconstruction de l'arbre
