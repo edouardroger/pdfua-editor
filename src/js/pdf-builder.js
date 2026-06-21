@@ -592,7 +592,7 @@ async function prevPDF() {
     if (!result) return;
     result.stream.on('finish', () => {
       document.getElementById('pif').src = result.stream.toBlobURL('application/pdf');
-      openPv();
+      openModal('prev-modal');
     });
     result.stream.on('error', err => announce('Erreur : ' + err.message));
   } catch (err) {

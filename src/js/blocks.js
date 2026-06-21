@@ -164,7 +164,7 @@ function _sanitizeRichContent(html) {
 
 function syncRichContent() {
   if (!sid) return;
-  const b = blocks.find(x => x.id === sid);
+  const b = blockById(sid);
   if (!b || !RICH_TYPES.has(b.type)) return;
   _syncRichFromDOM(b);
   if (typeof saveSession === 'function') saveSession();
@@ -172,7 +172,7 @@ function syncRichContent() {
 
 function getRichEditEl(blockId) {
   const ct = document.getElementById('ct-' + blockId); if (!ct) return null;
-  const b = blocks.find(x => x.id === blockId);
+  const b = blockById(blockId);
   if (b && (b.type === 'ul' || b.type === 'ol')) {
     const focused = ct.querySelector('li:focus');
     if (focused) return focused;
@@ -238,7 +238,8 @@ function initFmtBar() {
     }
   };
   noteBtn.addEventListener('pointerdown', _captureNoteState);
-  noteBtn.addEventListener('mousedown', _captureNoteState); // fallback navigateurs sans pointer events
+  /* mousedown uniquement en fallback pour les navigateurs sans Pointer Events */
+  if (!window.PointerEvent) noteBtn.addEventListener('mousedown', _captureNoteState);
   noteBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); insertNoteAnchor(); });
   fmtBar.appendChild(noteBtn);
   fmtBar.appendChild(sep());
@@ -427,7 +428,7 @@ function insertNoteAnchor() {
   _noteSavedSid = null;
   _noteSavedRange = null;
 
-  const b = blocks.find(x => x.id === targetSid);
+  const b = blockById(targetSid);
   if (!b || !RICH_TYPES.has(b.type)) {
     announce('Sélectionnez du texte dans un paragraphe pour insérer une note.');
     return;
@@ -586,7 +587,7 @@ document.addEventListener('selectionchange', () => {
     const ct = el?.closest('.fb-ct');
     if (!ct) { hideFmtBar(); return; }
     const blockId = ct.id.replace('ct-', '');
-    const b = blocks.find(x => x.id === blockId);
+    const b = blockById(blockId);
     if (!b || !RICH_TYPES.has(b.type)) { hideFmtBar(); return; }
 
     positionFmtBar();
@@ -604,7 +605,7 @@ document.addEventListener('mousedown', e => {
 /* Raccourcis clavier Ctrl+B / Ctrl+I dans les blocs rich */
 document.addEventListener('keydown', e => {
   if (!sid) return;
-  const b = blocks.find(x => x.id === sid);
+  const b = blockById(sid);
   if (!b || !RICH_TYPES.has(b.type)) return;
   const active = document.activeElement;
   if (!active || !active.isContentEditable) return;
@@ -617,15 +618,6 @@ document.addEventListener('keydown', e => {
 
 function uid() { return 'b' + (++cnt); }
 function labelForType(type) { return LABELS[type] || type; }
-/* Cache du tri — invalidé à chaque modification structurelle des blocs */
-let _ordCache = null;
-let _ordCacheKey = '';
-function _ordKey() { return blocks.length + '|' + blocks.map(b => b.id + ':' + b.order).join(','); }
-function ordB() {
-  const key = _ordKey();
-  if (key !== _ordCacheKey) { _ordCache = [...blocks].sort((a, b) => a.order - b.order); _ordCacheKey = key; }
-  return _ordCache;
-}
 function getCanvasPage(pageIdx) { return document.getElementById('cpage-' + pageIdx); }
 function docFont() { return (window.FONTS && window.FONTS.cssFamily) || "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"; }
 function refreshBlockFonts() { blocks.forEach(b => { const ct = document.getElementById('el-' + b.id)?.querySelector('.fb-ct'); if (ct) fillCt(ct, b); }); }
@@ -691,7 +683,8 @@ const tabBtns = [...document.querySelectorAll('.rtab')];
 const tabNames = tabBtns.map(b => b.dataset.tab);
 
 /* Effets de bord par onglet — évite les if séparés dans switchTab */
-const TAB_EFFECTS = { ua: () => { updUA(); updTree(); }, save: () => { }, bloc: updBP, export: () => { } };
+/* Effets de bord par onglet */
+const TAB_EFFECTS = { ua: () => { updUA(); updTree(); }, bloc: updBP };
 
 function switchTab(name) {
   const idx = tabNames.indexOf(name); if (idx === -1) return;
@@ -729,23 +722,19 @@ document.querySelector('.rtabs').addEventListener('keydown', e => {
 });
 
 /* ── DRAG depuis SIDEBAR ── */
-let dragType = null;
-
 document.querySelectorAll('.bsrc').forEach(btn => {
   btn.addEventListener('dragstart', e => {
     if (btn.dataset.t === 'freeform') { e.preventDefault(); return; }
-    dragType = btn.dataset.t;
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('btype', btn.dataset.t);
     if (btn.dataset.shape) e.dataTransfer.setData('bshape', btn.dataset.shape);
   });
-  btn.addEventListener('dragend', () => { dragType = null; });
 
   /* Alternative clavier : Entrée ajoute le bloc en haut de la page 1 */
   btn.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      const d = DEFS[btn.dataset.t] || { w: 200, h: 60 };
+      const d = BLOCK_META[btn.dataset.t] || { w: 200, h: 60 };
       const x = pageW(0) / 2 - d.w / 2;
       const y = MAR + blocks.filter(b => Math.floor(b.y / PH) === 0).length * 24;
       const extra = btn.dataset.shape ? { shapeKind: btn.dataset.shape } : {};
@@ -779,7 +768,7 @@ document.querySelectorAll('.bsrc').forEach(btn => {
       });
       const pageIdx = targetPage ? (parseInt(targetPage.dataset.page) || 0) : 0;
       const pw = pageW(pageIdx);
-      const d = DEFS[btn.dataset.t] || { w: 200, h: 60 };
+      const d = BLOCK_META[btn.dataset.t] || { w: 200, h: 60 };
       const x = pw / 2 - d.w / 2;
       const blocksOnPage = blocks.filter(b => Math.floor(b.y / PH) === pageIdx);
       const y = pageIdx * PH + MAR + blocksOnPage.length * 28;
@@ -796,7 +785,7 @@ document.querySelectorAll('.bsrc').forEach(btn => {
   if (btn.dataset.t === 'freeform') {
     btn.style.cursor = 'pointer';
     btn.addEventListener('click', () => {
-      const d = DEFS.freeform;
+      const d = BLOCK_META.freeform;
       const x = pageW(0) / 2 - d.w / 2;
       const y = MAR + 40;
       const newId = addBlock('freeform', x, y, {}, { noFocus: false });
@@ -808,9 +797,11 @@ document.querySelectorAll('.bsrc').forEach(btn => {
 /* ── AJOUTER UN BLOC ── */
 function addBlock(type, x, y, extraProps, { noFocus = true, noSelect = false } = {}) {
   snapshotState();
-  const d = DEFS[type] || { w: 200, h: 60 };
+  const d = BLOCK_META[type] || { w: 200, h: 60 };
   const b = Object.assign(structuredClone(d), { id: uid(), type, x: Math.round(x), y: Math.round(y), order: blocks.length, content: d.content || '' }, extraProps || {});
   blocks.push(b);
+  _blockMap_set(b);
+  _invalidateOrdCache();
   getCanvasPage(Math.floor(b.y / PH))?.appendChild(buildEl(b));
   if (!noSelect) { sel(b.id, noFocus); switchTab('bloc'); }
   updUA(); updTree(); saveSession();
@@ -930,14 +921,7 @@ function buildEl(b) {
    ══════════════════════════════════════════════════════════ */
 
 /* ── CONTENU DES BLOCS — table de dispatch IHM ── */
-
-/* ── Styles des encadrés — partagé entre FILL_CT, BLOCK_RENDERERS et exportCode ── */
-const ASIDE_STYLES = {
-  info: { bg: '#eff6ff', border: '#3b82f6', icon: 'ℹ', iconColor: '#1d4ed8' },
-  warn: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠', iconColor: '#92400e' },
-  tip: { bg: '#f0fdf4', border: '#22c55e', icon: '✓', iconColor: '#166534' },
-  neutral: { bg: '#f9fafb', border: '#9ca3af', icon: '▮', iconColor: '#6b7280' },
-};
+/* Note : ASIDE_STYLES est défini dans constants.js */
 
 /* ── Helper : crée un div contenteditable rich avec oninput → richContent ── */
 function _mkRichDiv(b, ariaLabel, style, className) {
@@ -1424,7 +1408,7 @@ const FILL_CT = {
     svg.style.display = 'block';
     svg.style.transform = rotation ? `rotate(${rotation}deg)` : '';
     svg.style.transformOrigin = '50% 50%';
-    svg.innerHTML = shapeSVGPath(b.shapeKind || 'circle', w, h);
+    svg.innerHTML = (SHAPE_RENDERERS[b.shapeKind || 'circle'] || SHAPE_RENDERERS.circle).svg(w, h);
 
     svg.querySelectorAll('ellipse,path,polygon,rect').forEach(el => {
       if (fillNone) el.setAttribute('fill', 'none');
@@ -1482,6 +1466,7 @@ function desel() {
     prevWrapper?.setAttribute('aria-selected', 'false');
   }
   sid = null;
+  _updBP_lastSid = null; _updBP_lastKey = '';
   $('bp-none').style.display = 'block';
   $('bp-fields').style.display = 'none';
 }
@@ -1494,11 +1479,8 @@ function desel() {
    correspondants + met à jour les sup + les titres.
    ══════════════════════════════════════════════════════════════ */
 function renumberNotes() {
-  /* ── 1. Numéroter dans l'ordre de lecture (page > y > x) ── */
-  const readOrder = [...blocks].sort((a, b) => {
-    const pa = Math.floor(a.y / PH), pb = Math.floor(b.y / PH);
-    return pa !== pb ? pa - pb : a.y !== b.y ? a.y - b.y : a.x - b.x;
-  });
+  /* ── 1. Numéroter dans l'ordre de lecture — réutilise ordB() (déjà trié) ── */
+  const readOrder = ordB();
 
   let counter = 0;
   readOrder.forEach(b => {
@@ -1509,7 +1491,7 @@ function renumberNotes() {
     if (!sups.length) return;
     sups.forEach(sup => {
       const noteId = sup.dataset.noteId;
-      const noteBlock = blocks.find(x => x.id === noteId);
+      const noteBlock = blockById(noteId);
       if (!noteBlock) return;
       counter++;
       const ref = String(counter);
@@ -1541,7 +1523,7 @@ function _repositionNotes() {
     .sort((a, b) => (parseInt(a.noteRef) || 0) - (parseInt(b.noteRef) || 0))
     .forEach(b => {
       /* La note doit apparaître sur la même page que son ancre */
-      const anchorBlock = blocks.find(x => x.id === b.anchorBlockId);
+      const anchorBlock = blockById(b.anchorBlockId);
       const pageIdx = anchorBlock ? Math.floor(anchorBlock.y / PH) : Math.floor(b.y / PH);
       if (!byPage[pageIdx]) byPage[pageIdx] = [];
       byPage[pageIdx].push(b);
@@ -1585,7 +1567,7 @@ function deletePage(idx) {
   if (idx === 0 || numPages <= 1) return;
   snapshotState();
   /* 1. Supprimer les blocs sur cette page */
-  blocks.filter(b => Math.floor(b.y / PH) === idx).forEach(b => { _removeNoteAnchor(b); document.getElementById('el-' + b.id)?.remove(); });
+  blocks.filter(b => Math.floor(b.y / PH) === idx).forEach(b => { _removeNoteAnchor(b); _blockMap_delete(b.id); document.getElementById('el-' + b.id)?.remove(); });
   blocks = blocks.filter(b => Math.floor(b.y / PH) !== idx);
   /* 2. Redescendre les blocs des pages suivantes */
   blocks.forEach(b => { if (Math.floor(b.y / PH) > idx) { b.y -= PH; const domEl = document.getElementById('el-' + b.id); if (domEl) domEl.style.top = (b.y % PH) + 'px'; } });
@@ -1602,25 +1584,28 @@ function deletePage(idx) {
   for (let i = idx; i < numPages; i++) {
     const pg = document.getElementById('cpage-' + (i + 1)) || pageWrap.querySelectorAll('.canvas-page')[i];
     if (pg) { pg.id = 'cpage-' + i; pg.dataset.page = i; pg.setAttribute('aria-label', 'Page ' + (i + 1) + ' — zone de dépôt des blocs'); applyPageOrientation(pg, i); setupPageDrop(pg, i); }
+    _pageLabelCache[i] = ''; // invalider le cache label pour les pages réindexées
     _updatePageLabel(i);
   }
-  if (sid && !blocks.find(b => b.id === sid)) desel();
+  if (sid && !blockById(sid)) desel();
   rebuildGridOverlays(); updUA(); updTree(); saveSession();
   announce('Page ' + (idx + 1) + ' supprimée. Ctrl+Z pour annuler.');
 }
 /* ── Helper : retire le <sup> d'ancre dans le bloc parent d'une note ── */
 function _removeNoteAnchor(b) {
   if (b.type !== 'note' || !b.anchorBlockId) return;
-  const parent = blocks.find(x => x.id === b.anchorBlockId); if (!parent) return;
+  const parent = blockById(b.anchorBlockId); if (!parent) return;
   document.getElementById('ct-' + parent.id)?.querySelector('sup[data-note-id="' + b.id + '"]')?.remove();
   _syncRichFromDOM(parent);
 }
 
 function rmB(id) {
   snapshotState();
-  const b = blocks.find(x => x.id === id);
+  const b = blockById(id);
   if (b) _removeNoteAnchor(b);
   blocks = blocks.filter(x => x.id !== id);
+  _blockMap_delete(id);
+  _invalidateOrdCache();
   document.getElementById('el-' + id)?.remove();
   if (sid === id) desel();
   if (b?.type === 'note' && b.anchorBlockId) renumberNotes();
@@ -1631,18 +1616,21 @@ function rmB(id) {
 
 function dupB(id) {
   snapshotState();
-  const orig = blocks.find(b => b.id === id); if (!orig) return;
+  const orig = blockById(id); if (!orig) return;
   const copy = JSON.parse(JSON.stringify({ ...orig, _bmNode: undefined }));
   copy.id = uid(); copy.x = orig.x + 16; copy.y = orig.y + 16; copy.order = blocks.length;
   blocks.push(copy);
+  _blockMap_set(copy);
+  _invalidateOrdCache();
   getCanvasPage(Math.floor(copy.y / PH))?.appendChild(buildEl(copy));
   sel(copy.id); updUA(); updTree(); saveSession();
   announce('Bloc dupliqué.');
 }
 
 function bprop(k, v) {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   b[k] = v;
+  _updBP_lastKey = ''; // invalider le cache pour forcer le re-fill au prochain updBP
   if (k === 'alt' || k === 'linkText') rr(b.id);
   /* Quand le type change (ex. h1→h2), mettre à jour le label visible dans la barre du bloc */
   if (k === 'type') {
@@ -1661,10 +1649,10 @@ function bprop(k, v) {
   updUA(); saveSession();
 }
 
-function rr(id) { const b = blocks.find(x => x.id === id); if (!b) return; const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); }
+function rr(id) { const b = blockById(id); if (!b) return; const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); }
 
 function applyPos() {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   const oldPageIdx = Math.floor(b.y / PH);
   b.x = parseInt(document.getElementById('bx').value) || 0;
   b.y = parseInt(document.getElementById('by').value) || 0;
@@ -1677,7 +1665,7 @@ function applyPos() {
 }
 
 function applySz() {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
   const minW = isDecorative ? 1 : 80;
   const minH = isDecorative ? 1 : 28;
@@ -1688,7 +1676,7 @@ function applySz() {
 }
 
 function qa(d) {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   const pageIdx = Math.floor(b.y / PH), pw = pageW(pageIdx);
   const ALIGN = { l: () => ({ x: MAR }), r: () => ({ x: pw - MAR - b.w }), c: () => ({ x: Math.round((pw - b.w) / 2) }), t: () => ({ y: pageIdx * PH + MAR }) };
   Object.assign(b, ALIGN[d]?.());
@@ -1699,7 +1687,7 @@ function qa(d) {
 
 /* Gestion des calques (z-index visuel, indépendant de l'ordre de lecture PDF) */
 function chZ(d) {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   snapshotState();
   b.zIndex = (b.zIndex || 0) + d;
   const domEl = document.getElementById('el-' + b.id);
@@ -1714,13 +1702,14 @@ function getZLabel(z) {
 }
 
 function chOrd(d) {
-  const b = blocks.find(x => x.id === sid); if (!b) return;
+  const b = blockById(sid); if (!b) return;
   snapshotState();
   const sorted = ordB();
   const i = sorted.findIndex(x => x.id === sid);
   const j = i + d; if (j < 0 || j >= sorted.length) return;
   const o = sorted[j];
   const tmp = b.order; b.order = o.order; o.order = tmp;
+  _invalidateOrdCache();
   updTree(); updBP();
   saveSession();
 }
@@ -1736,7 +1725,7 @@ function syncOrderToPosition() {
       return pa !== pb ? pa - pb : a.y !== b.y ? a.y - b.y : a.x - b.x;
     })
     .forEach((b, i) => { b.order = i; });
-  _ordCacheKey = ''; // invalider le cache
+  _invalidateOrdCache();
   updTree(); updBP(); saveSession();
   announce('Ordre de lecture synchronisé sur la position des blocs.');
 }
@@ -1898,7 +1887,7 @@ function setSlider(id, value, fmt) {
 }
 
 /**
- * Peuple un conteneur div avec un sélecteur couleur DSFR.
+ * Peuple un conteneur div avec un sélecteur couleur.
  * Si le sélecteur existe déjà (même id), met à jour sa valeur.
  */
 function _fillColorWrap(wrapperId, selectId, value, propKey) {
@@ -1922,8 +1911,29 @@ function _fillColorWrap(wrapperId, selectId, value, propKey) {
   }
 }
 
+/* Cache pour updBP : on ne re-remplit les panneaux que si le bloc sélectionné ou ses
+   données ont changé. La clé est un snapshot JSON léger des champs susceptibles de varier. */
+let _updBP_lastSid = null;
+let _updBP_lastKey = '';
+
+function _bpKey(b) {
+  if (!b) return '';
+  // Champs géométriques + champs de propriétés dont les panneaux dépendent
+  return `${b.id}|${b.x}|${b.y}|${b.w}|${b.h}|${b.type}|${b.zIndex || 0}|` +
+    `${b.fontSize ?? ''}|${b.textIndent ?? ''}|${b.alt ?? ''}|${b.imgLinkUrl ?? ''}|` +
+    `${b.linkText ?? ''}|${b.linkUrl ?? ''}|${b.hlv ?? ''}|${b.bookmark ?? ''}|` +
+    `${b.quoteSource ?? ''}|${b.noteRef ?? ''}|${b.formLabel ?? ''}|${b.formPlaceholder ?? ''}|` +
+    `${b.formDefaultValue ?? ''}|${b.formOptions ?? ''}|${b.formChecked ?? ''}|` +
+    `${b.formRequired ?? ''}|${b.formReadonly ?? ''}|${b.asideStyle ?? ''}|` +
+    `${b.shapeKind ?? ''}|${b.shapeColor ?? ''}|${b.shapeOpacity ?? ''}|${b.shapeFillNone ?? ''}|` +
+    `${b.shapeBorderEnabled ?? ''}|${b.shapeBorderColor ?? ''}|${b.shapeBorderWidth ?? ''}|${b.shapeRotation ?? ''}|` +
+    `${b.strokeWidth ?? ''}|${b.shapeFilled ?? ''}|${b.pathClosed ?? ''}|` +
+    `${b.chartKind ?? ''}|${b.chartTitle ?? ''}|${b.listNoBullet ?? ''}|` +
+    `${blocks.length}|${ordB().findIndex(x => x.id === b.id)}`;
+}
+
 function updBP() {
-  const b = blocks.find(x => x.id === sid);
+  const b = blockById(sid);
   $('bp-none').style.display = b ? 'none' : 'block';
   const _zLbl = $('z-level-lbl'); if (_zLbl && b) _zLbl.textContent = getZLabel(b.zIndex || 0);
   $('bp-fields').style.display = b ? 'block' : 'none';
@@ -1931,21 +1941,35 @@ function updBP() {
     /* Annoncer la désélection */
     const sa = $('sel-announce');
     if (sa) sa.textContent = '';
+    _updBP_lastSid = null; _updBP_lastKey = '';
     return;
   }
-  $('bx').value = Math.round(b.x); $('by').value = Math.round(b.y);
-  $('bw').value = Math.round(b.w); $('bh').value = Math.round(b.h);
+
   const pageNum = Math.floor(b.y / PH) + 1;
   const readPos = ordB().findIndex(x => x.id === b.id) + 1;
+
+  /* Mise à jour légère toujours effectuée (géométrie + position lecture) */
+  $('bx').value = Math.round(b.x); $('by').value = Math.round(b.y);
+  $('bw').value = Math.round(b.w); $('bh').value = Math.round(b.h);
   $('oi').textContent = `Page ${pageNum} — Position lecture : ${readPos} / ${blocks.length}`;
-  /* Annoncer la sélection dans la région live sr-only pour les AT */
-  const sa = $('sel-announce');
-  if (sa) {
-    const label = labelForType(b.type);
-    const preview = b.content ? ' : ' + b.content.replace(/\n/g, ' ').slice(0, 40) : '';
-    sa.textContent = `${label}${preview} sélectionné — page ${pageNum}, position ${readPos} sur ${blocks.length}.`;
+
+  /* Annonce AT uniquement au changement de sélection */
+  if (_updBP_lastSid !== sid) {
+    const sa = $('sel-announce');
+    if (sa) {
+      const label = labelForType(b.type);
+      const preview = b.content ? ' : ' + b.content.replace(/\n/g, ' ').slice(0, 40) : '';
+      sa.textContent = `${label}${preview} sélectionné — page ${pageNum}, position ${readPos} sur ${blocks.length}.`;
+    }
   }
-  PANEL_BINDINGS.forEach(({ panel, types, fill }) => { const on = types.includes(b.type); $(panel).style.display = on ? 'block' : 'none'; if (on) fill(b); });
+
+  /* Panneaux contextuels : re-remplir uniquement si la clé a changé */
+  const currentKey = _bpKey(b);
+  if (currentKey !== _updBP_lastKey) {
+    PANEL_BINDINGS.forEach(({ panel, types, fill }) => { const on = types.includes(b.type); $(panel).style.display = on ? 'block' : 'none'; if (on) fill(b); });
+    _updBP_lastKey = currentKey;
+  }
+  _updBP_lastSid = sid;
 }
 
 /* ── CHECKLIST PDF/UA ── */
@@ -2032,7 +2056,7 @@ function updTree() {
     n.setAttribute('aria-label', `Nœud ${i + 1} : ${labelForType(b.type)}${b.content ? ' — ' + b.content.slice(0, 30) : ''}`);
     n.onclick = () => { sel(b.id); switchTab('bloc'); };
     n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel(b.id); switchTab('bloc'); } };
-    n.innerHTML = `<span aria-hidden="true" style="color:#9ca3af">${String(i + 1).padStart(2, '0')} </span><span class="tg" aria-hidden="true">&lt;${tg}&gt;</span> <span class="tc" aria-hidden="true">${co}</span>`;
+    n.innerHTML = `<span aria-hidden="true" style="color:#9ca3af">${String(i + 1).padStart(2, '0')} </span><span class="tg" aria-hidden="true">&lt;${tg}&gt;</span> <span class="tc" aria-hidden="true">${_esc(co)}</span>`;
     frag.appendChild(n);
   });
 
@@ -2048,8 +2072,24 @@ function updTree() {
 let _uaTimer = null, _treeTimer = null;
 const _updUA = updUA;
 const _updTree = updTree;
+
+/* Cache fingerprint pour updTree : on ne reconstruit l'arbre DOM que si la
+   structure du document a changé (types, contenu, ordre, nombre de blocs). */
+let _treeLastKey = '';
+function _updTreeCached() {
+  const s = ordB();
+  const key = s.map(b =>
+    `${b.id}:${b.type}:${(b.content || '').slice(0, 20)}:${b.alt ?? ''}:` +
+    `${b.linkText ?? ''}:${b.noteRef ?? ''}:${b.asideStyle ?? ''}:` +
+    `${b.shapeKind ?? ''}:${b.chartKind ?? ''}:${(b.pathPoints || []).length}`
+  ).join('|');
+  if (key === _treeLastKey) return;
+  _treeLastKey = key;
+  _updTree();
+}
+
 updUA = () => { clearTimeout(_uaTimer); _uaTimer = setTimeout(_updUA, 150); };
-updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 150); };
+updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCached, 150); };
 
 /* ══════════════════════════════════════════════════════════════
    ADAPTATIONS TACTILES — touch events, zoom canvas, sidebar tap
@@ -2166,7 +2206,6 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   const IS_TOUCH = window.matchMedia('(pointer: coarse)').matches ||
     ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
   const IS_NARROW = window.innerWidth <= 1100;
-  if (!IS_TOUCH && !IS_NARROW) return;
 
   function _normTouch(e, touch) {
     /* Renvoie un objet compatible MouseEvent à partir d'un Touch */
@@ -2215,7 +2254,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
     if (fbEl._mobileReady) return;
     fbEl._mobileReady = true;
     const elId = () => fbEl.id.replace('el-', '');
-    const getB = () => blocks.find(x => x.id === elId());
+    const getB = () => blockById(elId());
 
     /* Barre titre → déplacement */
     const bar = fbEl.querySelector('.fb-bar');
@@ -2366,9 +2405,14 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   }
 
   function autoZoom() {
-    const vp = document.getElementById('viewport'); if (!vp) return;
+    const vp = document.getElementById('viewport');
+    if (!vp) return;
     const avail = vp.clientWidth - 48;
-    if (avail < PW) applyZoom(Math.max(ZMIN, avail / PW));
+    const z = Math.max(
+      ZMIN,
+      Math.min(ZMAX, avail / PW)
+    );
+    applyZoom(z);
   }
 
   /* Barre flottante +/−/⟳ */
@@ -2407,9 +2451,13 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTree, 15
   }
 
   /* Zoom initial adaptatif */
-  autoZoom();
-  window.addEventListener('resize', () => { if (_zoom < 1) autoZoom(); });
-  window.addEventListener('orientationchange', () => setTimeout(autoZoom, 300));
+  window.addEventListener('load', autoZoom);
+  window.addEventListener('resize', autoZoom);
+  window.addEventListener('orientationchange', () => {
+    setTimeout(autoZoom, 300);
+  });
+
+  requestAnimationFrame(autoZoom);
 
   /* ── 6. BANNIÈRE INFO — première visite sur mobile ── */
   if (IS_TOUCH && window.matchMedia('(max-width: 768px)').matches && !sessionStorage.getItem('mob_ok')) {
@@ -2469,7 +2517,9 @@ function initPanelListeners() {
 
   /* ── Ordre de lecture ── */
   (function () {
-    const brow = document.querySelector('#tp-bloc .ps:has(#oi) .brow');
+    /* Remonter depuis #oi jusqu'au .brow frère précédent */
+    const oiEl = g('oi');
+    const brow = oiEl?.closest('.ps')?.querySelector('.brow');
     if (brow) {
       const [btnUp, btnDown] = brow.querySelectorAll('.sb');
       btnUp?.addEventListener('click', () => chOrd(-1));
@@ -2480,7 +2530,8 @@ function initPanelListeners() {
 
   /* ── Calque ── */
   (function () {
-    const brow = document.querySelector('#tp-bloc .ps:has(#z-level-lbl) .brow');
+    const zEl = g('z-level-lbl');
+    const brow = zEl?.closest('.ps')?.querySelector('.brow');
     if (brow) {
       const [btnUp, btnDown] = brow.querySelectorAll('.sb');
       btnUp?.addEventListener('click', () => chZ(1));

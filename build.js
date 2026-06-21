@@ -10,8 +10,8 @@ const { PurgeCSS } = require('purgecss');
 
 const MODULES = [
   'blob-stream.js',
-  'fontLoader.js',
   'constants.js',
+  'fontLoader.js',
   'state.js',
   'blocks.js',
   'editor-ui.js',

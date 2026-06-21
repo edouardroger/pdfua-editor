@@ -73,9 +73,9 @@
 
         <div class="tb-group" role="group" aria-label="Export">
           <button class="tb-btn primary" type="button" id="btn-gen" title="Générer le PDF/UA">
-            <span class="ico-sm" aria-hidden="true">⬇</span> Générer PDF
+            <span class="ico-sm" aria-hidden="true">⬇</span> Générer le PDF
           </button>
-          <button class="tb-btn" type="button" id="btn-prev" title="Prévisualiser dans le navigateur">
+          <button class="tb-btn" type="button" id="btn-prev" title="Aperçu dans le navigateur">
             <span class="ico-sm" aria-hidden="true">◉</span> Aperçu
           </button>
           <button class="tb-btn" type="button" id="btn-exp" title="Exporter le code JS PDFKit">
@@ -86,9 +86,9 @@
       </nav>
 
       <!-- Bouton hamburger — visible uniquement sur mobile, ouvre le drawer sidebar -->
-      <button id="tb-hamburger" class="tb-btn tb-hamburger" type="button" aria-label="Ouvrir la palette de blocs"
-        aria-expanded="false" aria-controls="sidebar">
-        <span aria-hidden="true">☰</span>
+      <button id="tb-hamburger" class="tb-btn tb-hamburger" type="button" title="Ouvrir la palette de blocs"
+        aria-label="Ouvrir la palette de blocs" aria-expanded="false" aria-controls="sidebar">
+        <span aria-hidden="true">+</span>
       </button>
 
       <div class="tb-spacer"></div>
@@ -815,7 +815,8 @@
   </dialog>
 
   <!-- Toast notifications -->
-  <div id="toast" role="status" aria-live="polite" aria-atomic="true" aria-relevant="additions text" aria-label="Notifications"></div>
+  <div id="toast" role="status" aria-live="polite" aria-atomic="true" aria-relevant="additions text"
+    aria-label="Notifications"></div>
 
   <!-- Région live sr-only pour les annonces de sélection de bloc (non visible) -->
   <div id="sel-announce" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>

@@ -1,13 +1,21 @@
-// constants.js — Constantes globales, métadonnées, palette DSFR, formes
+// constants.js — Constantes globales, métadonnées, palette, formes
 
 const PW = 794, PH = 1123, MAR = 40, BAR_H = 0, CT_PAD = 6;
 const LINK_COLOR = '#1d4ed8'; /* Couleur liens & appels de note — contraste ≥ 4.5:1 sur blanc */
 const pageWrap = document.getElementById('page-wrap');
 
-
-const CREATOR = 'Générateur de PDF'
-const PRODUCER = ''; // Laisser vide pour éviter d'ajouter une info inutile dans le PDF
+const CREATOR = 'Générateur de PDF';
+const PRODUCER = '';
 const FS = { h1: 32, h2: 28, h3: 24, h4: 20, h5: 18, h6: 16, p: 13, list: 13, link: 13, table: 12, quote: 13, note: 8, aside: 12, code: 12 };
+
+/* ── Helper d'échappement HTML partagé — protège les innerHTML dynamiques ── */
+function _esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 // Définitions des blocs
 const BLOCK_META = {
@@ -36,7 +44,6 @@ const BLOCK_META = {
   'form-checkbox': { label: 'Case à cocher', w: 260, h: 40, formLabel: 'Libellé de la case', formRequired: false, formReadonly: false, formChecked: false },
   'form-radio': { label: 'Boutons radio', w: 260, h: 90, formLabel: 'Groupe de choix', formOptions: 'Option 1\nOption 2\nOption 3', formRequired: false, formReadonly: false },
   'form-select': { label: 'Liste déroulante', w: 280, h: 60, formLabel: 'Libellé', formOptions: 'Choix 1\nChoix 2\nChoix 3', formRequired: false, formReadonly: false, formDefaultValue: '' },
-
   chart: {
     label: 'Graphique', w: 340, h: 220,
     chartKind: 'pie',
@@ -51,11 +58,18 @@ const BLOCK_META = {
   },
 };
 
-// Alias pour accès rapide aux labels et dimensions de chaque type de bloc
-const DEFS = BLOCK_META;
+/* LABELS : accès rapide aux libellés sans passer par BLOCK_META[type].label */
 const LABELS = Object.fromEntries(Object.entries(BLOCK_META).map(([k, v]) => [k, v.label]));
 
-/* ── PALETTE DSFR — couleurs officielles du système de design de l'État ── */
+/* ── Styles des encadrés — partagé entre FILL_CT (blocks.js), pdf-renderers.js et export-code.js ── */
+const ASIDE_STYLES = {
+  info:    { bg: '#eff6ff', border: '#3b82f6', icon: 'ℹ', iconColor: '#1d4ed8' },
+  warn:    { bg: '#fffbeb', border: '#f59e0b', icon: '⚠', iconColor: '#92400e' },
+  tip:     { bg: '#f0fdf4', border: '#22c55e', icon: '✓', iconColor: '#166534' },
+  neutral: { bg: '#f9fafb', border: '#9ca3af', icon: '▮', iconColor: '#6b7280' },
+};
+
+/* ── PALETTE ── */
 const DSFR_COLORS = [
   { label: 'Bleu France — 975 (fond)', hex: '#f5f5fe', group: 'Bleu France' },
   { label: 'Bleu France — 950', hex: '#ececfe', group: 'Bleu France' },
@@ -104,7 +118,7 @@ const DSFR_COLORS = [
   { label: 'Noir', hex: '#000000', group: 'Noir & Blanc' },
 ];
 
-/* Trouver la couleur DSFR la plus proche par hex (insensible à la casse) */
+/* Trouver la couleur la plus proche par hex (insensible à la casse) */
 function dsfrClosest(hex) {
   const h = (hex || '').toLowerCase();
   const exact = DSFR_COLORS.find(c => c.hex.toLowerCase() === h);
@@ -112,7 +126,7 @@ function dsfrClosest(hex) {
 }
 
 /**
- * Construit un <select> de couleurs DSFR avec un swatch de prévisualisation.
+ * Construit un <select> de couleurs avec un swatch de prévisualisation.
  * @param {string}   id       — id HTML du select
  * @param {string}   value    — valeur hex courante
  * @param {function} onChange — callback(hexValue)
@@ -121,7 +135,6 @@ function dsfrClosest(hex) {
 function makeDsfrColorSelect(id, value, onChange) {
   const resolved = dsfrClosest(value);
 
-  /* Swatch de couleur à droite du select */
   const swatch = document.createElement('span');
   swatch.id = id + '-swatch';
   swatch.className = 'dsfr-color-swatch';
@@ -179,20 +192,16 @@ const SHAPE_RENDERERS = {
     label: 'Demi-cercle', icon: '◑',
     svg: (w, h) => { const [cx, cy] = [w / 2, h / 2]; return `<path d="M0,${cy} A${cx},${cy} 0 0,1 ${w},${cy} Z" fill="currentColor"/>`; },
     pdf: (doc, w, h, cmd = 'fill') => {
-      /* Approximation Bézier cubique d'une demi-ellipse (rx=w/2, ry=h/2)
-         Deux quarts d'arc, facteur de Bézier k ≈ 0.5523 pour erreur < 0.03%
-         SVG : M 0,cy  A rx,ry 0 0,1  w,cy  Z  (bombé vers le haut)
-         Point de départ : (0, cy)  →  sommet : (cx, 0)  →  arrivée : (w, cy) */
       const cx = w / 2, cy = h / 2, k = 0.5523;
       doc.moveTo(0, cy)
-        .bezierCurveTo(0, cy - k * cy, cx - k * cx, 0, cx, 0)       // quart gauche
-        .bezierCurveTo(cx + k * cx, 0, w, cy - k * cy, w, cy)       // quart droit
+        .bezierCurveTo(0, cy - k * cy, cx - k * cx, 0, cx, 0)
+        .bezierCurveTo(cx + k * cx, 0, w, cy - k * cy, w, cy)
         .lineTo(0, cy)
         .closePath()[cmd]();
     },
   },
 
-  star: { label: 'Étoile 5 pts', icon: '★', svg: (w, h) => _starSVG(w, h, 5, 0.4), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 5, 0.4, cmd) },
+  star:  { label: 'Étoile 5 pts', icon: '★', svg: (w, h) => _starSVG(w, h, 5, 0.4), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 5, 0.4, cmd) },
   star6: { label: 'Étoile 6 pts', icon: '✶', svg: (w, h) => _starSVG(w, h, 6, 0.5), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 6, 0.5, cmd) },
 
   triangle: {
@@ -243,7 +252,7 @@ const SHAPE_RENDERERS = {
 
   wave: {
     label: 'Vague', icon: '〜',
-    /* La vague est un tracé ouvert — fill inapplicable, toujours stroke */
+    /* Tracé ouvert — fill inapplicable, toujours stroke */
     svg: (w, h) => {
       const [cx, cy, sw] = [w / 2, h / 2, Math.max(2, h * 0.12)];
       return `<path d="M0,${cy} C${w * 0.15},${cy - h * 0.35} ${w * 0.35},${cy - h * 0.35} ${cx},${cy} S${w * 0.85},${cy + h * 0.35} ${w},${cy}" stroke="currentColor" stroke-width="${sw}" fill="none"/>`;
@@ -256,7 +265,8 @@ const SHAPE_RENDERERS = {
     },
   },
 };
-// Helpers pour dessiner les étoiles
+
+/* ── Helpers étoiles ── */
 const _starPointsCache = new Map();
 function _starPoints(w, h, n, ir_ratio) {
   const key = `${w},${h},${n},${ir_ratio}`;
@@ -279,13 +289,21 @@ function _starPDF(doc, w, h, n, ir_ratio, cmd = 'fill') {
   doc.closePath()[cmd]();
 }
 
-// Compatibilité avec le reste du code
-function shapeSVGPath(kind, w, h) {
-  const r = SHAPE_RENDERERS[kind] || SHAPE_RENDERERS.circle;
-  return r.svg(w, h);
-}
-
-// Garder les labels et icônes des formes
+/* SHAPE_DEFS : accès rapide aux labels/icônes sans passer par SHAPE_RENDERERS */
 const SHAPE_DEFS = Object.fromEntries(
   Object.entries(SHAPE_RENDERERS).map(([k, v]) => [k, { label: v.label, icon: v.icon }])
 );
+
+/* ── Conversion binaire → base64 par blocs (évite le stack overflow sur les grands buffers) ──
+   Utilisé par fontLoader.js (injection CSS @font-face) et state.js (sauvegarde images).
+   Retourne une chaîne base64 brute (sans préfixe data:...).
+   NOTE : constants.js doit être chargé AVANT fontLoader.js dans le bundle. */
+function _bufToBase64(buf) {
+  const bytes = new Uint8Array(buf instanceof ArrayBuffer ? buf : buf.buffer ?? buf);
+  const CHUNK = 8192;
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
+  }
+  return btoa(bin);
+}

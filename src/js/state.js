@@ -3,10 +3,36 @@
 // État global du document
 let blocks = [];           // liste de tous les blocs
 let sid = null;            // id du bloc sélectionné
-let selectedBlock = null;  // référence directe au bloc sélectionné (optimisation)
 let cnt = 0;               // compteur d'id
 let numPages = 1;          // nombre de pages A4 créées
 let pageOrientations = ['portrait']; // orientation par index de page ['portrait'|'landscape', …]
+
+/* ── Index id→bloc : O(1) lookup au lieu de O(n) blocks.find(x => x.id === id) ──
+   Maintenu en sync avec `blocks` via _blockMap_set / _blockMap_delete / _blockMap_reset.
+   Toutes les mutations de `blocks` dans state.js et blocks.js doivent passer par ces helpers,
+   ou appeler _blockMap_reset() après une réaffectation complète de `blocks = [...]`. */
+const _blockMap = new Map();
+function _blockMap_set(b)    { _blockMap.set(b.id, b); }
+function _blockMap_delete(id){ _blockMap.delete(id); }
+function _blockMap_reset()   { _blockMap.clear(); blocks.forEach(b => _blockMap.set(b.id, b)); }
+/** Lookup O(1) par id — remplace blocks.find(x => x.id === id) partout dans le code. */
+function blockById(id)       { return _blockMap.get(id); }
+
+/* ── Cache du tri ordB — invalidé via _ordVersion à chaque mutation de blocks ──
+   ordB() est appelé très fréquemment (updBP, updTree, _prepareBlocks, etc.).
+   Un compteur de version remplace l'ancienne clé O(n) basée sur map+join. */
+let _ordCache = null;
+let _ordVersion = 0;
+let _ordCachedVersion = -1;
+function ordB() {
+  if (_ordVersion !== _ordCachedVersion) {
+    _ordCache = [...blocks].sort((a, b) => a.order - b.order);
+    _ordCachedVersion = _ordVersion;
+  }
+  return _ordCache;
+}
+/** Invalider le cache ordB — à appeler après tout push/splice/modification d'order sur blocks. */
+function _invalidateOrdCache() { _ordVersion++; }
 
 
 function _isLandscape(idx) { return (pageOrientations[idx] || 'portrait') === 'landscape'; }
@@ -19,9 +45,13 @@ function applyPageOrientation(pg, idx) {
   [pg.style.width, pg.style.height] = _isLandscape(idx) ? [PH + 'px', PW + 'px'] : [PW + 'px', PH + 'px'];
 }
 
+/* Cache orientation par page — évite de recréer le label si rien n'a changé */
+const _pageLabelCache = {};
+
 /* Basculer l'orientation d'une page et mettre à jour l'IHM */
 function togglePageOrientation(idx) {
   pageOrientations[idx] = _isLandscape(idx) ? 'portrait' : 'landscape';
+  delete _pageLabelCache[idx]; // invalider le cache pour forcer le re-rendu du label
   const pg = document.getElementById('cpage-' + idx);
   if (pg) applyPageOrientation(pg, idx);
   _updatePageLabel(idx);
@@ -34,6 +64,11 @@ function _updatePageLabel(idx) {
   const isLand = _isLandscape(idx);
   const label = pageWrap.querySelector(`.page-label[data-page="${idx}"]`);
   if (!label) return;
+  /* Guard : ne reconstruire que si l'orientation ou l'index a changé */
+  const cacheKey = `${idx}:${isLand ? 'l' : 'p'}`;
+  if (_pageLabelCache[idx] === cacheKey) return;
+  _pageLabelCache[idx] = cacheKey;
+
   label.innerHTML = '';
   label.appendChild(el('span', { text: 'Page ' + (idx + 1) }));
   label.appendChild(el('button', {
@@ -75,18 +110,20 @@ const History = {
     this._lock = true;
     blocks.forEach(b => document.getElementById('el-' + b.id)?.remove());
     blocks = prev.blocks; cnt = prev.cnt;
-    _ordCache = null;
+    _ordVersion++;
+    _bumpSaveVersion();
+    _blockMap_reset();
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
     blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
-    sid = null; selectedBlock = null; desel(); updUA(); updTree(); saveSession();
+    sid = null; desel(); updUA(); updTree(); saveSession();
     this._lock = false;
     announce('Action annulée.');
   },
 };
 
 // Alias pour garder la compatibilité avec le reste du code
-function snapshotState() { History.snapshot(); }
+function snapshotState() { History.snapshot(); _bumpSaveVersion(); }
 function undoLast() { History.undo(); }
 
 // Grille magnétique 
@@ -281,17 +318,29 @@ function _validateImportedBlock(b) {
 
 /* Debounce interne : évite les sauvegardes multiples sur oninput rapides */
 let _saveTimer = null;
+/* Cache de la dernière sérialisation : évite sort+map+JSON.stringify si rien n'a changé */
+let _saveLastJson = '';
+let _saveVersion = 0; // incrémenté par snapshotState/addBlock/rmB/dupB
+
+function _bumpSaveVersion() { _saveVersion++; }
+
 function saveSession() {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     try {
       const meta = _collectMeta();
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+      /* Construire uniquement si l'état a évolué depuis la dernière sauvegarde */
+      const currentVersion = _saveVersion;
+      const sorted = ordB(); // réutilise le cache ordB sans re-trier
+      const payload = JSON.stringify({
         v: PROJECT_VERSION,
-        blocks: [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0)).map(_serializeBlock),
+        blocks: sorted.map(_serializeBlock),
         meta,
         pageOrientations: pageOrientations.slice(0, MAX_PAGES),
-      }));
+      });
+      if (payload === _saveLastJson) return; // aucun changement, rien à écrire
+      sessionStorage.setItem(SESSION_KEY, payload);
+      _saveLastJson = payload;
     } catch { /* quota dépassé ou désactivé */ }
   }, 500);
 }
@@ -317,9 +366,8 @@ function loadSession() {
       return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 0);
 
-    _ordCache = null;
-
-    /* Borner pageOrientations à MAX_PAGES (point 6) */
+    _invalidateOrdCache();
+    _blockMap_reset();
     if (Array.isArray(saved.pageOrientations)) {
       pageOrientations = saved.pageOrientations
         .slice(0, MAX_PAGES)
@@ -356,7 +404,7 @@ function _reattachNoteAnchors() {
       sup.className = 'note-anchor';
       sup.style.color = LINK_COLOR;
       sup.onclick = e => { e.stopPropagation(); sel(noteId); switchTab('bloc'); };
-      const noteBlock = blocks.find(x => x.id === noteId);
+      const noteBlock = blockById(noteId);
       if (noteBlock) sup.title = 'Note ' + (noteBlock.noteRef || '') + ' — cliquer pour sélectionner';
     });
   });
@@ -411,8 +459,9 @@ const MAX_PAGES = 50;
 
 const _ENVELOPE_MAGIC = new Uint8Array([0x50, 0x44, 0x55, 0x41]); // "PDUA"
 const _ENVELOPE_FORMAT_VERSION = 0x02;
-const _MAX_ASSET_SIZE = 20 * 1024 * 1024; // 20 Mo par image
-const _MAX_JSON_COMPRESSED = 50 * 1024 * 1024; // 50 Mo JSON (compressé ou non)
+const _MAX_ASSET_SIZE         =  20 * 1024 * 1024; // 20 Mo par image (binaire)
+const _MAX_JSON_COMPRESSED    =   5 * 1024 * 1024; // 5 Mo — flux gzip du JSON
+const _MAX_JSON_DECOMPRESSED  =  50 * 1024 * 1024; // 50 Mo — JSON après décompression
 
 /* ── Helper : lit un ReadableStream entier en Uint8Array ── */
 async function _readStream(readable) {
@@ -439,15 +488,10 @@ function _b64ToBin(dataUrl) {
 }
 
 /* ── Encodage Uint8Array → data-URL base64
-   Traite par blocs de 8 192 octets pour éviter le stack overflow
-   que causerait String.fromCharCode(...largeArray) sur les grandes images. ── */
+   Délègue à _bufToBase64 (constants.js) pour éviter la duplication du
+   pattern de conversion par blocs de 8 192 octets. ── */
 function _binToDataUrl(bytes, mime) {
-  let bin = '';
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
-  }
-  return 'data:' + (mime || 'image/png') + ';base64,' + btoa(bin);
+  return 'data:' + (mime || 'image/png') + ';base64,' + _bufToBase64(bytes);
 }
 
 /* ── Extraction du MIME depuis une data-URL ── */
@@ -621,12 +665,12 @@ async function _parseEnvelope(buffer) {
     const w = ds.writable.getWriter();
     w.write(jsonGzip); w.close();
     const decompressed = await _readStream(ds.readable);
-    if (decompressed.byteLength > _MAX_JSON_COMPRESSED)
+    if (decompressed.byteLength > _MAX_JSON_DECOMPRESSED)
       throw new Error('JSON trop volumineux après décompression (' + decompressed.byteLength + ' o).');
     jsonObj = JSON.parse(new TextDecoder().decode(decompressed));
   } else {
     /* Fallback : navigateur sans DecompressionStream — tenter JSON brut */
-    if (jsonGzip.byteLength > _MAX_JSON_COMPRESSED)
+    if (jsonGzip.byteLength > _MAX_JSON_DECOMPRESSED)
       throw new Error('JSON trop volumineux (' + jsonGzip.byteLength + ' o).');
     jsonObj = JSON.parse(new TextDecoder().decode(jsonGzip));
   }
@@ -733,7 +777,7 @@ function _projectSnapshot() {
     v: PROJECT_VERSION,
     meta: _collectMeta(),
     /* Sérialisation par liste blanche : champs canoniques uniquement */
-    blocks: [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0)).map(_serializeBlock),
+    blocks: ordB().map(_serializeBlock),
     /* cnt est omis volontairement — recalculé à l'import depuis les ids */
     grid: { enabled: gridEnabled, visible: gridVisible, size: gridSize },
     /* Borner pageOrientations à MAX_PAGES par sécurité */
@@ -746,7 +790,6 @@ function _projectSnapshot() {
 //   • Ancien format gzip pur (v1, rétrocompatibilité)
 async function _decompress(buffer) {
   const u8 = new Uint8Array(buffer);
-  const MAX_DECOMPRESSED = 50 * 1024 * 1024;
 
   /* Détection du format par magic */
   const isPDUA = u8[0] === 0x50 && u8[1] === 0x44 && u8[2] === 0x55 && u8[3] === 0x41;
@@ -761,12 +804,12 @@ async function _decompress(buffer) {
     const w = ds.writable.getWriter();
     w.write(u8); w.close();
     const decompressed = await _readStream(ds.readable);
-    if (decompressed.byteLength > MAX_DECOMPRESSED) throw new Error('Fichier trop volumineux après décompression.');
+    if (decompressed.byteLength > _MAX_JSON_DECOMPRESSED) throw new Error('Fichier trop volumineux après décompression.');
     return JSON.parse(new TextDecoder().decode(decompressed));
   }
 
   /* Fallback JSON brut (ancien format sans compression) */
-  if (u8.byteLength > MAX_DECOMPRESSED) throw new Error('Fichier trop volumineux.');
+  if (u8.byteLength > _MAX_JSON_DECOMPRESSED) throw new Error('Fichier trop volumineux.');
   return JSON.parse(new TextDecoder().decode(u8));
 }
 
@@ -821,7 +864,8 @@ async function openProject(input) {
     document.querySelectorAll('.canvas-page').forEach((pg, i) => { if (i > 0) pg.remove(); });
     document.querySelectorAll('.page-label').forEach((l, i) => { if (i > 0) l.remove(); });
     blocks = []; cnt = 0; numPages = 1; pageOrientations = ['portrait']; sid = null;
-    _ordCache = null;
+    _invalidateOrdCache();
+    _blockMap_reset();
 
     /* Sanitiser les méta — champs texte uniquement */
     if (project.meta && typeof project.meta === 'object') {
@@ -863,7 +907,8 @@ async function openProject(input) {
       return Number.isFinite(n) ? Math.max(max, n) : max;
     }, 0);
 
-    _ordCache = null;
+    _invalidateOrdCache();
+    _blockMap_reset();
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
     _restorePages();

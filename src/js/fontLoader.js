@@ -70,18 +70,6 @@ window.FONT_LIST = [
 
 const _fontCache = {};
 
-/* Convertit un ArrayBuffer en chaîne base64 par blocs de 8 192 octets.
-   Évite le stack overflow que causerait String.fromCharCode(...largeArray). */
-function _bufToBase64(buf) {
-  const bytes = new Uint8Array(buf);
-  const CHUNK = 8192;
-  let bin = '';
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode(...bytes.subarray(i, Math.min(i + CHUNK, bytes.length)));
-  }
-  return btoa(bin);
-}
-
 const _font = {
   async fetch(url) {
     if (_fontCache[url]) return _fontCache[url];

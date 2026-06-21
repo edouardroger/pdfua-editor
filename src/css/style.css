@@ -2880,7 +2880,7 @@ dialog.modal::backdrop {
   opacity: .85;
 }
 
-/* ── Sélecteur de couleur DSFR (makeDsfrColorSelect) ── */
+/* ── Sélecteur de couleur ── */
 .dsfr-color-wrap {
   display: flex;
   align-items: center;
@@ -2898,14 +2898,6 @@ dialog.modal::backdrop {
   color: #1a1a1a;
 }
 
-/* .dsfr-color-swatch {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  border: 1px solid #e5e7eb;
-  flex-shrink: 0;
-} */
 .dsfr-color-swatch {
   min-width: 22px;
   min-height: 22px;
@@ -3239,7 +3231,7 @@ dialog.modal::backdrop {
   cursor: pointer;
 }
 
-/* ── Encadré (aside) — base + 4 variantes (couleurs DSFR) ── */
+/* ── Encadré (aside) — base + 4 variantes ── */
 .fb-aside-wrap {
   padding: 6px 8px;
   height: 100%;

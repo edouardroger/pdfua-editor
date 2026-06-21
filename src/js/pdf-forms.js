@@ -17,11 +17,11 @@
     return ref;
   }
 
-  /* ── Tokens DSFR v1.14.4 en RGB [0-1] ─────────────────────────────
+  /* ── Tokens en RGB [0-1] ─────────────────────────────
      --grey-950-100           #eeeeee  → fond input/select (background-contrast-grey)
      --grey-200-850           #3a3a3a  → texte + bordure bas (border-plain-grey)
      --blue-france-sun-113-625 #000091 → bordure active + fond checkbox/radio cochés
-     Coche checkbox            #f5f5fe  → blanc cassé DSFR (svg path fill)
+     Coche checkbox            #f5f5fe  → blanc cassé (svg path fill)
   ─────────────────────────────────────────────────────────────────── */
   const _D = {
     inputBg: '0.933 0.933 0.933', /* #eeeeee  background-contrast-grey */
@@ -29,11 +29,11 @@
     border: '0.227 0.227 0.227', /* #3a3a3a  border-plain-grey */
     blue: '0 0 0.569',         /* #000091  blue-france-sun-113-625 */
     white: '1 1 1',             /* #ffffff  fond checkbox décochée */
-    checkMark: '0.961 0.961 0.996', /* #f5f5fe  couleur coche DSFR */
+    checkMark: '0.961 0.961 0.996', /* #f5f5fe  couleur coche */
   };
 
   /* ── Input / Textarea / Select ─────────────────────────────────────
-     DSFR : fond gris #eeeeee, coins arrondis haut (4pt), 
+     Fond gris #eeeeee, coins arrondis haut (4pt), 
      bordure BAS uniquement 2px #3a3a3a (box-shadow inset 0 -2px)
      En PDF : on trace seulement le trait bas en 2pt.
   ─────────────────────────────────────────────────────────────────── */
@@ -57,8 +57,8 @@
     ].join(' '));
   }
 
-  /* AP stream select : fond gris DSFR + zone chevron distincte + chevron DSFR (#161616)
-     Chevron SVG DSFR : M12 13.1l5-4.9 1.4 1.4L12 15.9l-6.4-6.4L7 8.1z
+  /* AP stream select : fond gris + zone chevron distincte + chevron (#161616)
+     Chevron SVG : M12 13.1l5-4.9 1.4 1.4L12 15.9l-6.4-6.4L7 8.1z
      Icône 16×16pt, positionnée à droite dans une zone séparée (w-28 à w). */
   function _apSelect(doc, w, h, readonly) {
     const bg = readonly ? _D.inputBgRO : _D.inputBg;
@@ -86,7 +86,7 @@
     ].join(' ');
     /* Séparateur vertical entre texte et chevron */
     const sep = chevX + ' 2 m ' + chevX + ' ' + (h - 2) + ' l S';
-    /* Chevron DSFR #161616 — centré dans la zone chevron
+    /* Chevron #161616 — centré dans la zone chevron
        Points SVG absolus (viewBox 24×24) : (12,13.1),(17,8.2),(18.4,9.6),(12,15.9),(5.6,9.5),(7,8.1)
        Conversion : sc=14/24, origine icône centrée dans zone chevron */
     const sc = 14 / 24;
@@ -117,7 +117,7 @@
   }
 
   /* ── Checkbox ──────────────────────────────────────────────────────
-     DSFR : 24×24pt, border-radius 4pt, fond blanc décochée / #000091 cochée.
+     24×24pt, border-radius 4pt, fond blanc décochée / #000091 cochée.
      Coche : 2 segments en STROKE (pas fill) — trait #f5f5fe 2.5pt, linecap round.
      Coordonnées dans repère PDF (Y=0 bas, BBox [0,0,24,24]) :
        (3.64, 12.36) → (10, 6) → (20.6, 16.58)
@@ -160,10 +160,8 @@
   }
 
   /* ── Radio button ──────────────────────────────────────────────────
-     DSFR : cercle 24×24pt, fond blanc, bordure 1px #3a3a3a
+     Cercle 24×24pt, fond blanc, bordure 1px #3a3a3a
      Sélectionné : cercle intérieur #000091 rayon ≈ 6pt (sur base 24)
-     Le CSS DSFR utilise radial-gradient pour simuler le cercle,
-     on trace directement en PDF via courbes de Bézier.
   ─────────────────────────────────────────────────────────────────── */
   function _apRadio(doc, sz) {
     const r = sz / 2;       /* rayon externe */
@@ -407,7 +405,7 @@
             BS: { W: 0 },
             MK: { BG: ro ? [0.871, 0.871, 0.871] : [0.933, 0.933, 0.933], BC: [] }
           });
-          /* Couleur texte DSFR après sélection */
+          /* Couleur du texteaprès sélection */
           const lastAnnot = doc.page.annotations[doc.page.annotations.length - 1];
           if (lastAnnot?.data) lastAnnot.data.DA = '/Regular 10 Tf 0.227 0.227 0.227 rg';
         });

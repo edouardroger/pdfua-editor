@@ -6,7 +6,7 @@ initFmtBar();
 
 const sessionRestored = loadSession();
 if (sessionRestored && blocks.length > 0) {
-  /* Différer la restaurationt : canvas visible immédiatement */
+  /* Différer la restauration : canvas visible immédiatement */
   requestAnimationFrame(() => {
     restoreSessionBlocks();
     refreshBlockFonts();
@@ -71,7 +71,7 @@ window._patchUABadge = function () {
   }
 };
 
-/* ── Met à jour le H2 sr-only du panneau switchTab. */
+/* ── Mise à jour du H2 sr-only du panneau */
 (function () {
   const _orig = switchTab;
   const PANEL_LABELS = { meta: 'Document', bloc: 'Bloc sélectionné', ua: 'PDF/UA', export: 'Paramètres' };
