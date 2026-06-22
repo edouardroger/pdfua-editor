@@ -60,7 +60,7 @@ fs.mkdirSync(DIST_DIR, { recursive: true });
   const bundle = [banner, `/* ═══ pdfkit.standalone.js ═══ */\n${pdfkitSrc}`, ...moduleParts].join('\n\n');
 
   fs.writeFileSync(path.join(DIST_DIR, 'editor.js'), bundle, 'utf8');
-  console.log(`\n→ editor.js     : ${bundle.split('\n').length} lignes (${(Buffer.byteLength(bundle) / 1024).toFixed(0)} Ko)`);
+  console.log(`\n→ editor.js     : ${(bundle.match(/\n/g)?.length ?? 0) + 1} lignes (${(Buffer.byteLength(bundle) / 1024).toFixed(0)} Ko)`);
 
   // ── 2. Minification JS via Terser ─────────────────────────────────────────
   let terser;
