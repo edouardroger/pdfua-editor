@@ -766,6 +766,15 @@ body {
   font-family: var(--ui-font-mono);
 }
 
+.sb-hint-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .sb-footer {
   padding: 8px 10px;
   border-top: 1px solid var(--ui-border-weak);
@@ -954,11 +963,11 @@ body {
 
 .fb.shape-block {
   background: transparent;
-  border-color: rgba(148, 163, 184, .4);
+  border-color: var(--ui-fb-border);
 }
 
 .fb.shape-block:hover {
-  border-color: rgba(147, 197, 253, .6);
+  border-color: var(--ui-fb-hover-border);
 }
 
 .fb.shape-block.sel {
@@ -966,7 +975,7 @@ body {
 }
 
 .fb.shape-block .fb-bar {
-  background: rgba(249, 250, 251, .85);
+  background: var(--ui-fb-bar-bg);
 }
 
 .fb.shape-block .fb-ct {
@@ -1942,7 +1951,7 @@ fieldset legend {
 
 @media (prefers-color-scheme: dark) {
   .tn .tg {
-    color: #93bbf7;
+    color: var(--ui-link);
   }
 }
 
@@ -2881,24 +2890,24 @@ dialog.modal::backdrop {
 }
 
 /* ── Sélecteur de couleur ── */
-.dsfr-color-wrap {
+.color-select-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
 }
 
-.dsfr-color-select {
+.color-select {
   flex: 1;
   font-size: 11px;
   padding: 3px 5px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--ui-border-input);
   border-radius: 5px;
-  background: #fff;
-  color: #1a1a1a;
+  background: var(--ui-bg-surface);
+  color: var(--ui-txt-primary);
 }
 
-.dsfr-color-swatch {
+.color-swatch {
   min-width: 22px;
   min-height: 22px;
   border-radius: 4px;
@@ -3350,8 +3359,8 @@ dialog.modal::backdrop {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #1e293b;
-  color: #e2e8f0;
+  background: var(--ui-fmtbar-bg);
+  color: var(--ui-fmtbar-fg);
   border-radius: 22px;
   padding: 5px 12px;
   z-index: 8000;
@@ -3363,7 +3372,7 @@ dialog.modal::backdrop {
 .mob-zoom-btn {
   background: none;
   border: none;
-  color: #e2e8f0;
+  color: var(--ui-fmtbar-fg);
   font-size: 17px;
   cursor: pointer;
   min-width: 36px;
@@ -3386,8 +3395,8 @@ dialog.modal::backdrop {
   top: 0;
   left: 0;
   right: 0;
-  background: #1e3a5f;
-  color: #fff;
+  background: var(--ui-toast-bg);
+  color: var(--ui-toast-color);
   padding: 9px 42px 9px 12px;
   font-size: 11px;
   line-height: 1.5;
@@ -3401,7 +3410,7 @@ dialog.modal::backdrop {
   right: 8px;
   background: none;
   border: none;
-  color: #fff;
+  color: var(--ui-toast-color);
   font-size: 20px;
   cursor: pointer;
   min-width: 32px;
