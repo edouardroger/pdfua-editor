@@ -12,6 +12,11 @@ if (sessionRestored && blocks.length > 0) {
     refreshBlockFonts();
     updUA();
     updTree();
+    /* Mettre à jour la prévisualisation de la marge */
+    const _mprev = document.getElementById('m-margin-preview');
+    const _minp = document.getElementById('m-margin');
+    if (_mprev && _minp) _mprev.textContent = '≈ ' + (parseInt(_minp.value || 40) * 0.03528).toFixed(2) + ' cm';
+    invalidateMarginGuides();
     announce('Session restaurée (' + blocks.length + ' bloc' + (blocks.length > 1 ? 's' : '') + ').');
   });
 } else {
@@ -19,12 +24,14 @@ if (sessionRestored && blocks.length > 0) {
   addBlock('p', MAR, MAR + 105, {}, { noSelect: true });
 }
 
-/* Différer les passes lourdest */
+/* Différer les passes lourdes */
 requestAnimationFrame(() => {
   refreshBlockFonts();
   requestAnimationFrame(() => {
     updUA();
     updTree();
+    /* Guides de marge — premier affichage (les pages existent à ce stade) */
+    rebuildMarginGuides();
   });
 });
 
@@ -33,10 +40,24 @@ requestAnimationFrame(() => {
 initPanelListeners();
 
 /* ── Sauvegarde session ── */
-['m-title', 'm-author', 'm-subject', 'm-lang'].forEach(id => {
+['m-title', 'm-author', 'm-subject', 'm-lang', 'm-margin'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', () => saveSession());
 });
+
+/* Mise à jour de la prévisualisation de la marge */
+(function () {
+  const inp = document.getElementById('m-margin');
+  const prev = document.getElementById('m-margin-preview');
+  if (!inp || !prev) return;
+  const update = () => {
+    const v = parseInt(inp.value, 10) || 40;
+    prev.textContent = '≈ ' + (v * 0.03528).toFixed(2) + ' cm';
+    invalidateMarginGuides();
+  };
+  inp.addEventListener('input', update);
+  update();
+})();
 document.addEventListener('input', e => {
   if (e.target.isContentEditable || e.target.classList.contains('list-ta')) {
     saveSession();
