@@ -331,11 +331,18 @@
 
         <!-- Aide rapide -->
         <div class="sb-hint" role="note" aria-label="Aide clavier">
-          Glisser → page &nbsp;·&nbsp; <kbd>Suppr</kbd> suppr.
-          <br><kbd>↑↓←→</kbd> déplacer &nbsp;·&nbsp; <kbd>Shift+↑↓←→</kbd> ×10
-          <br><kbd>Ctrl+↑↓←→</kbd> redimensionner
-          <br><kbd>Ctrl+B</kbd> gras &nbsp;·&nbsp; <kbd>Ctrl+I</kbd> italique &nbsp;·&nbsp; <kbd>Ctrl+U</kbd> souligné
-          <br><kbd>Ctrl+D</kbd> dupliquer &nbsp;·&nbsp; <kbd>Échap</kbd> désélectionner
+          <ul class="sb-hint-list">
+            <li>Glisser un bloc → page</li>
+            <li><kbd>Suppr</kbd> supprimer</li>
+            <li><kbd>↑↓←→</kbd> déplacer</li>
+            <li><kbd>Shift+↑↓←→</kbd> déplacer ×10</li>
+            <li><kbd>Ctrl+↑↓←→</kbd> redimensionner</li>
+            <li><kbd>Ctrl+B</kbd> gras</li>
+            <li><kbd>Ctrl+I</kbd> italique</li>
+            <li><kbd>Ctrl+U</kbd> souligné</li>
+            <li><kbd>Ctrl+D</kbd> dupliquer</li>
+            <li><kbd>Échap</kbd> désélectionner</li>
+          </ul>
         </div>
 
       </div><!-- /.sb-scroll -->
@@ -408,6 +415,14 @@
 
           <label for="m-subject">Sujet</label>
           <input id="m-subject" type="text" placeholder="Sujet du document">
+
+          <label for="m-margin">Marges (pt)</label>
+          <div class="d-flex gap-6 items-center">
+            <input id="m-margin" type="number" min="10" max="120" step="5" value="40"
+              style="width:80px" aria-describedby="m-margin-hint">
+            <span id="m-margin-preview" class="field-hint" style="margin:0">≈ 1,41 cm</span>
+          </div>
+          <p id="m-margin-hint" class="field-hint">Marges identiques sur les 4 côtés (10–120 pt). 1 pt ≈ 0,035 cm.</p>
         </div>
 
         <div class="ps">
