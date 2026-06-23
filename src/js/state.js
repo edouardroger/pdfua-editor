@@ -12,11 +12,11 @@ let pageOrientations = ['portrait']; // orientation par index de page ['portrait
    Toutes les mutations de `blocks` dans state.js et blocks.js doivent passer par ces helpers,
    ou appeler _blockMap_reset() après une réaffectation complète de `blocks = [...]`. */
 const _blockMap = new Map();
-function _blockMap_set(b)    { _blockMap.set(b.id, b); }
-function _blockMap_delete(id){ _blockMap.delete(id); }
-function _blockMap_reset()   { _blockMap.clear(); blocks.forEach(b => _blockMap.set(b.id, b)); }
+function _blockMap_set(b) { _blockMap.set(b.id, b); }
+function _blockMap_delete(id) { _blockMap.delete(id); }
+function _blockMap_reset() { _blockMap.clear(); blocks.forEach(b => _blockMap.set(b.id, b)); }
 /** Lookup O(1) par id — remplace blocks.find(x => x.id === id) partout dans le code. */
-function blockById(id)       { return _blockMap.get(id); }
+function blockById(id) { return _blockMap.get(id); }
 
 /* ── Cache du tri ordB — invalidé via _ordVersion à chaque mutation de blocks ──
    ordB() est appelé très fréquemment (updBP, updTree, _prepareBlocks, etc.).
@@ -99,8 +99,17 @@ const History = {
   snapshot() {
     if (this._lock) return;
     try {
-      const c = _cleanBlocks();
-      this._stack.push({ blocks: structuredClone(c), cnt });
+      /* Exclure imgData du clone : les images (souvent plusieurs Mo de base64)
+         ne changent pas via les actions undo-ables classiques.
+         La Map imgMap conserve les références et est réinjectée à l'undo. */
+      const raw = _cleanBlocks();
+      const imgMap = new Map(raw.filter(b => b.imgData).map(b => [b.id, b.imgData]));
+      const c = imgMap.size === 0 ? raw : raw.map(b => {
+        if (!b.imgData) return b;
+        const { imgData, ...rest } = b;
+        return rest;
+      });
+      this._stack.push({ blocks: structuredClone(c), imgMap, cnt });
       if (this._stack.length > this.MAX_DEPTH) this._stack.shift();
     } catch { }
   },
@@ -109,7 +118,10 @@ const History = {
     const prev = this._stack.pop();
     this._lock = true;
     blocks.forEach(b => document.getElementById('el-' + b.id)?.remove());
-    blocks = prev.blocks; cnt = prev.cnt;
+    blocks = prev.blocks;
+    /* Réinjecter les imgData exclues du clone */
+    if (prev.imgMap?.size) blocks.forEach(b => { if (prev.imgMap.has(b.id)) b.imgData = prev.imgMap.get(b.id); });
+    cnt = prev.cnt;
     _ordVersion++;
     _bumpSaveVersion();
     _blockMap_reset();
@@ -133,6 +145,48 @@ let gridSize = 20;      // taille de la cellule (px)
 let gridOverlays = [];      // éléments canvas de grille
 let _gridLastState = '';    // cache : évite de tout redessiner si rien ne change
 
+/* ── Guides de marge — toujours affichés, indépendants de la grille ── */
+let _marginGuides = [];     // éléments SVG de guide de marge
+let _marginLastState = '';  // cache clé
+
+function rebuildMarginGuides() {
+  const mar = MAR;
+  const stateKey = `${mar}|${numPages}|${pageOrientations.join(',')}`;
+  if (stateKey === _marginLastState && _marginGuides.length > 0) return;
+  _marginLastState = stateKey;
+
+  _marginGuides.forEach(g => g.remove());
+  _marginGuides = [];
+
+  const NS = 'http://www.w3.org/2000/svg';
+  document.querySelectorAll('.canvas-page').forEach(pg => {
+    const pageIdx = parseInt(pg.dataset.page) || 0;
+    const cw = pageW(pageIdx);
+    const ch = pageH(pageIdx);
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', cw);
+    svg.setAttribute('height', ch);
+    svg.setAttribute('aria-hidden', 'true');
+    svg.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible';
+
+    /* Rectangle de marge : pointillés discrets */
+    const rect = document.createElementNS(NS, 'rect');
+    rect.setAttribute('x', mar);
+    rect.setAttribute('y', mar);
+    rect.setAttribute('width', cw - mar * 2);
+    rect.setAttribute('height', ch - mar * 2);
+    rect.setAttribute('fill', 'none');
+    rect.setAttribute('stroke', 'rgba(99,102,241,0.35)');
+    rect.setAttribute('stroke-width', '0.75');
+    rect.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(rect);
+
+    pg.appendChild(svg);
+    _marginGuides.push(svg);
+  });
+}
+
 function snapVal(v) { return gridEnabled ? Math.round(v / gridSize) * gridSize : v; }
 function snapPt(x, y) { return { x: snapVal(x), y: snapVal(y) }; }
 function applyGridToEl(el, b) { el.style.left = b.x + 'px'; el.style.top = (b.y % PH) + 'px'; }
@@ -146,6 +200,9 @@ function rebuildGridOverlays() {
   /* Supprimer les anciens overlays */
   gridOverlays.forEach(o => o.remove());
   gridOverlays = [];
+
+  /* Toujours reconstruire les guides de marge en même temps */
+  rebuildMarginGuides();
   if (!gridVisible) return;
 
   const dpr = window.devicePixelRatio || 1;
@@ -170,17 +227,18 @@ function rebuildGridOverlays() {
     ctx.fillStyle = '#6366f1';
     ctx.lineWidth = 0.5;
 
-    /* Une seule passe : lignes verticales + points sur chaque intersection */
-    for (let x = 0; x <= cw; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
-      for (let y = 0; y <= ch; y += gridSize) {
-        ctx.beginPath(); ctx.arc(x, y, 1, 0, TWO_PI); ctx.fill();
-      }
-    }
-    /* Lignes horizontales (points déjà tracés ci-dessus) */
-    for (let y = 0; y <= ch; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
-    }
+    /* Batch lignes : un seul beginPath/stroke par axe → N appels GPU → 2 */
+    ctx.beginPath();
+    for (let x = 0; x <= cw; x += gridSize) { ctx.moveTo(x, 0); ctx.lineTo(x, ch); }
+    for (let y = 0; y <= ch; y += gridSize) { ctx.moveTo(0, y); ctx.lineTo(cw, y); }
+    ctx.stroke();
+
+    /* Batch points : un seul beginPath/fill pour toutes les intersections */
+    ctx.beginPath();
+    for (let x = 0; x <= cw; x += gridSize)
+      for (let y = 0; y <= ch; y += gridSize)
+        ctx.arc(x, y, 1, 0, TWO_PI);
+    ctx.fill();
 
     pg.appendChild(canvas);
     gridOverlays.push(canvas);
@@ -197,9 +255,15 @@ function toggleGrid(enabled, visible, size) {
     .forEach(([id, prop, val]) => { const e = document.getElementById(id); if (e) e[prop] = val; });
 }
 
+/** Invalider et redessiner les guides de marge (à appeler quand la marge change). */
+function invalidateMarginGuides() {
+  _marginLastState = '';
+  rebuildMarginGuides();
+}
+
 /* ── Helpers ── */
 function _cleanBlocks() { return blocks.map(b => { const c = { ...b }; delete c._bmNode; return c; }); }
-function _collectMeta() { const g = id => document.getElementById(id)?.value || ''; return { title: g('m-title'), author: g('m-author'), subject: g('m-subject'), lang: g('m-lang'), font: g('m-font') }; }
+function _collectMeta() { const g = id => document.getElementById(id)?.value || ''; return { title: g('m-title'), author: g('m-author'), subject: g('m-subject'), lang: g('m-lang'), font: g('m-font'), margin: g('m-margin') }; }
 
 /* ── Validation d'URL — bloque javascript:, data:, vbscript: etc.
    Utilisé par confirmLink (blocks.js), bprop, _validateImportedBlock et openProject.
@@ -378,6 +442,12 @@ function loadSession() {
         const e = document.getElementById('m-' + k);
         if (e && saved.meta[k] && typeof saved.meta[k] === 'string') e.value = saved.meta[k].slice(0, 500);
       });
+      /* Restaurer la marge — valeur numérique entre 10 et 120 */
+      if (saved.meta.margin) {
+        const mv = parseInt(saved.meta.margin, 10);
+        const e = document.getElementById('m-margin');
+        if (e && Number.isFinite(mv) && mv >= 10 && mv <= 120) e.value = mv;
+      }
     }
     return true;
   } catch { return false; }
@@ -459,9 +529,9 @@ const MAX_PAGES = 50;
 
 const _ENVELOPE_MAGIC = new Uint8Array([0x50, 0x44, 0x55, 0x41]); // "PDUA"
 const _ENVELOPE_FORMAT_VERSION = 0x02;
-const _MAX_ASSET_SIZE         =  20 * 1024 * 1024; // 20 Mo par image (binaire)
-const _MAX_JSON_COMPRESSED    =   5 * 1024 * 1024; // 5 Mo — flux gzip du JSON
-const _MAX_JSON_DECOMPRESSED  =  50 * 1024 * 1024; // 50 Mo — JSON après décompression
+const _MAX_ASSET_SIZE = 20 * 1024 * 1024; // 20 Mo par image (binaire)
+const _MAX_JSON_COMPRESSED = 5 * 1024 * 1024; // 5 Mo — flux gzip du JSON
+const _MAX_JSON_DECOMPRESSED = 50 * 1024 * 1024; // 50 Mo — JSON après décompression
 
 /* ── Helper : lit un ReadableStream entier en Uint8Array ── */
 async function _readStream(readable) {
@@ -873,6 +943,12 @@ async function openProject(input) {
         const e = document.getElementById('m-' + k);
         if (e && project.meta[k] && typeof project.meta[k] === 'string') e.value = project.meta[k].slice(0, 500);
       });
+      /* Restaurer la marge */
+      if (project.meta.margin) {
+        const mv = parseInt(project.meta.margin, 10);
+        const e = document.getElementById('m-margin');
+        if (e && Number.isFinite(mv) && mv >= 10 && mv <= 120) e.value = mv;
+      }
     }
 
     if (project.grid) {
