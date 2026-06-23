@@ -1,6 +1,18 @@
 // constants.js — Constantes globales, métadonnées, palette, formes
 
-const PW = 794, PH = 1123, MAR = 40, BAR_H = 0, CT_PAD = 6;
+const PW = 794, PH = 1123, BAR_H = 0, CT_PAD = 6;
+/* MAR : valeur par défaut des marges (pt). Remplacée dynamiquement par docMAR(). */
+const MAR_DEFAULT = 40;
+/** Retourne la marge courante du document (en pt). Lit le champ IHM si disponible. */
+function docMAR() {
+  const el = document.getElementById('m-margin');
+  if (!el) return MAR_DEFAULT;
+  const v = parseInt(el.value, 10);
+  return (Number.isFinite(v) && v >= 10 && v <= 120) ? v : MAR_DEFAULT;
+}
+/* Alias de compatibilité — les modules qui utilisent MAR directement continueront
+   à fonctionner ; les nouveaux appels passent par docMAR(). */
+Object.defineProperty(window, 'MAR', { get: docMAR, configurable: true });
 const LINK_COLOR = '#1d4ed8'; /* Couleur liens & appels de note — contraste ≥ 4.5:1 sur blanc */
 const pageWrap = document.getElementById('page-wrap');
 
@@ -63,14 +75,14 @@ const LABELS = Object.fromEntries(Object.entries(BLOCK_META).map(([k, v]) => [k,
 
 /* ── Styles des encadrés — partagé entre FILL_CT (blocks.js), pdf-renderers.js et export-code.js ── */
 const ASIDE_STYLES = {
-  info:    { bg: '#eff6ff', border: '#3b82f6', icon: 'ℹ', iconColor: '#1d4ed8' },
-  warn:    { bg: '#fffbeb', border: '#f59e0b', icon: '⚠', iconColor: '#92400e' },
-  tip:     { bg: '#f0fdf4', border: '#22c55e', icon: '✓', iconColor: '#166534' },
+  info: { bg: '#eff6ff', border: '#3b82f6', icon: 'ℹ', iconColor: '#1d4ed8' },
+  warn: { bg: '#fffbeb', border: '#f59e0b', icon: '⚠', iconColor: '#92400e' },
+  tip: { bg: '#f0fdf4', border: '#22c55e', icon: '✓', iconColor: '#166534' },
   neutral: { bg: '#f9fafb', border: '#9ca3af', icon: '▮', iconColor: '#6b7280' },
 };
 
 /* ── PALETTE ── */
-const DSFR_COLORS = [
+const COLOR_PALETTE = [
   { label: 'Bleu France — 975 (fond)', hex: '#f5f5fe', group: 'Bleu France' },
   { label: 'Bleu France — 950', hex: '#ececfe', group: 'Bleu France' },
   { label: 'Bleu France — 900', hex: '#cacafb', group: 'Bleu France' },
@@ -118,11 +130,13 @@ const DSFR_COLORS = [
   { label: 'Noir', hex: '#000000', group: 'Noir & Blanc' },
 ];
 
+/* ── Map hex→hex pour lookup O(1) (insensible à la casse) ── */
+const _colorPaletteMap = new Map(COLOR_PALETTE.map(c => [c.hex.toLowerCase(), c.hex]));
+const _COLOR_FALLBACK = COLOR_PALETTE[6].hex; /* Bleu France principal */
+
 /* Trouver la couleur la plus proche par hex (insensible à la casse) */
-function dsfrClosest(hex) {
-  const h = (hex || '').toLowerCase();
-  const exact = DSFR_COLORS.find(c => c.hex.toLowerCase() === h);
-  return exact ? exact.hex : DSFR_COLORS[6].hex; /* fallback: Bleu France principal */
+function paletteClosest(hex) {
+  return _colorPaletteMap.get((hex || '').toLowerCase()) ?? _COLOR_FALLBACK;
 }
 
 /**
@@ -132,22 +146,25 @@ function dsfrClosest(hex) {
  * @param {function} onChange — callback(hexValue)
  * @returns {HTMLElement} wrapper div contenant le select + le swatch
  */
-function makeDsfrColorSelect(id, value, onChange) {
-  const resolved = dsfrClosest(value);
+function makeColorSelect(id, value, onChange) {
+  const resolved = paletteClosest(value);
 
   const swatch = document.createElement('span');
   swatch.id = id + '-swatch';
-  swatch.className = 'dsfr-color-swatch';
+  swatch.className = 'color-swatch';
   swatch.style.background = resolved;
 
   const sel = document.createElement('select');
   sel.id = id;
-  sel.className = 'dsfr-color-select';
+  sel.className = 'color-select';
 
-  /* Grouper par famille */
-  const groups = {};
-  DSFR_COLORS.forEach(c => { (groups[c.group] = groups[c.group] || []).push(c); });
-  Object.entries(groups).forEach(([gName, colors]) => {
+  /* Grouper par famille — Map pour garantir l'ordre d'insertion */
+  const groups = new Map();
+  for (const c of COLOR_PALETTE) {
+    if (!groups.has(c.group)) groups.set(c.group, []);
+    groups.get(c.group).push(c);
+  }
+  for (const [gName, colors] of groups) {
     const og = document.createElement('optgroup');
     og.label = gName;
     colors.forEach(c => {
@@ -158,7 +175,7 @@ function makeDsfrColorSelect(id, value, onChange) {
       og.appendChild(opt);
     });
     sel.appendChild(og);
-  });
+  }
 
   sel.onchange = () => {
     swatch.style.background = sel.value;
@@ -166,7 +183,7 @@ function makeDsfrColorSelect(id, value, onChange) {
   };
 
   const wrap = document.createElement('div');
-  wrap.className = 'dsfr-color-wrap';
+  wrap.className = 'color-select-wrap';
   wrap.append(sel, swatch);
   return wrap;
 }
@@ -201,7 +218,7 @@ const SHAPE_RENDERERS = {
     },
   },
 
-  star:  { label: 'Étoile 5 pts', icon: '★', svg: (w, h) => _starSVG(w, h, 5, 0.4), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 5, 0.4, cmd) },
+  star: { label: 'Étoile 5 pts', icon: '★', svg: (w, h) => _starSVG(w, h, 5, 0.4), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 5, 0.4, cmd) },
   star6: { label: 'Étoile 6 pts', icon: '✶', svg: (w, h) => _starSVG(w, h, 6, 0.5), pdf: (doc, w, h, cmd = 'fill') => _starPDF(doc, w, h, 6, 0.5, cmd) },
 
   triangle: {
