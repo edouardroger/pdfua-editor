@@ -591,7 +591,7 @@ document.addEventListener('selectionchange', () => {
     if (!b || !RICH_TYPES.has(b.type)) { hideFmtBar(); return; }
 
     positionFmtBar();
-  }, 60);
+  }, 30);
 });
 
 /* Fermer la barre si clic hors d'un bloc ou de la barre elle-même */
@@ -877,8 +877,11 @@ function buildEl(b) {
     /* On sort immédiatement si l'utilisateur est en train d'écrire */
     if (isInField) return;
 
-    /* 2. Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc */
+    /* 2. Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc.
+          Exception : si le focus est sur un bouton de la barre (dup, del),
+          laisser le comportement natif du bouton s'exécuter (click synthétique). */
     if (e.key === 'Enter' || e.key === ' ') {
+      if (active && active.closest('.fb-dup, .fb-del')) return;
       e.preventDefault();
       sel(b.id);
       if (typeof switchTab === 'function') switchTab('bloc');
@@ -1489,6 +1492,7 @@ function renumberNotes() {
     if (!ct) return;
     const sups = ct.querySelectorAll('sup[data-note-id]');
     if (!sups.length) return;
+    let changed = false;
     sups.forEach(sup => {
       const noteId = sup.dataset.noteId;
       const noteBlock = blockById(noteId);
@@ -1503,8 +1507,10 @@ function renumberNotes() {
         const refEl = noteEl.querySelector('.note-ref');
         if (refEl) refEl.textContent = '[' + ref + ']';
       }
+      changed = true;
     });
-    _syncRichFromDOM(b);
+    /* Synchroniser richContent une seule fois après tous les sups du bloc */
+    if (changed) _syncRichFromDOM(b);
   });
 
   /* ── 2. Repositionner les notes par page, empilées en bas ── */
@@ -1608,8 +1614,9 @@ function rmB(id) {
   _invalidateOrdCache();
   document.getElementById('el-' + id)?.remove();
   if (sid === id) desel();
-  if (b?.type === 'note' && b.anchorBlockId) renumberNotes();
-  else if (blocks.some(x => x.type === 'note')) _repositionNotes();
+  /* Recalculer la numérotation dès qu'il reste des notes (ou qu'on vient d'en supprimer une) */
+  if (blocks.some(x => x.type === 'note') || b?.type === 'note') renumberNotes();
+  else _repositionNotes();
   updUA(); updTree(); saveSession();
   announce('Bloc ' + (b ? labelForType(b.type) : 'bloc') + ' supprimé. Ctrl+Z pour annuler.');
 }
@@ -1630,7 +1637,8 @@ function dupB(id) {
 function bprop(k, v) {
   const b = blockById(sid); if (!b) return;
   b[k] = v;
-  _updBP_lastKey = ''; // invalider le cache pour forcer le re-fill au prochain updBP
+  b._v = (b._v || 0) + 1; // invalide le cache _bpKey en O(1)
+  _updBP_lastKey = '';     // forcer le re-fill au prochain updBP
   if (k === 'alt' || k === 'linkText') rr(b.id);
   /* Quand le type change (ex. h1→h2), mettre à jour le label visible dans la barre du bloc */
   if (k === 'type') {
@@ -1653,9 +1661,15 @@ function rr(id) { const b = blockById(id); if (!b) return; const c = document.ge
 
 function applyPos() {
   const b = blockById(sid); if (!b) return;
+  const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+  const mar = isDecorative ? 0 : MAR;
   const oldPageIdx = Math.floor(b.y / PH);
-  b.x = parseInt(document.getElementById('bx').value) || 0;
-  b.y = parseInt(document.getElementById('by').value) || 0;
+  const rawX = parseInt(document.getElementById('bx').value) || 0;
+  const rawY = parseInt(document.getElementById('by').value) || 0;
+  const pageIdx = Math.floor(rawY / PH);
+  b.x = isDecorative ? rawX : Math.max(mar, Math.min(pageW(pageIdx) - mar - b.w, rawX));
+  b.y = isDecorative ? rawY : Math.max(pageIdx * PH + mar, rawY);
+  b._v = (b._v || 0) + 1;
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) {
     domEl.style.left = b.x + 'px'; domEl.style.top = (b.y % PH) + 'px';
@@ -1667,10 +1681,13 @@ function applyPos() {
 function applySz() {
   const b = blockById(sid); if (!b) return;
   const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+  const mar = isDecorative ? 0 : MAR;
   const minW = isDecorative ? 1 : 80;
   const minH = isDecorative ? 1 : 28;
-  b.w = Math.max(minW, parseInt(document.getElementById('bw').value) || minW);
+  const maxW = pageW(Math.floor(b.y / PH)) - mar - b.x;
+  b.w = Math.max(minW, Math.min(maxW, parseInt(document.getElementById('bw').value) || minW));
   b.h = Math.max(minH, parseInt(document.getElementById('bh').value) || minH);
+  b._v = (b._v || 0) + 1;
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) { domEl.style.width = b.w + 'px'; domEl.style.height = b.h + 'px'; }
 }
@@ -1896,14 +1913,14 @@ function _fillColorWrap(wrapperId, selectId, value, propKey) {
   let sel = $(selectId);
   if (sel) {
     /* Mettre à jour la valeur existante */
-    const resolved = dsfrClosest(value);
+    const resolved = paletteClosest(value);
     sel.value = resolved;
     const swatch = $(selectId + '-swatch');
     if (swatch) swatch.style.background = resolved;
   } else {
     /* Créer le sélecteur la première fois */
     wrap.innerHTML = '';
-    const widget = makeDsfrColorSelect(selectId, value, hex => {
+    const widget = makeColorSelect(selectId, value, hex => {
       bprop(propKey, hex);
       rr(sid);
     });
@@ -1916,20 +1933,14 @@ function _fillColorWrap(wrapperId, selectId, value, propKey) {
 let _updBP_lastSid = null;
 let _updBP_lastKey = '';
 
+/* ── Cache invalidation du panneau de propriétés ──
+   Au lieu de concaténer ~35 champs en string à chaque updBP(),
+   on utilise un compteur de version b._v incrémenté dans bprop().
+   La clé devient "<id>|<_v>|<blocks.length>|<readPos>" — O(1) à construire. */
 function _bpKey(b) {
   if (!b) return '';
-  // Champs géométriques + champs de propriétés dont les panneaux dépendent
-  return `${b.id}|${b.x}|${b.y}|${b.w}|${b.h}|${b.type}|${b.zIndex || 0}|` +
-    `${b.fontSize ?? ''}|${b.textIndent ?? ''}|${b.alt ?? ''}|${b.imgLinkUrl ?? ''}|` +
-    `${b.linkText ?? ''}|${b.linkUrl ?? ''}|${b.hlv ?? ''}|${b.bookmark ?? ''}|` +
-    `${b.quoteSource ?? ''}|${b.noteRef ?? ''}|${b.formLabel ?? ''}|${b.formPlaceholder ?? ''}|` +
-    `${b.formDefaultValue ?? ''}|${b.formOptions ?? ''}|${b.formChecked ?? ''}|` +
-    `${b.formRequired ?? ''}|${b.formReadonly ?? ''}|${b.asideStyle ?? ''}|` +
-    `${b.shapeKind ?? ''}|${b.shapeColor ?? ''}|${b.shapeOpacity ?? ''}|${b.shapeFillNone ?? ''}|` +
-    `${b.shapeBorderEnabled ?? ''}|${b.shapeBorderColor ?? ''}|${b.shapeBorderWidth ?? ''}|${b.shapeRotation ?? ''}|` +
-    `${b.strokeWidth ?? ''}|${b.shapeFilled ?? ''}|${b.pathClosed ?? ''}|` +
-    `${b.chartKind ?? ''}|${b.chartTitle ?? ''}|${b.listNoBullet ?? ''}|` +
-    `${blocks.length}|${ordB().findIndex(x => x.id === b.id)}`;
+  const readPos = ordB().findIndex(x => x.id === b.id);
+  return `${b.id}|${b._v ?? 0}|${blocks.length}|${readPos}`;
 }
 
 function updBP() {
@@ -2265,9 +2276,11 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
         if (!ctx?.b) return; const { sx, sy, ox, oy, b } = ctx;
         const pi = Math.floor(b.y / PH);
         const _isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+        const _mar = _isDecorative ? 0 : MAR;
         const _newX = ox + (e.clientX - sx);
-        b.x = snapVal(_isDecorative ? _newX : Math.max(0, Math.min(pageW(pi) - b.w, _newX)));
-        b.y = snapVal(oy + (e.clientY - sy));
+        b.x = snapVal(_isDecorative ? _newX : Math.max(_mar, Math.min(pageW(pi) - _mar - b.w, _newX)));
+        const _newY = oy + (e.clientY - sy);
+        b.y = snapVal(Math.max(pi * PH + (_isDecorative ? 0 : _mar), _newY));
         fbEl.style.left = b.x + 'px'; fbEl.style.top = (b.y % PH) + 'px';
         const ni = Math.floor(b.y / PH);
         if (ni !== pi) { const pg = getCanvasPage(ni); if (pg) pg.appendChild(fbEl); }
@@ -2290,9 +2303,10 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
       onMove: (e, ctx) => {
         if (!ctx?.b) return; const { sx, sy, sw, sh, b } = ctx;
         const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+        const mar = isDecorative ? 0 : MAR;
         const minW = isDecorative ? 1 : 80;
         const minH = isDecorative ? 1 : 28;
-        b.w = Math.max(minW, Math.min(pageW(Math.floor(b.y / PH)) - b.x, snapVal(sw + (e.clientX - sx))));
+        b.w = Math.max(minW, Math.min(pageW(Math.floor(b.y / PH)) - mar - b.x, snapVal(sw + (e.clientX - sx))));
         b.h = Math.max(minH, snapVal(sh + (e.clientY - sy)));
         fbEl.style.width = b.w + 'px'; fbEl.style.height = b.h + 'px'; updBP();
       },
