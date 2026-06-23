@@ -68,14 +68,16 @@ window.FONT_LIST = [
   }
 ].sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
 
-const _fontCache = {};
+const _fontCache = new Map();
 
 const _font = {
   async fetch(url) {
-    if (_fontCache[url]) return _fontCache[url];
+    if (_fontCache.has(url)) return _fontCache.get(url);
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Chargement police échoué : ${url} (${res.status})`);
-    return (_fontCache[url] = await res.arrayBuffer());
+    const buf = await res.arrayBuffer();
+    _fontCache.set(url, buf);
+    return buf;
   },
 
   async load(def) {
