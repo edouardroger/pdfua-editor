@@ -57,23 +57,23 @@ function _mkLineW(x1, y1, x2, y2, sw) {
 const _PAT_FNS = {
   hlines(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s / 2, s, s / 2, sw)); },
   vlines(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(s / 2, 0, s / 2, s, sw)); },
-  diag1(svg, uid, color, cs)  { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s, s, 0, sw) + _mkLineW(-s * 0.1, s * 0.1, s * 0.1, -s * 0.1, sw) + _mkLineW(s * 0.9, s * 1.1, s * 1.1, s * 0.9, sw)); },
-  diag2(svg, uid, color, cs)  { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, 0, s, s, sw) + _mkLineW(-s * 0.1, s * 0.9, s * 0.1, s * 1.1, sw) + _mkLineW(s * 0.9, -s * 0.1, s * 1.1, s * 0.1, sw)); },
-  cross(svg, uid, color, cs)  { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s / 2, s, s / 2, sw) + _mkLineW(s / 2, 0, s / 2, s, sw)); },
-  dots(svg, uid, color, cs)   { const s = _patStep(cs), r = Math.max(0.7, s * 0.22); return _mkPat(svg, uid, s, color, `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="white" fill-opacity="0.35"/>`); },
+  diag1(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s, s, 0, sw) + _mkLineW(-s * 0.1, s * 0.1, s * 0.1, -s * 0.1, sw) + _mkLineW(s * 0.9, s * 1.1, s * 1.1, s * 0.9, sw)); },
+  diag2(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, 0, s, s, sw) + _mkLineW(-s * 0.1, s * 0.9, s * 0.1, s * 1.1, sw) + _mkLineW(s * 0.9, -s * 0.1, s * 1.1, s * 0.1, sw)); },
+  cross(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s / 2, s, s / 2, sw) + _mkLineW(s / 2, 0, s / 2, s, sw)); },
+  dots(svg, uid, color, cs) { const s = _patStep(cs), r = Math.max(0.7, s * 0.22); return _mkPat(svg, uid, s, color, `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="white" fill-opacity="0.35"/>`); },
   dashes(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18), dl = s * 0.6; return _mkPat(svg, uid, s, color, `<line x1="0" y1="${s / 2}" x2="${dl}" y2="${s / 2}" stroke="white" stroke-width="${sw}" stroke-opacity="0.35"/>`); },
 };
 
 /* ── Motifs de hachure disponibles — svgFn référence directement _PAT_FNS ── */
 const CHART_PATTERNS = [
-  { id: 'solid',  label: 'Plein',          svgFn: null },
-  { id: 'hlines', label: 'Lignes horiz.',  svgFn: _PAT_FNS.hlines },
-  { id: 'vlines', label: 'Lignes vert.',   svgFn: _PAT_FNS.vlines },
-  { id: 'diag1',  label: 'Diagonale /',    svgFn: _PAT_FNS.diag1  },
-  { id: 'diag2',  label: 'Diagonale \\',   svgFn: _PAT_FNS.diag2  },
-  { id: 'cross',  label: 'Croisillons',    svgFn: _PAT_FNS.cross  },
-  { id: 'dots',   label: 'Points',         svgFn: _PAT_FNS.dots   },
-  { id: 'dashes', label: 'Tirets',         svgFn: _PAT_FNS.dashes },
+  { id: 'solid', label: 'Plein', svgFn: null },
+  { id: 'hlines', label: 'Lignes horiz.', svgFn: _PAT_FNS.hlines },
+  { id: 'vlines', label: 'Lignes vert.', svgFn: _PAT_FNS.vlines },
+  { id: 'diag1', label: 'Diagonale /', svgFn: _PAT_FNS.diag1 },
+  { id: 'diag2', label: 'Diagonale \\', svgFn: _PAT_FNS.diag2 },
+  { id: 'cross', label: 'Croisillons', svgFn: _PAT_FNS.cross },
+  { id: 'dots', label: 'Points', svgFn: _PAT_FNS.dots },
+  { id: 'dashes', label: 'Tirets', svgFn: _PAT_FNS.dashes },
 ];
 
 /* Résoudre le fill SVG d'une série. chartSize = Math.min(w, h) du graphique. */
@@ -334,11 +334,11 @@ function _chartRebuildRows(b) {
   if (existingRows.length === data.length && data.length > 0) {
     data.forEach((d, i) => {
       const row = existingRows[i];
-      /* Sélecteur couleur — délégué à _fillColorWrap via makeDsfrColorSelect */
+      /* Sélecteur couleur — délégué à _fillColorWrap via makeColorSelect */
       const colorSel = row.querySelector(`#chartcolor-${i}`);
       if (colorSel) {
-        const resolved = typeof dsfrClosest === 'function'
-          ? dsfrClosest(d.color || CHART_PALETTE[i % CHART_PALETTE.length])
+        const resolved = typeof paletteClosest === 'function'
+          ? paletteClosest(d.color || CHART_PALETTE[i % CHART_PALETTE.length])
           : (d.color || CHART_PALETTE[i % CHART_PALETTE.length]);
         if (colorSel.value !== resolved) {
           colorSel.value = resolved;
@@ -369,7 +369,7 @@ function _chartRebuildRows(b) {
     const colorWrap = document.createElement('div');
     colorWrap.id = `chartcolor-wrap-${i}`;
     colorWrap.className = 'chart-color-wrap';
-    const colorWidget = makeDsfrColorSelect(
+    const colorWidget = makeColorSelect(
       `chartcolor-${i}`,
       d.color || CHART_PALETTE[i % CHART_PALETTE.length],
       hex => { d.color = hex; rr(sid); saveSession(); }
@@ -556,9 +556,17 @@ function startFreeformDraw(blockId) {
   previewSvg.setAttribute('class', 'ff-preview-svg');
   previewSvg.setAttribute('width', PW);
   previewSvg.setAttribute('height', PH);
+  /* Deux calques : ff-static (points validés) et ff-ghost (segment courant + poignées)
+     → mousemove ne vide et ne reconstruit que ff-ghost, pas l'ensemble du SVG */
+  const ffStatic = document.createElementNS(_SVG_NS, 'g');
+  ffStatic.setAttribute('id', 'ff-static');
+  const ffGhost = document.createElementNS(_SVG_NS, 'g');
+  ffGhost.setAttribute('id', 'ff-ghost');
+  previewSvg.appendChild(ffStatic);
+  previewSvg.appendChild(ffGhost);
   pg.appendChild(previewSvg);
 
-  _ffDraw = { blockId, pts: [], overlay, previewSvg, pg, bx, by, bw, bh, dragging: null, mousePos: null };
+  _ffDraw = { blockId, pts: [], overlay, previewSvg, ffStatic, ffGhost, pg, bx, by, bw, bh, dragging: null, mousePos: null };
 
   _ffRedraw();
   overlay.addEventListener('mousedown', _ffMouseDown);
@@ -637,6 +645,7 @@ function _ffCommitPoint(e) {
   d.pts.push(pt);
   d.dragging = null;
   d.mousePos = _ffPg(e);
+  d._staticDirty = true; // invalider le calque statique
   _ffRedraw();
 }
 
@@ -654,7 +663,7 @@ function _ffKeyDown(e) {
   if (e.key === 'Enter') { e.preventDefault(); finalizeFreeformDraw(false); }
   if (e.key === 'Backspace' || e.key === 'Delete') {
     e.preventDefault();
-    if (_ffDraw.pts.length > 0) { _ffDraw.pts.pop(); _ffRedraw(); }
+    if (_ffDraw.pts.length > 0) { _ffDraw.pts.pop(); _ffDraw._staticDirty = true; _ffRedraw(); }
   }
 }
 
@@ -673,36 +682,63 @@ function _ffKeyDown(e) {
 
 function _ffRedraw() {
   if (!_ffDraw) return;
-  const { pts, bx, by, bw, bh, dragging, mousePos, previewSvg } = _ffDraw;
+  const { pts, bx, by, bw, bh, dragging, mousePos, previewSvg, ffStatic, ffGhost } = _ffDraw;
 
   /* helpers SVG */
   const mk = tag => document.createElementNS(_SVG_NS, tag);
-  const pg2svg = (lx, ly) => ({ x: lx + bx, y: ly + by }); // local→page
-  const raw2svg = (px, py) => ({ x: px, y: py });           // page déjà OK
 
-  previewSvg.innerHTML = '';
+  /* ─ Calque statique : chemin validé + ancres + poignées validées + cadre
+     Ne reconstruit le calque statique que si demandé par _ffRedrawStatic()
+     (au commit d'un point, pas à chaque mousemove). */
+  if (_ffDraw._staticDirty !== false) {
+    while (ffStatic.firstChild) ffStatic.removeChild(ffStatic.firstChild);
 
-  /* ─ 1. Chemin tracé ─ */
-  if (pts.length >= 2) {
-    const svgPts = pts.map(p => ({
-      x: p.x + bx, y: p.y + by,
-      cp1: p.cp1 ? { x: p.cp1.x + bx, y: p.cp1.y + by } : null,
-      cp2: p.cp2 ? { x: p.cp2.x + bx, y: p.cp2.y + by } : null,
-    }));
-    const pathEl = mk('path');
-    pathEl.setAttribute('d', freeformPathD(svgPts, false));
-    pathEl.setAttribute('stroke', '#3b82f6');
-    pathEl.setAttribute('stroke-width', '2');
-    pathEl.setAttribute('fill', 'none');
-    pathEl.setAttribute('stroke-linejoin', 'round');
-    pathEl.setAttribute('stroke-linecap', 'round');
-    previewSvg.appendChild(pathEl);
+    /* ─ 1. Chemin tracé ─ */
+    if (pts.length >= 2) {
+      const svgPts = pts.map(p => ({
+        x: p.x + bx, y: p.y + by,
+        cp1: p.cp1 ? { x: p.cp1.x + bx, y: p.cp1.y + by } : null,
+        cp2: p.cp2 ? { x: p.cp2.x + bx, y: p.cp2.y + by } : null,
+      }));
+      const pathEl = mk('path');
+      pathEl.setAttribute('d', freeformPathD(svgPts, false));
+      pathEl.setAttribute('stroke', '#3b82f6');
+      pathEl.setAttribute('stroke-width', '2');
+      pathEl.setAttribute('fill', 'none');
+      pathEl.setAttribute('stroke-linejoin', 'round');
+      pathEl.setAttribute('stroke-linecap', 'round');
+      ffStatic.appendChild(pathEl);
+    }
+
+    /* ─ 3. Poignées Bézier des points validés ─ */
+    pts.forEach(p => {
+      const ax = p.x + bx, ay = p.y + by;
+      if (p.cp1) _ffDrawHandle(ffStatic, mk, ax, ay, p.cp1.x + bx, p.cp1.y + by, '#f59e0b');
+      if (p.cp2) _ffDrawHandle(ffStatic, mk, ax, ay, p.cp2.x + bx, p.cp2.y + by, '#a78bfa');
+    });
+
+    /* ─ 4. Ancres ─ */
+    pts.forEach((p, i) => _ffDrawAnchor(ffStatic, mk, p.x + bx, p.y + by, i === 0, false));
+
+    /* ─ 5. Cadre du bloc ─ */
+    const frame = mk('rect');
+    frame.setAttribute('x', bx); frame.setAttribute('y', by);
+    frame.setAttribute('width', bw); frame.setAttribute('height', bh);
+    frame.setAttribute('fill', 'none');
+    frame.setAttribute('stroke', '#3b82f6');
+    frame.setAttribute('stroke-width', '1');
+    frame.setAttribute('stroke-dasharray', '6 3');
+    frame.setAttribute('rx', '2');
+    ffStatic.appendChild(frame);
+
+    _ffDraw._staticDirty = false;
   }
 
-  /* ─ 2. Segment fantôme vers la souris ─
-     Deux cas :
-     a) Glisser en cours  → on prévisualise la courbe Bézier qui sera créée
-     b) Survol libre      → ligne droite ou courbe si le dernier pt a un cp1 */
+  /* ─ Calque fantôme : segment vers la souris + poignées live
+     Vidé et reconstruit à chaque mousemove (contenu minimal). ─ */
+  while (ffGhost.firstChild) ffGhost.removeChild(ffGhost.firstChild);
+
+  /* ─ 2. Segment fantôme vers la souris ─ */
   const targetPos = dragging ? dragging.curPg : mousePos;
 
   if (pts.length >= 1 && targetPos) {
@@ -710,23 +746,13 @@ function _ffRedraw() {
     const lastSvgX = lastPt.x + bx, lastSvgY = lastPt.y + by;
 
     if (dragging && dragging.active) {
-      /* ── Cas glisser actif : aperçu Bézier cubique live ──
-         Le point final sera à startPg, avec :
-           cp2 = startPg - dir*TENSION  (handle entrant)
-           cp1 = startPg + dir*TENSION  (handle sortant)
-         Pour l'aperçu du segment pts[-1]→newPt :
-           c1  = cp1 du dernier point validé (s'il existe), sinon lastPt
-           c2  = handle entrant calculé en temps réel
-      */
       const sp = dragging.startPg;
       const ep = dragging.curPg;
       const dx = ep.x - sp.x, dy = ep.y - sp.y;
       const TENSION = 0.4;
-      const newPtX = sp.x, newPtY = sp.y; // le point sera posé à startPg
+      const newPtX = sp.x, newPtY = sp.y;
       const c2x = sp.x - dx * TENSION, c2y = sp.y - dy * TENSION;
       const c1x = sp.x + dx * TENSION, c1y = sp.y + dy * TENSION;
-
-      /* Courbe vers le nouveau point (ancre = startPg) */
       const c1Prev = lastPt.cp1 ? { x: lastPt.cp1.x + bx, y: lastPt.cp1.y + by }
         : { x: lastSvgX, y: lastSvgY };
       const ghostPath = mk('path');
@@ -737,18 +763,11 @@ function _ffRedraw() {
       ghostPath.setAttribute('stroke-width', '1.5');
       ghostPath.setAttribute('stroke-dasharray', '6 3');
       ghostPath.setAttribute('fill', 'none');
-      previewSvg.appendChild(ghostPath);
-
-      /* Handle sortant (cp1) du nouveau point → vers la souris */
-      _ffDrawHandle(previewSvg, mk, newPtX, newPtY, c1x, c1y, '#f59e0b');
-      /* Handle entrant (cp2) */
-      _ffDrawHandle(previewSvg, mk, newPtX, newPtY, c2x, c2y, '#a78bfa');
-
-      /* Ancre fantôme au nouveau point */
-      _ffDrawAnchor(previewSvg, mk, newPtX, newPtY, false, true);
-
+      ffGhost.appendChild(ghostPath);
+      _ffDrawHandle(ffGhost, mk, newPtX, newPtY, c1x, c1y, '#f59e0b');
+      _ffDrawHandle(ffGhost, mk, newPtX, newPtY, c2x, c2y, '#a78bfa');
+      _ffDrawAnchor(ffGhost, mk, newPtX, newPtY, false, true);
     } else {
-      /* ── Cas survol libre : ligne droite OU courbe si cp1 dispo ── */
       const tx = targetPos.x, ty = targetPos.y;
       const ghostD = lastPt.cp1
         ? `M ${lastSvgX} ${lastSvgY} Q ${lastPt.cp1.x + bx} ${lastPt.cp1.y + by} ${tx} ${ty}`
@@ -759,34 +778,11 @@ function _ffRedraw() {
       ghostLine.setAttribute('stroke-width', '1');
       ghostLine.setAttribute('stroke-dasharray', '4 3');
       ghostLine.setAttribute('fill', 'none');
-      previewSvg.appendChild(ghostLine);
+      ffGhost.appendChild(ghostLine);
     }
   }
 
-  /* ─ 3. Poignées Bézier des points validés ─ */
-  pts.forEach((p, i) => {
-    const ax = p.x + bx, ay = p.y + by;
-    if (p.cp1) _ffDrawHandle(previewSvg, mk, ax, ay, p.cp1.x + bx, p.cp1.y + by, '#f59e0b');
-    if (p.cp2) _ffDrawHandle(previewSvg, mk, ax, ay, p.cp2.x + bx, p.cp2.y + by, '#a78bfa');
-  });
-
-  /* ─ 4. Ancres ─ */
-  pts.forEach((p, i) => {
-    _ffDrawAnchor(previewSvg, mk, p.x + bx, p.y + by, i === 0, false);
-  });
-
-  /* ─ 5. Cadre du bloc ─ */
-  const frame = mk('rect');
-  frame.setAttribute('x', bx); frame.setAttribute('y', by);
-  frame.setAttribute('width', bw); frame.setAttribute('height', bh);
-  frame.setAttribute('fill', 'none');
-  frame.setAttribute('stroke', '#3b82f6');
-  frame.setAttribute('stroke-width', '1');
-  frame.setAttribute('stroke-dasharray', '6 3');
-  frame.setAttribute('rx', '2');
-  previewSvg.appendChild(frame);
-
-  /* ─ 6. Compteur ─ */
+  /* ─ 6. Compteur (mis à jour à chaque mousemove) ─ */
   if (pts.length > 0) {
     const ctr = mk('text');
     ctr.setAttribute('x', bx + bw - 4); ctr.setAttribute('y', by - 6);
@@ -794,7 +790,7 @@ function _ffRedraw() {
     ctr.setAttribute('font-size', '10'); ctr.setAttribute('fill', '#3b82f6');
     ctr.textContent = pts.length + ' pt' + (pts.length > 1 ? 's' : '') +
       (dragging && dragging.active ? '  ↗ courbe…' : '');
-    previewSvg.appendChild(ctr);
+    ffGhost.appendChild(ctr);
   }
 }
 
@@ -898,17 +894,20 @@ function moveBlockByKey(id, key, shift, resize) {
     /* Ctrl/⌘ + flèche : redimensionner */
     const minW = isDecorative ? 1 : 80;
     const minH = isDecorative ? 1 : 28;
-    const maxW = pw - b.x;
+    const mar = isDecorative ? 0 : MAR;
+    const maxW = pw - mar - b.x;
     if (key === 'ArrowRight') b.w = Math.min(maxW, snapVal(b.w + delta));
     if (key === 'ArrowLeft') b.w = Math.max(minW, snapVal(b.w - delta));
     if (key === 'ArrowDown') b.h = snapVal(b.h + delta);
     if (key === 'ArrowUp') b.h = Math.max(minH, snapVal(b.h - delta));
   } else {
     /* Flèche seule ou Shift+flèche : déplacer */
-    if (key === 'ArrowRight') b.x = isDecorative ? snapVal(b.x + delta) : Math.min(pw - b.w, snapVal(b.x + delta));
-    if (key === 'ArrowLeft') b.x = isDecorative ? snapVal(b.x - delta) : Math.max(0, snapVal(b.x - delta));
+    const mar = isDecorative ? 0 : MAR;
+    const minY = pageIdx * PH + mar;
+    if (key === 'ArrowRight') b.x = isDecorative ? snapVal(b.x + delta) : Math.min(pw - mar - b.w, snapVal(b.x + delta));
+    if (key === 'ArrowLeft') b.x = isDecorative ? snapVal(b.x - delta) : Math.max(mar, snapVal(b.x - delta));
     if (key === 'ArrowDown') b.y = snapVal(b.y + delta);
-    if (key === 'ArrowUp') b.y = Math.max(pageIdx * PH, snapVal(b.y - delta));
+    if (key === 'ArrowUp') b.y = Math.max(minY, snapVal(b.y - delta));
   }
 
   /* Mettre à jour le DOM — immédiat (fluidité visuelle) */
@@ -984,10 +983,12 @@ function attachDrag(bar, el, b) {
     onMove: (e, { startX, startY, origX, origY }) => {
       const pageIdx = Math.floor(b.y / PH);
       const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+      const mar = isDecorative ? 0 : MAR;
       const newX = origX + (e.clientX - startX);
-      // Les formes décoratives peuvent déborder des bords (usage ornemental)
-      b.x = snapVal(isDecorative ? newX : Math.max(0, Math.min(pageW(pageIdx) - b.w, newX)));
-      b.y = snapVal(origY + (e.clientY - startY));
+      b.x = snapVal(isDecorative ? newX : Math.max(mar, Math.min(pageW(pageIdx) - mar - b.w, newX)));
+      const newY = origY + (e.clientY - startY);
+      const minY = pageIdx * PH + (isDecorative ? 0 : mar);
+      b.y = snapVal(Math.max(minY, newY));
       el.style.left = b.x + 'px'; el.style.top = (b.y % PH) + 'px';
       if (Math.floor(b.y / PH) !== pageIdx) { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(el); }
       updBP();
@@ -1006,8 +1007,9 @@ function attachRsz(rsz, el, b) {
   useDrag(rsz, {
     onStart: e => ({ sx: e.clientX, sy: e.clientY, sw: b.w, sh: b.h }),
     onMove: (e, { sx, sy, sw, sh }) => {
-      const maxW = pageW(Math.floor(b.y / PH)) - b.x;
       const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
+      const mar = isDecorative ? 0 : MAR;
+      const maxW = pageW(Math.floor(b.y / PH)) - mar - b.x;
       const minW = isDecorative ? 1 : 80;
       const minH = isDecorative ? 1 : 28;
       b.w = Math.max(minW, Math.min(maxW, snapVal(sw + (e.clientX - sx))));
