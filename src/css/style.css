@@ -1087,6 +1087,15 @@ body {
   margin-block-end: 0;
 }
 
+/* Indentation des sous-listes imbriquées dans le WYSIWYG.
+   Le reset CSS global (*{padding:0}) supprime le padding-left natif des navigateurs.
+   On le restaure uniquement pour les ul/ol enfants d'un li,
+   afin que Tab/Shift+Tab soit visible immédiatement dans l'IHM. */
+.fb-ct li > ul,
+.fb-ct li > ol {
+  padding-left: 20px;
+}
+
 .fb-ct li {
   margin-block-start: 0;
   margin-block-end: 0;
@@ -1222,6 +1231,34 @@ body {
   padding: 0;
 }
 
+/* Listes imbriquées dans le WYSIWYG */
+.list-preview ul,
+.list-preview ol {
+  padding-left: 20px;
+  margin: 0;
+  font-size: inherit;
+}
+
+.list-preview ul li {
+  list-style-type: circle;
+}
+
+.list-preview ul ul li {
+  list-style-type: square;
+}
+
+.list-preview ol li {
+  list-style-type: decimal;
+}
+
+.list-preview ol ol li {
+  list-style-type: lower-alpha;
+}
+
+.list-preview ol ol ol li {
+  list-style-type: lower-roman;
+}
+
 .list-preview.list-no-bullet {
   list-style: none;
   padding-left: 4px;
@@ -1233,6 +1270,12 @@ body {
   line-height: 1.6;
   display: block;
   min-height: 0;
+}
+
+.list-preview.list-no-bullet ul,
+.list-preview.list-no-bullet ol {
+  list-style: none;
+  padding-left: 20px;
 }
 
 /* Grille magnétique */

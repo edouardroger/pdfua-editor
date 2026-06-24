@@ -143,63 +143,103 @@ function exportCode() {
       },
 
       _list(b) {
-        const itemRunsList = _parseListItems(b);
+        const items = _parseListItems(b);
+        const INDENT = 18;
+        const lineH = Math.max(14, bh / Math.max(items.length, 1));
 
-        const lineH = Math.max(14, bh / Math.max(itemRunsList.length, 1));
+        const _toRoman = n => {
+          const vals = [10,'x',9,'ix',5,'v',4,'iv',1,'i'];
+          let r = '';
+          for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i+1]; n -= vals[i]; }
+          return r;
+        };
+        const _label = (type, depth, counter) => {
+          if (b.listNoBullet) return '';
+          if (type === 'ul') return ['\u2022 ', '\u2013 ', '\u00B7 '][Math.min(depth, 2)];
+          const sfx = ['. ',') ','. '][Math.min(depth, 2)];
+          const pfx = depth === 0 ? String(counter) : depth === 1 ? String.fromCharCode(96 + counter) : _toRoman(counter);
+          return pfx + sfx;
+        };
+
         lines.push(`  // Liste ${b.type}`);
         lines.push(`  const list_${id} = doc.struct('L');`);
-        itemRunsList.forEach((seg, i) => {
-          const label = b.type === 'ul' ? '• ' : `${i + 1}. `;
+        lines.push(`  docStruct.add(list_${id});`);
+
+        const counters = [];
+        let prevDepth = 0;
+        const stackVars = [`list_${id}`];
+
+        items.forEach((item, i) => {
+          const { runs, depth, type } = item;
+
+          /* Gérer les changements de niveau */
+          if (depth > prevDepth) {
+            const subVar = `subL_${id}_${i}`;
+            lines.push(`  const ${subVar} = doc.struct('L');`);
+            lines.push(`  ${stackVars[stackVars.length-1]}.add(${subVar});`);
+            stackVars.push(subVar);
+          } else if (depth < prevDepth) {
+            for (let d = prevDepth; d > depth; d--) {
+              if (counters[d] !== undefined) counters[d] = 0;
+              const closingVar = stackVars.pop();
+              lines.push(`  ${closingVar}.end();`);
+            }
+          }
+          prevDepth = depth;
+
+          while (counters.length <= depth) counters.push(0);
+          const counter = ++counters[depth];
+          const label = _label(type, depth, counter);
+          const indentX = bx + depth * INDENT;
+          const lblW = b.listNoBullet ? 0 : 20;
+          const bodyX = indentX + lblW;
+          const bodyW = bw - depth * INDENT - lblW;
           const iy = by + i * lineH;
+
+          const currentL = stackVars[stackVars.length - 1];
           lines.push(`  const li_${id}_${i} = doc.struct('LI');`);
-          lines.push(`  list_${id}.add(li_${id}_${i});`);
-          lines.push(`  li_${id}_${i}.add(doc.struct('Lbl', () => { doc.fontSize(${FS.list}).font('Regular').fillColor('#111111').text('${label}', ${bx}, ${iy}, { width:20, lineBreak:false }); }));`);
+          lines.push(`  ${currentL}.add(li_${id}_${i});`);
+          if (!b.listNoBullet && label) {
+            const safeLbl = label.replace(/'/g, "\\'");
+            lines.push(`  li_${id}_${i}.add(doc.struct('Lbl', () => { doc.fontSize(${FS.list}).font('Regular').fillColor('#111111').text('${safeLbl}', ${indentX}, ${iy}, { width:${lblW + 4}, lineBreak:false }); }));`);
+          }
           lines.push(`  const lbody_${id}_${i} = doc.struct('LBody');`);
           lines.push(`  li_${id}_${i}.add(lbody_${id}_${i});`);
-          // Séparer les runs normaux des runs superscript (appels de note)
-          // Les superscripts sont émis dans leur propre struct Link avec positionnement absolu
-          // (miroir exact de emitRichRuns pour les noteId)
-          const normalRuns = seg.filter(r => !r.noteId);
-          const hasNotes = seg.some(r => r.noteId);
 
+          const hasNotes = runs.some(r => r.noteId);
           if (!hasNotes) {
-            // Pas de note : émission simple en un seul LBody.add callback
             lines.push(`  lbody_${id}_${i}.add(() => {`);
             let isFirst = true;
-            seg.forEach((run, ri) => {
-              const isLast = ri === seg.length - 1;
+            runs.forEach((run, ri) => {
+              const isLast = ri === runs.length - 1;
               const font = run.bold ? 'Bold' : run.italic ? 'Italic' : 'Regular';
               const safeText = (run.text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '');
               if (!safeText) return;
               const continued = isLast ? '' : ', continued: true';
               const underline = run.linkUrl ? ', underline: true' : '';
               const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
-              const posArgs = isFirst ? `${bx + 20}, ${iy}, ` : '';
+              const posArgs = isFirst ? `${bodyX}, ${iy}, ` : '';
               const heightArg = isFirst ? `, height: ${lineH}` : '';
               lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${run.linkUrl ? '#1d4ed8' : '#111111'}')`);
-              lines.push(`      .text('${safeText}', ${posArgs}{ width: ${bw - 20}${heightArg}, lineBreak: false${continued}${underline}${link} });`);
+              lines.push(`      .text('${safeText}', ${posArgs}{ width: ${bodyW}${heightArg}, lineBreak: false${continued}${underline}${link} });`);
               isFirst = false;
             });
             lines.push(`  });`);
           } else {
-            // Mélange texte + superscripts : émettre run par run, chaque noteId dans un Link struct
-            // avec positionnement absolu (miroir de emitRichRuns._supDrawFn)
             const supFs = Math.round(FS.list * 0.58);
             const supRise = Math.round(FS.list * 0.38);
             let isVeryFirst = true;
-            seg.forEach((run, ri) => {
+            runs.forEach((run, ri) => {
               const safeText = (run.text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '');
               if (!safeText) return;
-              const isLast = ri === seg.length - 1;
+              const isLast = ri === runs.length - 1;
               const font = run.bold ? 'Bold' : run.italic ? 'Italic' : 'Regular';
-
               if (run.noteId) {
                 const captNoteId = run.noteId;
                 lines.push(`  const ref_${id}_${ri} = doc.struct('Reference');`);
                 lines.push(`  lbody_${id}_${i}.add(ref_${id}_${ri});`);
                 lines.push(`  const lnk_${id}_${ri} = doc.struct('Link', { alt: 'Note ${safeText}' });`);
                 lines.push(`  ref_${id}_${ri}.add(lnk_${id}_${ri});`);
-
                 lines.push(`  lnk_${id}_${ri}.add(() => {`);
                 lines.push(`    const _cx = doc.x, _cy = doc.y;`);
                 lines.push(`    doc.fontSize(${supFs}).font('${font}').fillColor('${LINK_COLOR}');`);
@@ -208,39 +248,27 @@ function exportCode() {
                 lines.push(`    doc.text('${safeText}', _cx, _cy - ${supRise}, { lineBreak: false, continued: true, width: _sw + 4, height: _sh });`);
                 lines.push(`    doc.goTo(_cx, _cy - ${supRise}, _sw + 2, _sh, 'note-${captNoteId}', { structParent: lnk_${id}_${ri} });`);
                 lines.push(`  });`);
-                lines.push(`  lnk_${id}_${ri}.end();`);
-                lines.push(`  ref_${id}_${ri}.end();`);
-
-                lines.push(`  lbody_${id}_${i}.add(() => {`);
-                lines.push(`    doc.fontSize(${FS.list}).font('Regular').fillColor('#111111');`);
-                if (isLast) {
-                  lines.push(`    try { doc.text('', { continued: false }); } catch(e){} `);
-                }
-                lines.push(`  });`);
+                lines.push(`  lnk_${id}_${ri}.end(); ref_${id}_${ri}.end();`);
+                lines.push(`  lbody_${id}_${i}.add(() => { doc.fontSize(${FS.list}).font('Regular').fillColor('#111111'); ${isLast ? "try { doc.text('', { continued: false }); } catch(e){}" : ''} });`);
               } else {
                 const continued = isLast ? '' : ', continued: true';
                 const underline = run.linkUrl ? ', underline: true' : '';
                 const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
                 const clr = run.linkUrl ? '#1d4ed8' : '#111111';
-                if (isVeryFirst) {
-                  lines.push(`  lbody_${id}_${i}.add(() => {`);
-                  lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${clr}')`);
-                  lines.push(`      .text('${safeText}', ${bx + 20}, ${iy}, { width:${bw - 20}, height:${lineH}, lineBreak:false${continued}${underline}${link} });`);
-                  lines.push(`  });`);
-                } else {
-                  lines.push(`  lbody_${id}_${i}.add(() => {`);
-                  lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${clr}')`);
-                  lines.push(`      .text('${safeText}', { width:${bw - 20}, lineBreak:false${continued}${underline}${link} });`);
-                  lines.push(`  });`);
-                }
+                const posArgs = isVeryFirst ? `${bodyX}, ${iy}, ` : '';
+                const heightArg = isVeryFirst ? `, height: ${lineH}` : '';
+                lines.push(`  lbody_${id}_${i}.add(() => { doc.fontSize(${FS.list}).font('${font}').fillColor('${clr}').text('${safeText}', ${posArgs}{ width:${bodyW}${heightArg}, lineBreak:false${continued}${underline}${link} }); });`);
               }
               isVeryFirst = false;
             });
           }
-          lines.push(`  lbody_${id}_${i}.end();`);
-          lines.push(`  li_${id}_${i}.end();`);
+          lines.push(`  lbody_${id}_${i}.end(); li_${id}_${i}.end();`);
         });
-        lines.push(`  docStruct.add(list_${id});`);
+
+        /* Fermer les L encore ouverts */
+        while (stackVars.length > 1) {
+          lines.push(`  ${stackVars.pop()}.end();`);
+        }
         lines.push(`  list_${id}.end();`);
       },
 

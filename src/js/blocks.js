@@ -537,19 +537,47 @@ function _parseSegments(runs) {
   return segments;
 }
 /* ── Helper partagé : parse les <li> depuis richContent (ou fallback content) ── */
+/**
+ * Parse la structure de liste d'un bloc (ul/ol), en préservant l'imbrication.
+ * Retourne un tableau d'objets { runs, depth, type } :
+ *   - runs  : tableau de runs de texte (pour emitRichRuns)
+ *   - depth : niveau d'imbrication (0 = racine)
+ *   - type  : 'ul' ou 'ol'
+ */
 function _parseListItems(b) {
   if (b.richContent) {
     const tmp = document.createElement('div');
     tmp.innerHTML = b.richContent;
-    const items = [...tmp.querySelectorAll('li')].map(li => {
-      const runs = htmlToRuns(li.innerHTML || '');
-      while (runs.length && runs[runs.length - 1].text === '\n') runs.pop();
-      return runs;
-    }).filter(runs => runs.some(r => r.text.trim() || r.noteId));
-    if (items.length) return items;
+    const rootList = tmp.querySelector('ul, ol');
+    if (rootList) {
+      const items = [];
+      const _walk = (listEl, depth) => {
+        const listType = listEl.tagName.toLowerCase();
+        for (const child of listEl.children) {
+          if (child.tagName !== 'LI') continue;
+          /* Cloner le li sans ses sous-listes pour extraire le texte direct */
+          const liClone = child.cloneNode(true);
+          liClone.querySelectorAll('ul, ol').forEach(sub => sub.remove());
+          const runs = htmlToRuns(liClone.innerHTML || '');
+          while (runs.length && runs[runs.length - 1].text === '\n') runs.pop();
+          if (runs.some(r => r.text.trim() || r.noteId)) {
+            items.push({ runs, depth, type: listType });
+          }
+          /* Sous-listes dans ce li */
+          for (const sub of child.children) {
+            if (sub.tagName === 'UL' || sub.tagName === 'OL') {
+              _walk(sub, depth + 1);
+            }
+          }
+        }
+      };
+      _walk(rootList, 0);
+      if (items.length) return items;
+    }
   }
+  /* Fallback texte brut → liste plate de niveau 0 */
   return (b.content || '').split('\n').filter(l => l.trim())
-    .map(l => [{ text: l.trim(), bold: false, italic: false, linkUrl: null }]);
+    .map(l => ({ runs: [{ text: l.trim(), bold: false, italic: false, linkUrl: null }], depth: 0, type: b.type }));
 }
 
 function _syncRichFromDOM(b) {
@@ -559,7 +587,12 @@ function _syncRichFromDOM(b) {
     if (lst) {
       if (b.richContent) invalidateHtmlToRunsCache(b.richContent);
       b.richContent = lst.outerHTML;
-      b.content = [...lst.querySelectorAll('li')].map(li => li.textContent).join('\n');
+      /* Texte brut : uniquement les li directs de chaque niveau (sans sous-listes) */
+      b.content = [...lst.querySelectorAll('li')].map(li => {
+        const clone = li.cloneNode(true);
+        clone.querySelectorAll('ul, ol').forEach(s => s.remove());
+        return clone.textContent;
+      }).join('\n');
     }
   } else {
     const editEl = ct.querySelector('[contenteditable="true"]');
@@ -877,6 +910,13 @@ function buildEl(b) {
     /* On sort immédiatement si l'utilisateur est en train d'écrire */
     if (isInField) return;
 
+    /* Tab depuis le wrapper d'un bloc liste : entrer dans le premier <li>
+       plutôt que de naviguer vers le prochain élément focusable de la page. */
+    if (e.key === 'Tab' && !e.shiftKey && (b.type === 'ul' || b.type === 'ol')) {
+      const firstLi = wrapper.querySelector('li[contenteditable]');
+      if (firstLi) { e.preventDefault(); firstLi.focus(); return; }
+    }
+
     /* 2. Entrée / Espace : sélectionner le bloc et basculer sur l'onglet Bloc.
           Exception : si le focus est sur un bouton de la barre (dup, del),
           laisser le comportement natif du bouton s'exécuter (click synthétique). */
@@ -1084,29 +1124,166 @@ const FILL_CT = {
   },
 
   _list(ct, b) {
-    const lst = document.createElement(b.type);
-    lst.className = 'list-preview fb-rich';
-    lst.setAttribute('aria-label', (b.type === 'ul' ? 'Liste à puces' : 'Liste numérotée') + ' — un élément par ligne');
+    const rootTag = b.type; // 'ul' ou 'ol'
 
-    /* Construire les <li contenteditable> depuis b.content ou b.richContent */
+    /* ── Créer la liste racine ── */
+    const lst = document.createElement(rootTag);
+    lst.className = 'list-preview fb-rich';
+    lst.setAttribute('aria-label', (rootTag === 'ul' ? 'Liste à puces' : 'Liste numérotée') + ' — Tab pour imbriquer, Shift+Tab pour remonter');
+
+    /* ── Marqueur par défaut d'un sous-niveau (même type que la racine) ── */
+    const _subTag = () => rootTag;
+
+    /* ── Attacher les handlers clavier/input à un <li> ── */
+    const _attachLi = li => {
+      li.onmousedown = e => e.stopPropagation();
+      li.oninput = _syncContent;
+      li.onkeydown = e => {
+
+        /* Tab → indenter (créer/rejoindre un sous-niveau) */
+        if (e.key === 'Tab' && !e.shiftKey) {
+          e.preventDefault();
+          const parentList = li.parentElement;
+          const prev = li.previousElementSibling;
+          if (!prev) return; // pas de précédent → impossible d'imbriquer
+          /* Chercher ou créer une sous-liste dans le li précédent */
+          let subList = prev.querySelector(':scope > ul, :scope > ol');
+          if (!subList) {
+            subList = document.createElement(_subTag());
+            prev.appendChild(subList);
+          }
+          subList.appendChild(li);
+          _focusLi(li);
+          _syncContent();
+          return;
+        }
+
+        /* Shift+Tab → désindenter (remonter d'un niveau) */
+        if (e.key === 'Tab' && e.shiftKey) {
+          e.preventDefault();
+          const parentList = li.parentElement;
+          if (parentList === lst) return; // déjà au niveau racine
+          const parentLi = parentList.parentElement; // le <li> qui contient parentList
+          if (!parentLi) return;
+          const grandParentList = parentLi.parentElement;
+          /* Insérer li après parentLi dans la liste grand-parente */
+          const nextSibling = parentLi.nextElementSibling;
+          grandParentList.insertBefore(li, nextSibling);
+          /* Supprimer la sous-liste si elle est vide */
+          if (!parentList.children.length) parentList.remove();
+          _focusLi(li);
+          _syncContent();
+          return;
+        }
+
+        /* Shift+Entrée → saut de ligne interne */
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          const sel = window.getSelection();
+          if (!sel || !sel.rangeCount) return;
+          const range = sel.getRangeAt(0);
+          range.deleteContents();
+          const br = document.createElement('br');
+          range.insertNode(br);
+          const after = document.createRange();
+          after.setStartAfter(br);
+          after.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(after);
+          _syncContent();
+          return;
+        }
+
+        /* Entrée → nouvel élément au même niveau */
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const parentList = li.parentElement;
+          const newLi = document.createElement('li');
+          newLi.contentEditable = 'true';
+          newLi.innerHTML = '<br>';
+          _attachLi(newLi);
+          li.insertAdjacentElement('afterend', newLi);
+          _focusLi(newLi);
+          _syncContent();
+          return;
+        }
+
+        /* Backspace sur item vide → supprimer ou désindenter */
+        if (e.key === 'Backspace') {
+          const isEmpty = li.textContent.trim() === '' && !li.querySelector('sup') && !li.querySelector('ul, ol');
+          if (!isEmpty) return;
+          const parentList = li.parentElement;
+          e.preventDefault();
+          if (parentList !== lst) {
+            /* Désindenter plutôt que supprimer */
+            const parentLi = parentList.parentElement;
+            if (!parentLi) return;
+            const grandParentList = parentLi.parentElement;
+            const nextSibling = parentLi.nextElementSibling;
+            grandParentList.insertBefore(li, nextSibling);
+            if (!parentList.children.length) parentList.remove();
+            _focusLi(li);
+          } else if (lst.children.length > 1) {
+            const prev = li.previousElementSibling;
+            li.remove();
+            if (prev) _focusLi(prev, false);
+          }
+          _syncContent();
+        }
+      };
+    };
+
+    /* ── Placer le focus en fin d'un <li> ── */
+    const _focusLi = (li, toEnd = true) => {
+      /* Cibler le nœud texte direct, pas les sous-listes */
+      const textNode = [...li.childNodes].find(n => n.nodeType === Node.TEXT_NODE || n.nodeName === 'BR');
+      const range = document.createRange();
+      if (toEnd && textNode && textNode.nodeType === Node.TEXT_NODE) {
+        range.setStart(textNode, textNode.length);
+      } else {
+        range.setStart(li, 0);
+      }
+      range.collapse(true);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      li.focus();
+    };
+
+    /* ── Attacher récursivement les handlers à tous les <li> d'un nœud ── */
+    const _attachAll = (node) => {
+      [...node.children].forEach(child => {
+        if (child.tagName === 'LI') {
+          child.contentEditable = 'true';
+          _attachLi(child);
+          _attachAll(child); // sous-listes dans ce li
+        } else if (child.tagName === 'UL' || child.tagName === 'OL') {
+          _attachAll(child);
+        }
+      });
+    };
+
+    /* ── Synchroniser richContent ── */
+    const _syncContent = () => {
+      b.richContent = lst.outerHTML;
+      b.content = [...lst.querySelectorAll('li')]
+        .map(li => li.childNodes[0]?.textContent || '').join('\n');
+      if (typeof saveSession === 'function') saveSession();
+    };
+
+    /* ── Construire depuis richContent ou content ── */
     const _rebuildLi = () => {
       lst.innerHTML = '';
-      /* Si richContent existe (contient des <sup> de notes), restaurer depuis là */
       if (b.richContent) {
         const tmp = document.createElement('div');
         tmp.innerHTML = b.richContent;
-        const savedLis = tmp.querySelectorAll('li');
-        if (savedLis.length) {
-          savedLis.forEach(savedLi => {
-            const li = document.createElement('li');
-            li.contentEditable = 'true';
-            li.innerHTML = savedLi.innerHTML || '<br>';
-            _attachLi(li);
-            lst.appendChild(li);
-          });
+        const srcList = tmp.querySelector('ul, ol');
+        if (srcList && srcList.children.length) {
+          lst.innerHTML = srcList.innerHTML;
+          _attachAll(lst);
           return;
         }
       }
+      /* Fallback texte brut → liste plate */
       const lines = (b.content || '').split('\n').filter(l => l.trim() !== '');
       (lines.length ? lines : ['']).forEach(line => {
         const li = document.createElement('li');
@@ -1115,68 +1292,6 @@ const FILL_CT = {
         _attachLi(li);
         lst.appendChild(li);
       });
-    };
-
-    const _attachLi = li => {
-      li.onmousedown = e => e.stopPropagation();
-      li.oninput = _syncContent;
-      li.onkeydown = e => {
-        if (e.key === 'Enter' && e.shiftKey) {
-          /* Shift+Entrée → saut de ligne interne au sein de l'item */
-          e.preventDefault();
-          const sel = window.getSelection();
-          if (!sel || !sel.rangeCount) return;
-          const range = sel.getRangeAt(0);
-          range.deleteContents();
-          const br = document.createElement('br');
-          range.insertNode(br);
-          /* Placer le curseur après le <br> inséré */
-          const after = document.createRange();
-          after.setStartAfter(br);
-          after.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(after);
-          _syncContent();
-        } else if (e.key === 'Enter') {
-          /* Entrée seule → nouvel élément de liste */
-          e.preventDefault();
-          const newLi = document.createElement('li');
-          newLi.contentEditable = 'true';
-          newLi.innerHTML = '<br>';
-          _attachLi(newLi);
-          li.insertAdjacentElement('afterend', newLi);
-          const range = document.createRange();
-          range.setStart(newLi, 0);
-          range.collapse(true);
-          window.getSelection().removeAllRanges();
-          window.getSelection().addRange(range);
-          _syncContent();
-        } else if (e.key === 'Backspace') {
-          const isEmpty = li.textContent.trim() === '' && !li.querySelector('sup');
-          if (isEmpty && lst.children.length > 1) {
-            e.preventDefault();
-            const prev = li.previousElementSibling;
-            li.remove();
-            if (prev) {
-              const range = document.createRange();
-              range.selectNodeContents(prev);
-              range.collapse(false);
-              window.getSelection().removeAllRanges();
-              window.getSelection().addRange(range);
-            }
-            _syncContent();
-          }
-        }
-      };
-    };
-
-    const _syncContent = () => {
-      /* Sérialiser les <li> en texte brut (ignorer les <sup> dans le compte de lignes) */
-      b.content = [...lst.querySelectorAll('li')]
-        .map(li => li.textContent).join('\n');
-      /* Synchroniser richContent pour les sup de notes */
-      b.richContent = lst.outerHTML;
-      if (typeof saveSession === 'function') saveSession();
     };
 
     _rebuildLi();
@@ -2031,8 +2146,8 @@ const TREE_LABELS = {};
 ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].forEach(t => { TREE_LABELS[t] = b => ({ tg: t.toUpperCase(), co: (b.content || '').slice(0, 26) }); });
 Object.assign(TREE_LABELS, {
   p: b => ({ tg: 'P', co: htmlToPlain(b.richContent || b.content || '').slice(0, 26) }),
-  ul: b => ({ tg: 'L(ul)', co: (b.content || '').split('\n').filter(l => l.trim()).length + ' items' }),
-  ol: b => ({ tg: 'L(ol)', co: (b.content || '').split('\n').filter(l => l.trim()).length + ' items' }),
+  ul: b => ({ tg: 'L(ul)', co: b.richContent ? (b.richContent.match(/<li/gi) || []).length + ' items' : (b.content || '').split('\n').filter(l => l.trim()).length + ' items' }),
+  ol: b => ({ tg: 'L(ol)', co: b.richContent ? (b.richContent.match(/<li/gi) || []).length + ' items' : (b.content || '').split('\n').filter(l => l.trim()).length + ' items' }),
   img: b => ({ tg: b.imgLinkUrl ? 'Link>Figure' : b.alt ? 'Figure' : 'Artifact', co: (b.imgLinkUrl ? '↗ ' : '') + (b.alt ? 'alt : ' + b.alt.slice(0, 18) : 'décoratif') }),
   link: b => ({ tg: 'Link', co: (b.linkText || '').slice(0, 22) }),
   table: b => ({ tg: 'Table', co: ((b.tableData || []).length - 1) + ' lignes' }),

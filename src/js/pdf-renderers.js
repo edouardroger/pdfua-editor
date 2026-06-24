@@ -153,7 +153,12 @@ class BlockRenderer {
         };
 
         if (runNoteId) {
-          // Appel de note : exposant en bleu avec goTo + liaison différée
+          // Appel de note : exposant en bleu avec goTo + liaison différée.
+          // _baseline est une variable partagée entre les deux callbacks (même closure) :
+          //   - le callback lnkS.add écrit la valeur de cy (baseline avant le supscript)
+          //   - le callback parentStruct.add la lit pour recaler doc.y
+          const _baseline = { cy: null };
+
           const nextRun = !isLastRun ? seg[idx + 1] : null;
           if (nextRun && !nextRun.noteId) skipNext = true;
           const isEffectivelyLast = isLastRun ||
@@ -166,6 +171,7 @@ class BlockRenderer {
 
           lnkS.add(() => {
             const cx = doc.x, cy = doc.y;
+            _baseline.cy = cy;               // ← capture pour le run suivant
             const supFontSize = fontSize * 0.58;
             const supRise = fontSize * 0.38;
             doc.fontSize(supFontSize).font(runFont).fillColor(LINK_COLOR);
@@ -180,13 +186,13 @@ class BlockRenderer {
           lnkS.end();
           refS.end();
 
-          // Émettre le run suivant directement si c'est du texte normal
+          // Émettre le run suivant en recalant doc.y sur la baseline capturée.
           parentStruct.add(() => {
+            // Restaurer la baseline originale (annule le décalage du supscript).
+            if (_baseline.cy !== null) doc.y = _baseline.cy;
             doc.fontSize(fontSize).font(runFont).fillColor(color);
             if (nextRun && !nextRun.noteId) {
-              const nextIsBold = defaultBold || nextRun.bold;
               const nFont = nextRun.bold ? 'Bold' : nextRun.italic ? 'Italic' : 'Regular';
-
               doc.fontSize(fontSize).font(nFont)
                 .fillColor(nextRun.linkUrl ? LINK_COLOR : color);
               doc.text(nextRun.text, {
@@ -257,46 +263,115 @@ class BlockRenderer {
   renderList(b) {
     const { doc, docStruct } = this;
     const { ox, oy, cw, ch } = this._coords(b);
-    const itemRunsList = _parseListItems(b);
+    const items = _parseListItems(b);
     const listFs = b.fontSize || FS.list;
-    const lineH = b.listNoBullet
-      ? listFs * 1.6
-      : Math.max(listFs * 1.6, ch / Math.max(itemRunsList.length, 1));
+    const lineH = listFs * 1.6;
+    const INDENT = 18; // pt par niveau d'imbrication
 
+    /* ── Marqueur selon niveau et type ── */
+    const _label = (type, depth, counter) => {
+      if (b.listNoBullet) return '';
+      if (type === 'ul') {
+        // Niveau 0 : • (U+2022) — présent dans toutes les polices latines
+        // Niveau 1 : – (U+2013, tiret demi-cadratin) — universel
+        // Niveau 2 : · (U+00B7, point médian) — dans le bloc Latin-1, garanti
+        return ['\u2022 ', '\u2013 ', '\u00B7 '][Math.min(depth, 2)];
+      } else {
+        const suffixes = ['. ', ') ', '. '];
+        const prefix = depth === 0
+          ? String(counter)
+          : depth === 1
+            ? String.fromCharCode(96 + counter) // a, b, c…
+            : _toRoman(counter);
+        return prefix + suffixes[Math.min(depth, 2)];
+      }
+    };
+
+    const _toRoman = n => {
+      const vals = [10,'x',9,'ix',5,'v',4,'iv',1,'i'];
+      let r = '';
+      for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i+1]; n -= vals[i]; }
+      return r;
+    };
+
+    /* ── Compteurs par (depth, parentIndex) — on utilise un tableau de piles ── */
+    const counters = [];
+    const _counter = depth => {
+      while (counters.length <= depth) counters.push(0);
+      /* Réinitialiser les niveaux inférieurs quand on revient à un niveau supérieur */
+      return ++counters[depth];
+    };
+    let prevDepth = 0;
+
+    /* ── Structure L racine ── */
     const listS = doc.struct('L');
     docStruct.add(listS);
+
+    /* Pile des L ouverts par niveau : listStack[0] = listS */
+    const listStack = [listS];
     let iy = oy;
 
-    itemRunsList.forEach((seg, i) => {
-      const liS = doc.struct('LI');
-      const label = b.type === 'ul' ? '• ' : (i + 1) + '. ';
-      const bodyX = b.listNoBullet ? ox : ox + 20;
-      const bodyW = b.listNoBullet ? cw : cw - 20;
+    items.forEach((item, idx) => {
+      const { runs, depth, type } = item;
+
+      /* Gérer les changements de niveau — réinitialiser les compteurs enfants */
+      if (depth < prevDepth) {
+        for (let d = prevDepth; d > depth; d--) {
+          if (counters[d] !== undefined) counters[d] = 0;
+          /* Fermer les L imbriqués qui ne sont plus actifs */
+          if (listStack.length > depth + 1) {
+            const closingL = listStack.pop();
+            try { closingL.end(); } catch (_) {}
+          }
+        }
+      } else if (depth > prevDepth) {
+        /* Ouvrir un nouveau L imbriqué */
+        const subL = doc.struct('L');
+        listStack[listStack.length - 1].add(subL);
+        listStack.push(subL);
+      }
+      prevDepth = depth;
+
+      const counter = _counter(depth);
+      const label = _label(type, depth, counter);
+      const indentX = ox + depth * INDENT;
+      const lblW = b.listNoBullet ? 0 : 20;
+      const bodyX = indentX + lblW;
+      const bodyW = Math.max(10, cw - depth * INDENT - lblW);
 
       let itemH;
       try {
         doc.fontSize(listFs).font('Regular');
-        itemH = doc.heightOfString(seg.map(r => r.text).join(''), { width: bodyW, lineBreak: true });
+        itemH = doc.heightOfString(runs.map(r => r.text).join(''), { width: bodyW, lineBreak: true });
       } catch (_) { itemH = lineH; }
       itemH = Math.max(itemH, lineH);
 
-      if (!b.listNoBullet) {
+      const currentL = listStack[listStack.length - 1];
+      const liS = doc.struct('LI');
+      currentL.add(liS);
+
+      if (!b.listNoBullet && label) {
         liS.add(doc.struct('Lbl', () => {
           doc.fontSize(listFs).font('Regular').fillColor('#111111')
-            .text(label, ox, iy, { width: 20, lineBreak: false });
+            .text(label, indentX, iy, { width: lblW + 4, lineBreak: false });
         }));
       }
 
       const lbodyS = doc.struct('LBody');
       liS.add(lbodyS);
-      this.emitRichRuns(lbodyS, seg, bodyX, iy, bodyW,
+      this.emitRichRuns(lbodyS, runs, bodyX, iy, bodyW,
         Math.max(itemH, oy + ch - iy), listFs, '#111111', {});
       lbodyS.end();
-
       liS.end();
-      listS.add(liS);
+
       iy += itemH;
     });
+
+    /* Fermer tous les L encore ouverts */
+    while (listStack.length > 1) {
+      const l = listStack.pop();
+      try { l.end(); } catch (_) {}
+    }
     listS.end();
   }
 
