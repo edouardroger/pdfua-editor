@@ -265,40 +265,54 @@ class BlockRenderer {
     const { ox, oy, cw, ch } = this._coords(b);
     const items = _parseListItems(b);
     const listFs = b.fontSize || FS.list;
-    const lineH = listFs * 1.6;
+    /* lineGap identique à celui des paragraphes → espacement cohérent */
+    const LINE_GAP = 2;
+    const lineH = listFs * 1.6 + LINE_GAP;
     const INDENT = 18; // pt par niveau d'imbrication
 
     /* ── Marqueur selon niveau et type ── */
     const _label = (type, depth, counter) => {
       if (b.listNoBullet) return '';
       if (type === 'ul') {
-        // Niveau 0 : • (U+2022) — présent dans toutes les polices latines
-        // Niveau 1 : – (U+2013, tiret demi-cadratin) — universel
-        // Niveau 2 : · (U+00B7, point médian) — dans le bloc Latin-1, garanti
         return ['\u2022 ', '\u2013 ', '\u00B7 '][Math.min(depth, 2)];
       } else {
         const suffixes = ['. ', ') ', '. '];
         const prefix = depth === 0
           ? String(counter)
           : depth === 1
-            ? String.fromCharCode(96 + counter) // a, b, c…
+            ? String.fromCharCode(96 + counter)
             : _toRoman(counter);
         return prefix + suffixes[Math.min(depth, 2)];
       }
     };
 
     const _toRoman = n => {
-      const vals = [10,'x',9,'ix',5,'v',4,'iv',1,'i'];
+      const vals = [10, 'x', 9, 'ix', 5, 'v', 4, 'iv', 1, 'i'];
       let r = '';
-      for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i+1]; n -= vals[i]; }
+      for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i + 1]; n -= vals[i]; }
       return r;
     };
 
-    /* ── Compteurs par (depth, parentIndex) — on utilise un tableau de piles ── */
+    /* ── Précalculer la hauteur de chaque item AVANT de dessiner ──────────
+       Cela permet à iy d'être correct pour tous les niveaux, y compris
+       les sous-items qui succèdent à un item parent. */
+    const _itemH = items.map(({ runs, depth }) => {
+      const bodyW = Math.max(10, cw - depth * INDENT - (b.listNoBullet ? 0 : 20));
+      const text = runs.map(r => r.text).join('');
+      let h;
+      try {
+        doc.fontSize(listFs).font('Regular');
+        h = doc.heightOfString(text || ' ', { width: bodyW, lineBreak: true });
+      } catch (_) { h = lineH; }
+      /* Ajouter lineGap par ligne de texte rendue */
+      const nLines = Math.max(1, Math.ceil(h / (listFs * 1.2)));
+      return Math.max(h + nLines * LINE_GAP, lineH);
+    });
+
+    /* ── Compteurs ── */
     const counters = [];
     const _counter = depth => {
       while (counters.length <= depth) counters.push(0);
-      /* Réinitialiser les niveaux inférieurs quand on revient à un niveau supérieur */
       return ++counters[depth];
     };
     let prevDepth = 0;
@@ -306,26 +320,23 @@ class BlockRenderer {
     /* ── Structure L racine ── */
     const listS = doc.struct('L');
     docStruct.add(listS);
-
-    /* Pile des L ouverts par niveau : listStack[0] = listS */
     const listStack = [listS];
     let iy = oy;
 
     items.forEach((item, idx) => {
       const { runs, depth, type } = item;
+      const itemH = _itemH[idx];
 
-      /* Gérer les changements de niveau — réinitialiser les compteurs enfants */
+      /* Gérer les changements de niveau */
       if (depth < prevDepth) {
         for (let d = prevDepth; d > depth; d--) {
           if (counters[d] !== undefined) counters[d] = 0;
-          /* Fermer les L imbriqués qui ne sont plus actifs */
           if (listStack.length > depth + 1) {
             const closingL = listStack.pop();
-            try { closingL.end(); } catch (_) {}
+            try { closingL.end(); } catch (_) { }
           }
         }
       } else if (depth > prevDepth) {
-        /* Ouvrir un nouveau L imbriqué */
         const subL = doc.struct('L');
         listStack[listStack.length - 1].add(subL);
         listStack.push(subL);
@@ -338,13 +349,6 @@ class BlockRenderer {
       const lblW = b.listNoBullet ? 0 : 20;
       const bodyX = indentX + lblW;
       const bodyW = Math.max(10, cw - depth * INDENT - lblW);
-
-      let itemH;
-      try {
-        doc.fontSize(listFs).font('Regular');
-        itemH = doc.heightOfString(runs.map(r => r.text).join(''), { width: bodyW, lineBreak: true });
-      } catch (_) { itemH = lineH; }
-      itemH = Math.max(itemH, lineH);
 
       const currentL = listStack[listStack.length - 1];
       const liS = doc.struct('LI');
@@ -360,7 +364,7 @@ class BlockRenderer {
       const lbodyS = doc.struct('LBody');
       liS.add(lbodyS);
       this.emitRichRuns(lbodyS, runs, bodyX, iy, bodyW,
-        Math.max(itemH, oy + ch - iy), listFs, '#111111', {});
+        Math.max(itemH, oy + ch - iy), listFs, '#111111', { lineGap: LINE_GAP });
       lbodyS.end();
       liS.end();
 
@@ -370,7 +374,7 @@ class BlockRenderer {
     /* Fermer tous les L encore ouverts */
     while (listStack.length > 1) {
       const l = listStack.pop();
-      try { l.end(); } catch (_) {}
+      try { l.end(); } catch (_) { }
     }
     listS.end();
   }
@@ -540,24 +544,65 @@ class BlockRenderer {
     if (!rows.length) return;
 
     const colCount = Math.max(...rows.map(r => r.length));
-    const colW = cw / colCount;
-    // FS.table(10pt) × 1.5 + padding × 2 ≈ 30pt — arrondi pour éviter le débordement
-    const rowH = 30;
-    const padX = 12;
+    const padX = 8;
+    const padY = 6;
+    const fs = b.fontSize || FS.table;
 
-    // ── Rendu graphique DS État (Artifact) ──
+    /* ── Largeurs de colonnes : tableColWidths (fractions) ou répartition égale ── */
+    let colWidths;
+    if (Array.isArray(b.tableColWidths) && b.tableColWidths.length === colCount) {
+      const total = b.tableColWidths.reduce((s, w) => s + w, 0) || 1;
+      colWidths = b.tableColWidths.map(w => (w / total) * cw);
+    } else {
+      colWidths = Array(colCount).fill(cw / colCount);
+    }
+
+    /* ── Précalculer la hauteur de chaque ligne selon son contenu ── */
+    const rowHeights = rows.map((row, ri) => {
+      let maxH = 0;
+      const font = ri === 0 ? 'Bold' : 'Regular';
+      row.forEach((cell, ci) => {
+        const cellW = Math.max(4, colWidths[ci] - padX * 2);
+        try {
+          doc.font(font).fontSize(fs);
+          const h = doc.heightOfString(String(cell ?? ''), { width: cellW, lineBreak: true });
+          maxH = Math.max(maxH, h + padY * 2);
+        } catch (_) { maxH = Math.max(maxH, fs * 1.4 + padY * 2); }
+      });
+      return Math.max(fs * 1.4 + padY * 2, maxH);
+    });
+
+    /* ── Positions Y cumulées de chaque ligne ── */
+    const rowYs = [];
+    let curY = oy;
+    rowHeights.forEach(h => { rowYs.push(curY); curY += h; });
+
+    // ── Rendu graphique (Artifact) ──
     doc.markContent('Artifact');
     doc.save();
-    doc.fillColor('#f6f6f6').rect(ox, oy, cw, rowH).fill();
+    /* En-tête gris */
+    doc.fillColor('#f6f6f6').rect(ox, oy, cw, rowHeights[0]).fill();
+    /* Lignes paires légèrement teintées */
     for (let ri = 2; ri < rows.length; ri++) {
       if (ri % 2 === 0)
-        doc.fillColor('#fafafa').rect(ox, oy + ri * rowH, cw, rowH).fill();
+        doc.fillColor('#fafafa').rect(ox, rowYs[ri], cw, rowHeights[ri]).fill();
     }
+    /* Séparateurs horizontaux */
     doc.lineWidth(0.5).strokeColor('#dddddd');
-    for (let ri = 2; ri <= rows.length; ri++)
-      doc.moveTo(ox, oy + ri * rowH).lineTo(ox + cw, oy + ri * rowH).stroke();
+    rowYs.forEach((y, ri) => {
+      if (ri > 0) doc.moveTo(ox, y).lineTo(ox + cw, y).stroke();
+    });
+    doc.moveTo(ox, curY).lineTo(ox + cw, curY).stroke();
+    /* Séparateur en-tête plus épais */
     doc.lineWidth(1.5).strokeColor('#dddddd');
-    doc.moveTo(ox, oy + rowH).lineTo(ox + cw, oy + rowH).stroke();
+    doc.moveTo(ox, rowYs[1] || curY).lineTo(ox + cw, rowYs[1] || curY).stroke();
+    /* Séparateurs verticaux entre colonnes */
+    doc.lineWidth(0.5).strokeColor('#eeeeee');
+    let colX = ox;
+    for (let ci = 0; ci < colCount - 1; ci++) {
+      colX += colWidths[ci];
+      doc.moveTo(colX, oy).lineTo(colX, curY).stroke();
+    }
     doc.restore();
     doc.endMarkedContent();
 
@@ -567,18 +612,22 @@ class BlockRenderer {
     const thead = doc.struct('THead');
     const trHead = doc.struct('TR');
 
+    let xOff = ox;
     rows[0].forEach((cell, ci) => {
       const th = doc.struct('TH');
       th.dictionary.data.A = { O: 'Table', Scope: 'Column' };
       th.dictionary.data.ID = new String(thIds[ci]);
+      const cellX = xOff;
+      const cellW = Math.max(4, colWidths[ci] - padX * 2);
+      const textY = rowYs[0] + padY;
       th.add(() => {
-        const textY = oy + (rowH - FS.table) / 2;
-        doc.font('Bold').fontSize(FS.table)
-          .text(String(cell ?? ''), ox + ci * colW + padX, textY, {
-            width: colW - padX * 2, height: FS.table + 2, lineBreak: false, ellipsis: true,
+        doc.font('Bold').fontSize(fs).fillColor('#111111')
+          .text(String(cell ?? ''), cellX + padX, textY, {
+            width: cellW, lineBreak: true,
           });
       });
       trHead.add(th);
+      xOff += colWidths[ci];
     });
     thead.add(trHead);
     table.add(thead);
@@ -587,17 +636,21 @@ class BlockRenderer {
       const tbody = doc.struct('TBody');
       for (let ri = 1; ri < rows.length; ri++) {
         const tr = doc.struct('TR');
+        xOff = ox;
         for (let ci = 0; ci < colCount; ci++) {
           const td = doc.struct('TD');
           td.dictionary.data.Headers = [new String(thIds[ci])];
+          const cellX = xOff;
+          const cellW = Math.max(4, colWidths[ci] - padX * 2);
+          const textY = rowYs[ri] + padY;
           td.add(() => {
-            const textY = oy + ri * rowH + (rowH - FS.table) / 2;
-            doc.font('Regular').fontSize(FS.table)
-              .text(String(rows[ri][ci] ?? ''), ox + ci * colW + padX, textY, {
-                width: colW - padX * 2, height: FS.table + 2, lineBreak: false, ellipsis: true,
+            doc.font('Regular').fontSize(fs).fillColor('#111111')
+              .text(String(rows[ri]?.[ci] ?? ''), cellX + padX, textY, {
+                width: cellW, lineBreak: true,
               });
           });
           tr.add(td);
+          xOff += colWidths[ci];
         }
         tbody.add(tr);
       }
