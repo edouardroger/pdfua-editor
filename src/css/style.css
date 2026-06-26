@@ -3215,22 +3215,62 @@ dialog.modal::backdrop {
   line-height: 1.5;
 }
 
+.fb-table-resizable {
+  user-select: none;
+}
+
+.fb-col-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+}
+
+.fb-col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 70%;
+  background: var(--ui-fb-sel-border);
+  border-radius: 1px;
+  opacity: 0.45;
+  transition: opacity .1s, background .1s;
+}
+
+.fb-col-resizer:hover::after,
+.fb-col-resizer:active::after {
+  opacity: 1;
+  background: var(--ui-focus);
+}
+
 .fb-table-cell {
-  padding: 9px 12px;
+  padding: 4px 8px;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
   border: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fb-table-cell--body {
   border-bottom: 1px solid #e0e0e0;
   background: transparent;
+  max-height: 32px;
 }
 
 .fb-table-cell--head {
   font-weight: 700;
   background-color: #f6f6f6;
   border-bottom: 2px solid #999999;
+  overflow: hidden;
 }
 
 .fb-table-btns {

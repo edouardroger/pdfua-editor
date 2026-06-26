@@ -1434,9 +1434,28 @@ const FILL_CT = {
   table(ct, b) {
     const tbl = document.createElement('table');
     tbl.setAttribute('aria-label', 'Tableau éditable');
-    tbl.className = 'fb-table-el';
+    tbl.className = 'fb-table-el fb-table-resizable';
     tbl.style.fontFamily = docFont();
     tbl.style.fontSize = (b.fontSize || FS.table) + 'px';
+    tbl.style.tableLayout = 'fixed';
+    tbl.style.width = '100%';
+
+    /* Initialiser tableColWidths si absent ou incohérent */
+    const colCount = Math.max(...(b.tableData || [[]]).map(r => r.length), 1);
+    if (!Array.isArray(b.tableColWidths) || b.tableColWidths.length !== colCount) {
+      b.tableColWidths = Array(colCount).fill(1);
+    }
+
+    /* <colgroup> pour le layout fixe */
+    const cg = document.createElement('colgroup');
+    const totalW = b.tableColWidths.reduce((s, w) => s + w, 0) || colCount;
+    b.tableColWidths.forEach(w => {
+      const col = document.createElement('col');
+      col.style.width = ((w / totalW) * 100).toFixed(2) + '%';
+      cg.appendChild(col);
+    });
+    tbl.appendChild(cg);
+
     const thead = tbl.createTHead();
     const tbody = tbl.createTBody();
     (b.tableData || []).forEach((row, ri) => {
@@ -1467,10 +1486,12 @@ const FILL_CT = {
     };
     const addRowBtn = mkTableBtn('+ Ligne', 'Ajouter une ligne au tableau', () => {
       b.tableData.push(b.tableData[0].map(() => ''));
+      b.tableColWidths = null;
       announce('Ligne ajoutée au tableau.');
     });
     const addColBtn = mkTableBtn('+ Colonne', 'Ajouter une colonne au tableau', () => {
       b.tableData.forEach(row => row.push(''));
+      b.tableColWidths = null;
       announce('Colonne ajoutée au tableau.');
     });
     const btnWrap = document.createElement('div');
@@ -1478,6 +1499,9 @@ const FILL_CT = {
     btnWrap.append(addRowBtn, addColBtn);
     ct.appendChild(tbl); ct.appendChild(btnWrap);
     ct.appendChild(utag('TABLE', 'u-t'));
+
+    /* Attacher les poignées de redimensionnement de colonnes */
+    _attachColResizers(tbl, b);
   },
 
   quote(ct, b) {

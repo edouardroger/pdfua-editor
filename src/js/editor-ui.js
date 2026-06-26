@@ -1238,3 +1238,75 @@ document.addEventListener('keydown', e => {
     }
   }
 });
+
+/* ── REDIMENSIONNEMENT DES COLONNES DE TABLEAU ──────────────────────────
+   Insère une poignée <div.fb-col-resizer> à droite de chaque cellule
+   d'en-tête (sauf la dernière). Le glisser redistribue les largeurs entre
+   la colonne gauche et la colonne droite, puis met à jour b.tableColWidths
+   (fractions normalisées, format attendu par renderTable et export-code).
+────────────────────────────────────────────────────────────────────────── */
+function _attachColResizers(tbl, b) {
+  tbl.querySelectorAll('.fb-col-resizer').forEach(h => h.remove());
+
+  const colCount = (b.tableColWidths || []).length;
+  if (colCount < 2) return;
+
+  const headerRow = tbl.querySelector('thead tr');
+  if (!headerRow) return;
+
+  const ths = [...headerRow.querySelectorAll('th')];
+  ths.forEach((th, ci) => {
+    if (ci === ths.length - 1) return;
+
+    const handle = document.createElement('div');
+    handle.className = 'fb-col-resizer';
+    handle.setAttribute('aria-hidden', 'true');
+    handle.title = 'Faire glisser pour redimensionner la colonne';
+
+    handle.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const startX = e.clientX;
+      const cols = [...tbl.querySelectorAll('colgroup col')];
+      const tblW = tbl.getBoundingClientRect().width || 1;
+      const startWidths = cols.map(col => {
+        const pct = parseFloat(col.style.width) || (100 / colCount);
+        return (pct / 100) * tblW;
+      });
+      const MIN_PX = 32;
+
+      const onMove = mv => {
+        const dx = mv.clientX - startX;
+        const tblWCur = tbl.getBoundingClientRect().width || 1;
+
+        let newLeft = startWidths[ci] + dx;
+        let newRight = startWidths[ci + 1] - dx;
+        if (newLeft < MIN_PX) { newLeft = MIN_PX; newRight = startWidths[ci] + startWidths[ci + 1] - MIN_PX; }
+        if (newRight < MIN_PX) { newRight = MIN_PX; newLeft = startWidths[ci] + startWidths[ci + 1] - MIN_PX; }
+
+        const cols2 = [...tbl.querySelectorAll('colgroup col')];
+        cols2[ci].style.width = ((newLeft / tblWCur) * 100).toFixed(2) + '%';
+        cols2[ci + 1].style.width = ((newRight / tblWCur) * 100).toFixed(2) + '%';
+
+        const newWidths = [...startWidths];
+        newWidths[ci] = newLeft;
+        newWidths[ci + 1] = newRight;
+        const total = newWidths.reduce((s, w) => s + w, 0) || 1;
+        b.tableColWidths = newWidths.map(w => +(w / total * colCount).toFixed(4));
+      };
+
+      const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        if (typeof saveSession === 'function') saveSession();
+      };
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    th.style.position = 'relative';
+    th.appendChild(handle);
+  });
+}
