@@ -1074,6 +1074,13 @@ body {
   box-sizing: border-box;
 }
 
+/* Sous-listes imbriquées dans les <li contenteditable> */
+.fb-ct [contenteditable] ul,
+.fb-ct [contenteditable] ol {
+  padding-left: 20px;
+  margin: 0;
+}
+
 .fb-ct [contenteditable] div,
 .fb-ct [contenteditable] p {
   min-height: 0;
@@ -1087,12 +1094,8 @@ body {
   margin-block-end: 0;
 }
 
-/* Indentation des sous-listes imbriquées dans le WYSIWYG.
-   Le reset CSS global (*{padding:0}) supprime le padding-left natif des navigateurs.
-   On le restaure uniquement pour les ul/ol enfants d'un li,
-   afin que Tab/Shift+Tab soit visible immédiatement dans l'IHM. */
-.fb-ct li > ul,
-.fb-ct li > ol {
+.fb-ct li>ul,
+.fb-ct li>ol {
   padding-left: 20px;
 }
 
