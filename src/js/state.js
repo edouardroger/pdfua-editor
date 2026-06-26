@@ -12,11 +12,11 @@ let pageOrientations = ['portrait']; // orientation par index de page ['portrait
    Toutes les mutations de `blocks` dans state.js et blocks.js doivent passer par ces helpers,
    ou appeler _blockMap_reset() après une réaffectation complète de `blocks = [...]`. */
 const _blockMap = new Map();
-function _blockMap_set(b)    { _blockMap.set(b.id, b); }
-function _blockMap_delete(id){ _blockMap.delete(id); }
-function _blockMap_reset()   { _blockMap.clear(); blocks.forEach(b => _blockMap.set(b.id, b)); }
+function _blockMap_set(b) { _blockMap.set(b.id, b); }
+function _blockMap_delete(id) { _blockMap.delete(id); }
+function _blockMap_reset() { _blockMap.clear(); blocks.forEach(b => _blockMap.set(b.id, b)); }
 /** Lookup O(1) par id — remplace blocks.find(x => x.id === id) partout dans le code. */
-function blockById(id)       { return _blockMap.get(id); }
+function blockById(id) { return _blockMap.get(id); }
 
 /* ── Cache du tri ordB — invalidé via _ordVersion à chaque mutation de blocks ──
    ordB() est appelé très fréquemment (updBP, updTree, _prepareBlocks, etc.).
@@ -354,6 +354,15 @@ function _validateImportedBlock(b) {
     );
   }
 
+  if (clean.tableColWidths !== undefined && clean.tableColWidths !== null) {
+    if (!Array.isArray(clean.tableColWidths)) {
+      clean.tableColWidths = null;
+    } else {
+      const widths = clean.tableColWidths.slice(0, 50).map(v => Number(v) || 0).filter(v => v > 0);
+      clean.tableColWidths = widths.length ? widths : null;
+    }
+  }
+
   /* chartData — valider chaque série */
   if (clean.chartData !== undefined) {
     if (!Array.isArray(clean.chartData)) { clean.chartData = []; }
@@ -535,9 +544,9 @@ const MAX_PAGES = 50;
 
 const _ENVELOPE_MAGIC = new Uint8Array([0x50, 0x44, 0x55, 0x41]); // "PDUA"
 const _ENVELOPE_FORMAT_VERSION = 0x02;
-const _MAX_ASSET_SIZE         =  20 * 1024 * 1024; // 20 Mo par image (binaire)
-const _MAX_JSON_COMPRESSED    =   5 * 1024 * 1024; // 5 Mo — flux gzip du JSON
-const _MAX_JSON_DECOMPRESSED  =  50 * 1024 * 1024; // 50 Mo — JSON après décompression
+const _MAX_ASSET_SIZE = 20 * 1024 * 1024; // 20 Mo par image (binaire)
+const _MAX_JSON_COMPRESSED = 5 * 1024 * 1024; // 5 Mo — flux gzip du JSON
+const _MAX_JSON_DECOMPRESSED = 50 * 1024 * 1024; // 50 Mo — JSON après décompression
 
 /* ── Helper : lit un ReadableStream entier en Uint8Array ── */
 async function _readStream(readable) {
@@ -790,7 +799,7 @@ const _BLOCK_FIELDS = {
   ol: ['richContent', 'content', 'listNoBullet', 'fontSize'],
   img: ['imgData', 'alt', 'imgLinkUrl'],
   link: ['linkText', 'linkUrl'],
-  table: ['tableData'],
+  table: ['tableData', 'tableColWidths'],
   quote: ['richContent', 'content', 'quoteSource', 'fontSize'],
   note: ['richContent', 'content', 'noteRef', 'anchorBlockId', 'fontSize'],
   hr: [],
