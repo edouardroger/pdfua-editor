@@ -42,7 +42,7 @@ const BLOCK_META = {
   ol: { label: 'Liste numérotée', w: 220, h: 94, content: 'Élément 1\nÉlément 2\nÉlément 3' },
   img: { label: 'Image', w: 240, h: 180, alt: '', imgData: null, imgLinkUrl: '' },
   link: { label: 'Lien hypertexte', w: 200, h: 50, linkText: 'Lien vers ceci', linkUrl: 'https://example.com' },
-  table: { label: 'Tableau', w: 360, h: 94, tableData: [['Col 1', 'Col 2', 'Col 3'], ['Cellule 1', 'Cellule 2', 'Cellule 3'], ['Cellule 4', 'Cellule 5', 'Cellule 6']] },
+  table: { label: 'Tableau', w: 360, h: 94, tableData: [['Col 1', 'Col 2', 'Col 3'], ['Cellule 1', 'Cellule 2', 'Cellule 3'], ['Cellule 4', 'Cellule 5', 'Cellule 6']], tableColWidths: null },
   quote: { label: 'Citation', w: 380, h: 90, content: 'Texte de la citation.', quoteSource: '— Auteur' },
   note: { label: 'Note', w: 340, h: 40, content: 'Texte de la note de bas de page.', noteRef: '1' },
   hr: { label: 'Séparateur', w: 500, h: 24 },
