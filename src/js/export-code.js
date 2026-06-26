@@ -145,21 +145,34 @@ function exportCode() {
       _list(b) {
         const items = _parseListItems(b);
         const INDENT = 18;
-        const lineH = Math.max(14, bh / Math.max(items.length, 1));
+        const listFs = b.fontSize || FS.list;
+        const LINE_GAP = 2;
+        const lineH = listFs * 1.6 + LINE_GAP;
 
         const _toRoman = n => {
-          const vals = [10,'x',9,'ix',5,'v',4,'iv',1,'i'];
+          const vals = [10, 'x', 9, 'ix', 5, 'v', 4, 'iv', 1, 'i'];
           let r = '';
-          for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i+1]; n -= vals[i]; }
+          for (let i = 0; i < vals.length; i += 2) while (n >= vals[i]) { r += vals[i + 1]; n -= vals[i]; }
           return r;
         };
         const _label = (type, depth, counter) => {
           if (b.listNoBullet) return '';
           if (type === 'ul') return ['\u2022 ', '\u2013 ', '\u00B7 '][Math.min(depth, 2)];
-          const sfx = ['. ',') ','. '][Math.min(depth, 2)];
+          const sfx = ['. ', ') ', '. '][Math.min(depth, 2)];
           const pfx = depth === 0 ? String(counter) : depth === 1 ? String.fromCharCode(96 + counter) : _toRoman(counter);
           return pfx + sfx;
         };
+
+        /* Précalculer les hauteurs de chaque item (même logique que renderList) */
+        const itemHs = items.map(({ runs, depth }) => {
+          const lblW = b.listNoBullet ? 0 : 20;
+          const bodyW = Math.max(10, bw - depth * INDENT - lblW);
+          /* On génère du code qui calcule heightOfString au runtime ;
+             pour les positions statiques on utilise lineH comme approximation.
+             Pour les items courts (1 ligne) c'est exact ; pour les longs
+             le script généré utilisera lineBreak:true donc PDFKit gère. */
+          return lineH;
+        });
 
         lines.push(`  // Liste ${b.type}`);
         lines.push(`  const list_${id} = doc.struct('L');`);
@@ -168,15 +181,18 @@ function exportCode() {
         const counters = [];
         let prevDepth = 0;
         const stackVars = [`list_${id}`];
+        let curIy = by;
 
         items.forEach((item, i) => {
           const { runs, depth, type } = item;
+          const iy = curIy;
+          const itemH = itemHs[i];
 
           /* Gérer les changements de niveau */
           if (depth > prevDepth) {
             const subVar = `subL_${id}_${i}`;
             lines.push(`  const ${subVar} = doc.struct('L');`);
-            lines.push(`  ${stackVars[stackVars.length-1]}.add(${subVar});`);
+            lines.push(`  ${stackVars[stackVars.length - 1]}.add(${subVar});`);
             stackVars.push(subVar);
           } else if (depth < prevDepth) {
             for (let d = prevDepth; d > depth; d--) {
@@ -194,14 +210,13 @@ function exportCode() {
           const lblW = b.listNoBullet ? 0 : 20;
           const bodyX = indentX + lblW;
           const bodyW = bw - depth * INDENT - lblW;
-          const iy = by + i * lineH;
 
           const currentL = stackVars[stackVars.length - 1];
           lines.push(`  const li_${id}_${i} = doc.struct('LI');`);
           lines.push(`  ${currentL}.add(li_${id}_${i});`);
           if (!b.listNoBullet && label) {
             const safeLbl = label.replace(/'/g, "\\'");
-            lines.push(`  li_${id}_${i}.add(doc.struct('Lbl', () => { doc.fontSize(${FS.list}).font('Regular').fillColor('#111111').text('${safeLbl}', ${indentX}, ${iy}, { width:${lblW + 4}, lineBreak:false }); }));`);
+            lines.push(`  li_${id}_${i}.add(doc.struct('Lbl', () => { doc.fontSize(${listFs}).font('Regular').fillColor('#111111').text('${safeLbl}', ${indentX}, ${iy.toFixed(2)}, { width:${lblW + 4}, lineBreak:false }); }));`);
           }
           lines.push(`  const lbody_${id}_${i} = doc.struct('LBody');`);
           lines.push(`  li_${id}_${i}.add(lbody_${id}_${i});`);
@@ -218,16 +233,16 @@ function exportCode() {
               const continued = isLast ? '' : ', continued: true';
               const underline = run.linkUrl ? ', underline: true' : '';
               const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
-              const posArgs = isFirst ? `${bodyX}, ${iy}, ` : '';
-              const heightArg = isFirst ? `, height: ${lineH}` : '';
-              lines.push(`    doc.fontSize(${FS.list}).font('${font}').fillColor('${run.linkUrl ? '#1d4ed8' : '#111111'}')`);
-              lines.push(`      .text('${safeText}', ${posArgs}{ width: ${bodyW}${heightArg}, lineBreak: false${continued}${underline}${link} });`);
+              const posArgs = isFirst ? `${bodyX}, ${iy.toFixed(2)}, ` : '';
+              const heightArg = isFirst ? `, height: ${itemH.toFixed(2)}` : '';
+              lines.push(`    doc.fontSize(${listFs}).font('${font}').fillColor('${run.linkUrl ? '#1d4ed8' : '#111111'}')`);
+              lines.push(`      .text('${safeText}', ${posArgs}{ width: ${bodyW}, lineBreak: true${heightArg}${continued}${underline}${link}, lineGap: ${LINE_GAP} });`);
               isFirst = false;
             });
             lines.push(`  });`);
           } else {
-            const supFs = Math.round(FS.list * 0.58);
-            const supRise = Math.round(FS.list * 0.38);
+            const supFs = Math.round(listFs * 0.58);
+            const supRise = Math.round(listFs * 0.38);
             let isVeryFirst = true;
             runs.forEach((run, ri) => {
               const safeText = (run.text || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '');
@@ -241,7 +256,9 @@ function exportCode() {
                 lines.push(`  const lnk_${id}_${ri} = doc.struct('Link', { alt: 'Note ${safeText}' });`);
                 lines.push(`  ref_${id}_${ri}.add(lnk_${id}_${ri});`);
                 lines.push(`  lnk_${id}_${ri}.add(() => {`);
+                lines.push(`    const _baseline_${id}_${ri} = { cy: null };`);
                 lines.push(`    const _cx = doc.x, _cy = doc.y;`);
+                lines.push(`    _baseline_${id}_${ri}.cy = _cy;`);
                 lines.push(`    doc.fontSize(${supFs}).font('${font}').fillColor('${LINK_COLOR}');`);
                 lines.push(`    const _sw = doc.widthOfString('${safeText}') + 1;`);
                 lines.push(`    const _sh = ${supFs * 1.5};`);
@@ -249,20 +266,24 @@ function exportCode() {
                 lines.push(`    doc.goTo(_cx, _cy - ${supRise}, _sw + 2, _sh, 'note-${captNoteId}', { structParent: lnk_${id}_${ri} });`);
                 lines.push(`  });`);
                 lines.push(`  lnk_${id}_${ri}.end(); ref_${id}_${ri}.end();`);
-                lines.push(`  lbody_${id}_${i}.add(() => { doc.fontSize(${FS.list}).font('Regular').fillColor('#111111'); ${isLast ? "try { doc.text('', { continued: false }); } catch(e){}" : ''} });`);
+                lines.push(`  lbody_${id}_${i}.add(() => {`);
+                lines.push(`    if (doc.y !== undefined) doc.y = ${iy.toFixed(2)};`);
+                lines.push(`    doc.fontSize(${listFs}).font('Regular').fillColor('#111111'); ${isLast ? "try { doc.text('', { continued: false }); } catch(e){}" : ''}`);
+                lines.push(`  });`);
               } else {
                 const continued = isLast ? '' : ', continued: true';
                 const underline = run.linkUrl ? ', underline: true' : '';
                 const link = run.linkUrl ? `, link: '${run.linkUrl.replace(/'/g, "\\'")}'` : '';
                 const clr = run.linkUrl ? '#1d4ed8' : '#111111';
-                const posArgs = isVeryFirst ? `${bodyX}, ${iy}, ` : '';
-                const heightArg = isVeryFirst ? `, height: ${lineH}` : '';
-                lines.push(`  lbody_${id}_${i}.add(() => { doc.fontSize(${FS.list}).font('${font}').fillColor('${clr}').text('${safeText}', ${posArgs}{ width:${bodyW}${heightArg}, lineBreak:false${continued}${underline}${link} }); });`);
+                const posArgs = isVeryFirst ? `${bodyX}, ${iy.toFixed(2)}, ` : '';
+                const heightArg = isVeryFirst ? `, height: ${itemH.toFixed(2)}` : '';
+                lines.push(`  lbody_${id}_${i}.add(() => { doc.fontSize(${listFs}).font('${font}').fillColor('${clr}').text('${safeText}', ${posArgs}{ width:${bodyW}, lineBreak:true${heightArg}${continued}${underline}${link}, lineGap:${LINE_GAP} }); });`);
               }
               isVeryFirst = false;
             });
           }
           lines.push(`  lbody_${id}_${i}.end(); li_${id}_${i}.end();`);
+          curIy += itemH;
         });
 
         /* Fermer les L encore ouverts */
