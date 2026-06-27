@@ -3251,19 +3251,16 @@ dialog.modal::backdrop {
 }
 
 .fb-table-cell {
-  padding: 4px 8px;
+  padding: 6px 8px;
   text-align: left;
   vertical-align: top;
   border: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .fb-table-cell--body {
   border-bottom: 1px solid #e0e0e0;
   background: transparent;
-  max-height: 32px;
 }
 
 .fb-table-cell--head {
