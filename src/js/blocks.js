@@ -764,6 +764,7 @@ function _createCanvasPage(pageIdx) {
   const label = Object.assign(document.createElement('div'), { className: 'page-label' });
   label.dataset.page = pageIdx;
   const pg = Object.assign(document.createElement('div'), { className: 'canvas-page', id: 'cpage-' + pageIdx });
+  pg.style.isolation = 'isolate';
   pg.setAttribute('aria-label', 'Page ' + (pageIdx + 1) + ' — zone de dépôt des blocs');
   pg.dataset.page = pageIdx;
   applyPageOrientation(pg, pageIdx); setupPageDrop(pg, pageIdx);
@@ -1913,7 +1914,8 @@ function qa(d) {
 function chZ(d) {
   const b = blockById(sid); if (!b) return;
   snapshotState();
-  b.zIndex = (b.zIndex || 0) + d;
+  const next = (b.zIndex || 0) + d;
+  b.zIndex = Math.max(-1, next);
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) domEl.style.zIndex = b.zIndex;
   updBP(); saveSession();

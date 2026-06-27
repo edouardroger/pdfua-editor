@@ -236,10 +236,15 @@ class PDFBuilder {
   /** Rend tous les blocs d'une page canvas donnée. */
   _renderCanvasPage(canvasPage) {
     const { doc, docStruct, toc } = this;
-    for (const b of (this.blocksByPage.get(canvasPage) || [])) {
+    const pageBlocks = this.blocksByPage.get(canvasPage) || [];
+    const visuallySorted = [...pageBlocks].sort((a, b) => {
+      const zA = a.zIndex || 0, zB = b.zIndex || 0;
+      if (zA !== zB) return zA - zB;
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
+    for (const b of visuallySorted) {
       doc.fillColor('#111111').font('Regular');
       if (toc.enabled && toc.destinations[b.id]) {
-        // La destination nommée est un objet indirect PDF (hors flux de contenu)
         doc.addNamedDestination(toc.destinations[b.id].destName);
       }
       const renderer = BLOCK_RENDERERS[b.type];
