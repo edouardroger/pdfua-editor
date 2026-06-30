@@ -15,55 +15,55 @@ window.FONT_LIST = [
   {
     id: 'open-sans', label: 'Open Sans', cssFamily: "'Open Sans', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/open-sans@4/files/open-sans-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-700-italic.woff',
     }
   },
   {
     id: 'roboto', label: 'Roboto', cssFamily: "'Roboto', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@4/files/roboto-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-700-italic.woff',
     }
   },
   {
     id: 'lato', label: 'Lato', cssFamily: "'Lato', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/lato@4/files/lato-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-700-italic.woff',
     }
   },
   {
     id: 'montserrat', label: 'Montserrat', cssFamily: "'Montserrat', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/montserrat@4/files/montserrat-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-italic.woff',
     }
   },
   {
     id: 'source-sans-3', label: 'Source Sans 3', cssFamily: "'Source Sans 3', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@4/files/source-sans-3-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/source-sans-3@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/source-sans-3@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/source-sans-3@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/source-sans-3@latest/latin-700-italic.woff',
     }
   },
   {
     id: 'noto-sans', label: 'Noto Sans', cssFamily: "'Noto Sans', sans-serif",
     urls: {
-      regular: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-400-normal.woff',
-      bold: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-700-normal.woff',
-      italic: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-400-italic.woff',
-      bolditalic: 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@4/files/noto-sans-latin-700-italic.woff',
+      regular: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-400-normal.woff',
+      bold: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-700-normal.woff',
+      italic: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-400-italic.woff',
+      bolditalic: 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-700-italic.woff',
     }
   }
 ].sort((a, b) => a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' }));
