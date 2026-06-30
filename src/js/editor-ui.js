@@ -1014,6 +1014,12 @@ function attachRsz(rsz, el, b) {
       const minH = isDecorative ? 1 : 28;
       b.w = Math.max(minW, Math.min(maxW, snapVal(sw + (e.clientX - sx))));
       b.h = Math.max(minH, snapVal(sh + (e.clientY - sy)));
+      /* Resize manuel : sortir du mode auto-hauteur */
+      if (typeof AUTO_HEIGHT_TYPES !== 'undefined' && AUTO_HEIGHT_TYPES.has(b.type)) {
+        b.manualHeight = true;
+        el.classList.remove('fb-auto-h');
+        el.style.minHeight = '';
+      }
       el.style.width = b.w + 'px'; el.style.height = b.h + 'px'; updBP();
     },
     onEnd: () => saveSession(),
