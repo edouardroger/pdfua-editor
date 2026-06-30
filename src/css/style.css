@@ -1,4 +1,7 @@
 :root {
+  /* ── Activation native ── */
+  color-scheme: light dark;
+
   /* ── Géométrie ── */
   --ui-topbar-h: 44px;
   --ui-sidebar-w: 192px;
@@ -12,281 +15,159 @@
   --ui-font-mono: 'IBM Plex Mono', monospace;
 
   /* ── Fonds ── */
-  --ui-bg-void: #eeeee9;
-  --ui-bg-base: #f5f5f2;
-  --ui-bg-surface: #ffffff;
-  --ui-bg-raised: #ffffff;
-  --ui-bg-hover: #f0f0ec;
-  --ui-bg-active: #e8e8e4;
-  --ui-bg-inset: #f5f5f2;
+  --ui-bg-void: light-dark(#eeeee9, #212121);
+  --ui-bg-base: light-dark(#f5f5f2, #1d1d1d);
+  --ui-bg-surface: light-dark(#ffffff, #191818);
+  --ui-bg-raised: light-dark(#ffffff, #1e1e24);
+  --ui-bg-hover: light-dark(#f0f0ec, #25252d);
+  --ui-bg-active: light-dark(#e8e8e4, #2c2c36);
+  --ui-bg-inset: light-dark(#f5f5f2, #0f0f12);
 
   /* ── Bordures ── */
-  --ui-border-weak: rgba(0, 0, 0, .09);
-  --ui-border-mid: rgba(0, 0, 0, .15);
-  --ui-border-str: rgba(0, 0, 0, .28);
-  --ui-border-input: rgba(0, 0, 0, .18);
+  --ui-border-weak: light-dark(rgba(0, 0, 0, .09), rgba(255, 255, 255, .07));
+  --ui-border-mid: light-dark(rgba(0, 0, 0, .15), rgba(255, 255, 255, .13));
+  --ui-border-str: light-dark(rgba(0, 0, 0, .28), rgba(255, 255, 255, .24));
+  --ui-border-input: light-dark(rgba(0, 0, 0, .18), #646466);
 
   /* ── Textes ── */
-  --ui-txt-primary: #1a1a18;
-  --ui-txt-sec: #3d3d3a;
-  --ui-txt-muted: #595955;
-  --ui-txt-disabled: #767673;
-  --ui-placeholder: #595955;
+  --ui-txt-primary: light-dark(#1a1a18, #f0efe8);
+  --ui-txt-sec: light-dark(#3d3d3a, #b8b6b0);
+  --ui-txt-muted: light-dark(#595955, #9e9e9a);
+  --ui-txt-disabled: light-dark(#767673, #6a6866);
+  --ui-placeholder: light-dark(#595955, #9e9e9a);
 
   /* ── Accent ── */
-  --ui-accent: #964b00;
-  --ui-accent-dim: rgba(176, 122, 0, .10);
-  --ui-accent-glow: rgba(176, 122, 0, .05);
-  --ui-accent-hover: #7a3c00;
+  --ui-accent: light-dark(#2563eb, #60a5fa);
+  --ui-accent-dim: light-dark(rgba(37, 99, 235, 0.10), rgba(96, 165, 250, 0.14));
+  --ui-accent-glow: light-dark(rgba(37, 99, 235, 0.05), rgba(96, 165, 250, 0.07));
+  --ui-accent-hover: light-dark(#1d4ed8, #3b82f6);
 
   /* ── Focus ── */
-  --ui-focus: #0060df;
+  --ui-focus: light-dark(#0060df, #60a5fa);
 
   /* ── États sémantiques ── */
-  --ui-ok: #1a7a4a;
-  --ui-ok-dim: rgba(26, 122, 74, .10);
-  --ui-ok-border: rgba(26, 122, 74, .28);
-  --ui-warn: #8f6200;
-  --ui-err: #c0392b;
-  --ui-err-dim: rgba(192, 57, 43, .10);
-  --ui-err-border: rgba(192, 57, 43, .28);
+  --ui-ok: light-dark(#1a7a4a, #5ccb8a);
+  --ui-ok-dim: light-dark(rgba(26, 122, 74, .10), rgba(92, 203, 138, .12));
+  --ui-ok-border: light-dark(rgba(26, 122, 74, .28), rgba(92, 203, 138, .30));
+  --ui-warn: light-dark(#8f6200, #f0b84a);
+  --ui-err: light-dark(#c0392b, #f07070);
+  --ui-err-dim: light-dark(rgba(192, 57, 43, .10), rgba(240, 112, 112, .12));
+  --ui-err-border: light-dark(rgba(192, 57, 43, .28), rgba(240, 112, 112, .30));
 
-  /* ── Ombres ── */
-  --ui-shadow-sm: 0 1px 16px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0, 0, 0, .05);
-  --ui-shadow-md: 0 8px 40px rgba(0, 0, 0, .15);
-  --ui-shadow-lg: 0 24px 80px rgba(0, 0, 0, .25);
-  --ui-shadow-sidebar: 4px 0 24px rgba(0, 0, 0, .12);
+  /* ── Ombres (Variables intermédiaires pour gérer les virgules complexes) ── */
+  --shadow-sm-l: 0 1px 16px rgba(0, 0, 0, .10), 0 0 0 1px rgba(0, 0, 0, .05);
+  --shadow-sm-d: 0 1px 16px rgba(0, 0, 0, .30), 0 0 0 1px rgba(255, 255, 255, .04);
+  --ui-shadow-sm: light-dark(var(--shadow-sm-l), var(--shadow-sm-d));
+
+  --ui-shadow-md: light-dark(0 8px 40px rgba(0, 0, 0, .15), 0 8px 40px rgba(0, 0, 0, .45));
+  --ui-shadow-lg: light-dark(0 24px 80px rgba(0, 0, 0, .25), 0 24px 80px rgba(0, 0, 0, .60));
+  --ui-shadow-sidebar: light-dark(4px 0 24px rgba(0, 0, 0, .12), 4px 0 24px rgba(0, 0, 0, .35));
   --ui-shadow-sidebar-dark: 4px 0 24px rgba(0, 0, 0, .5);
-  --ui-shadow-sheet: 0 -4px 24px rgba(0, 0, 0, .08);
-  --ui-shadow-sheet-dark: 0 -4px 24px rgba(0, 0, 0, .35);
-  --ui-overlay: rgba(0, 0, 0, .35);
-  --ui-overlay-lg: rgba(0, 0, 0, .60);
-  --ui-overlay-mob: rgba(0, 0, 0, .30);
+  --ui-shadow-sheet: light-dark(0 -4px 24px rgba(0, 0, 0, .08), 0 -4px 24px rgba(0, 0, 0, .30));
+  --ui-overlay: light-dark(rgba(0, 0, 0, .35), rgba(0, 0, 0, .55));
+  --ui-overlay-lg: light-dark(rgba(0, 0, 0, .60), rgba(0, 0, 0, .80));
+  --ui-overlay-mob: light-dark(rgba(0, 0, 0, .30), rgba(0, 0, 0, .50));
 
   /* ── Toast ── */
-  --ui-toast-bg: #1e3a5f;
-  --ui-toast-color: #ffffff;
-  --ui-toast-border: transparent;
+  --ui-toast-bg: light-dark(#1e3a5f, #1a2030);
+  --ui-toast-color: contrast-color(var(--ui-toast-bg));
+  --ui-toast-border: light-dark(transparent, rgba(255, 255, 255, .14));
 
   /* ── Iframe PDF ── */
-  --ui-pif-bg: #f5f5f0;
+  --ui-pif-bg: light-dark(#f5f5f0, #1a1a1e);
 
   /* ── Contrôles au-dessus du canvas ── */
   --ui-page-ctrl-bg: var(--ui-bg-surface);
   --ui-page-ctrl-color: var(--ui-txt-sec);
 
-  --ui-link: #1d4ed8;
+  --ui-link: light-dark(#1d4ed8, #60a5fa);
   --ui-fmtbar-bg: #1e293b;
   --ui-fmtbar-fg: #e2e8f0;
   --ui-fmtbar-hover: #334155;
-  --ui-dup-bg: #22c55e;
-  --ui-dup-hover: #16a34a;
-  --ui-fb-hover-border: #93c5fd;
+  --ui-dup-bg: light-dark(#1c9147, #166534);
+  --ui-dup-hover: light-dark(#16a34a, #15803d);
+  --ui-fb-hover-border: light-dark(#93c5fd, #60a5fa);
 
-  /* ── Blocs canvas (light) ── */
+  /* ── Blocs canvas ── */
   --ui-fb-bg: #ffffff;
   --ui-fb-text: #1a1a18;
-  --ui-fb-placeholder: #6b6b67;
-  /* Valeurs fixes (non overridées en dark) car .fb est toujours sur fond blanc */
+  --ui-fb-placeholder: light-dark(#6b6b67, #767676);
   --ui-iph-bg: #eff6ff;
   --ui-iph-color: #1d4ed8;
   --ui-fb-link: #1d4ed8;
-  --ui-fb-border: #d1d5db;
-  --ui-fb-bar-bg: #f0f4ff;
-  --ui-fb-bar-color: #606163;
-  --ui-fb-bar-border: #93c5fd;
-  --ui-fb-sel-border: #3b82f6;
-  --ui-fb-row-odd: #ffffff;
-  --ui-del-bg: #fee2e2;
-  --ui-del-border: #fecaca;
-  --ui-del-color: #dc2626;
+  --ui-fb-border: light-dark(#d1d5db, #c5c8d0);
+  --ui-fb-bar-bg: light-dark(#f0f4ff, #1e1e24);
+  --ui-fb-bar-color: light-dark(#606163, #b8b6b0);
+  --ui-fb-bar-border: light-dark(#93c5fd, #3a3a50);
+  --ui-fb-sel-border: light-dark(#3b82f6, #93c5fd);
+  --ui-fb-row-odd: light-dark(#ffffff, #f6f6f6);
+  --ui-del-bg: light-dark(#c80000, #a50000);
+  --ui-del-border: light-dark(#fecaca, #a50000);
+  --ui-del-color: contrast-color(var(--ui-del-bg));
 
   /* ── Icônes palette (bg / fg) ── */
-  --ico-h-bg: #dbeafe;
-  --ico-h-fg: #1d4ed8;
-  --ico-p-bg: #dcfce7;
-  --ico-p-fg: #166534;
-  --ico-l-bg: #fef3c7;
-  --ico-l-fg: #92400e;
-  --ico-img-bg: #fce7f3;
-  --ico-img-fg: #9d174d;
-  --ico-lnk-bg: #d1fae5;
-  --ico-lnk-fg: #065f46;
-  --ico-tbl-bg: #ede9fe;
-  --ico-tbl-fg: #5b21b6;
-  --ico-ch-bg: #fef9c3;
-  --ico-ch-fg: #854d0e;
-  --ico-qt-bg: #eef2ff;
-  --ico-qt-fg: #4338ca;
-  --ico-hr-bg: #f1f5f9;
-  --ico-hr-fg: #475569;
-  --ico-as-bg: #ecfdf5;
-  --ico-as-fg: #065f46;
-  --ico-cd-bg: #1e293b;
-  --ico-cd-fg: #7dd3fc;
-  --ico-fm-bg: #f5f3ff;
-  --ico-fm-fg: #6d28d9;
-  --ico-sh-bg: #f3f0ff;
-  --ico-sh-fg: #6d28d9;
+  --ico-h-bg: light-dark(#dbeafe, #1a2744);
+  --ico-h-fg: light-dark(#1d4ed8, #93bbf7);
+  --ico-p-bg: light-dark(#dcfce7, #152a1e);
+  --ico-p-fg: light-dark(#166534, #6dd898);
+  --ico-l-bg: light-dark(#fef3c7, #2a2010);
+  --ico-l-fg: light-dark(#92400e, #d4a855);
+  --ico-img-bg: light-dark(#fce7f3, #2a1525);
+  --ico-img-fg: light-dark(#9d174d, #e08ac0);
+  --ico-lnk-bg: light-dark(#d1fae5, #122520);
+  --ico-lnk-fg: light-dark(#065f46, #5dd4b8);
+  --ico-tbl-bg: light-dark(#ede9fe, #1e1530);
+  --ico-tbl-fg: light-dark(#5b21b6, #b090f0);
+  --ico-ch-bg: light-dark(#fef9c3, #28240a);
+  --ico-ch-fg: light-dark(#854d0e, #e0c840);
+  --ico-qt-bg: light-dark(#eef2ff, #12161e);
+  --ico-qt-fg: light-dark(#4338ca, #7896d8);
+  --ico-hr-bg: light-dark(#f1f5f9, #1e2028);
+  --ico-hr-fg: light-dark(#475569, #8892aa);
+  --ico-as-bg: light-dark(#ecfdf5, #0e2420);
+  --ico-as-fg: light-dark(#065f46, #5acea8);
+  --ico-cd-bg: light-dark(#1e293b, #0e1320);
+  --ico-cd-fg: light-dark(#7dd3fc, #7dd3fc);
+  --ico-fm-bg: light-dark(#f5f3ff, #1a1030);
+  --ico-fm-fg: light-dark(#6d28d9, #b080e8);
+  --ico-sh-bg: light-dark(#f3f0ff, #1a1828);
+  --ico-sh-fg: light-dark(#6d28d9, #c0a8e8);
 
   /* ── Couleurs utags / nœuds structure ── */
-  --u-h-bg: #dbeafe;
-  --u-h-fg: #1d4ed8;
-  --u-p-bg: #dcfce7;
-  --u-p-fg: #166534;
-  --u-l-bg: #fef3c7;
-  --u-l-fg: #92400e;
-  --u-i-bg: #fce7f3;
-  --u-i-fg: #9d174d;
-  --u-d-bg: #f1f5f9;
-  --u-d-fg: #475569;
-  --u-k-bg: #d1fae5;
-  --u-k-fg: #065f46;
-  --u-t-bg: #ede9fe;
-  --u-t-fg: #5b21b6;
-  --u-q-bg: #eef2ff;
-  --u-q-fg: #4338ca;
-  --u-n-bg: #fdf4ff;
-  --u-n-fg: #7e22ce;
-  --u-sep-bg: #f1f5f9;
-  --u-sep-fg: #475569;
-  --u-as-bg: #ecfdf5;
-  --u-as-fg: #065f46;
-  --u-cd-bg: #1e293b;
-  --u-cd-fg: #7dd3fc;
-  --u-ch-bg: #fef9c3;
-  --u-ch-fg: #854d0e;
-  --u-sh-bg: #f3f0ff;
-  --u-sh-fg: #6d28d9;
-  --u-f-bg: #f5f3ff;
-  --u-f-fg: #6d28d9;
-}
+  --u-h-bg: light-dark(#dbeafe, #1a2744);
+  --u-h-fg: light-dark(#1d4ed8, #93bbf7);
+  --u-p-bg: light-dark(#dcfce7, #152a1e);
+  --u-p-fg: light-dark(#166534, #6dd898);
+  --u-l-bg: light-dark(#fef3c7, #2a2010);
+  --u-l-fg: light-dark(#92400e, #d4a855);
+  --u-i-bg: light-dark(#fce7f3, #2a1525);
+  --u-i-fg: light-dark(#9d174d, #e08ac0);
+  --u-d-bg: light-dark(#f1f5f9, #1e2028);
+  --u-d-fg: light-dark(#475569, #8892aa);
+  --u-k-bg: light-dark(#d1fae5, #122520);
+  --u-k-fg: light-dark(#065f46, #5dd4b8);
+  --u-t-bg: light-dark(#ede9fe, #1e1530);
+  --u-t-fg: light-dark(#5b21b6, #b090f0);
+  --u-q-bg: light-dark(#eef2ff, #12161e);
+  --u-q-fg: light-dark(#4338ca, #7896d8);
+  --u-n-bg: light-dark(#fdf4ff, #1a1028);
+  --u-n-fg: light-dark(#7e22ce, #c080e8);
+  --u-sep-bg: light-dark(#f1f5f9, #1e2028);
+  --u-sep-fg: light-dark(#475569, #8892aa);
+  --u-as-bg: light-dark(#ecfdf5, #0e2420);
+  --u-as-fg: light-dark(#065f46, #5acea8);
+  --u-cd-bg: light-dark(#1e293b, #0e1320);
+  --u-cd-fg: light-dark(#7dd3fc, #7dd3fc);
+  --u-ch-bg: light-dark(#fef9c3, #28240a);
+  --u-ch-fg: light-dark(#854d0e, #e0c840);
+  --u-sh-bg: light-dark(#f3f0ff, #1a1828);
+  --u-sh-fg: light-dark(#6d28d9, #c0a8e8);
+  --u-f-bg: light-dark(#f5f3ff, #1a1030);
+  --u-f-fg: light-dark(#6d28d9, #b080e8);
 
-/* ── Mode sombre ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ui-bg-void: #212121;
-    --ui-bg-base: #1d1d1d;
-    --ui-bg-surface: #191818;
-    --ui-bg-raised: #1e1e24;
-    --ui-bg-hover: #25252d;
-    --ui-bg-active: #2c2c36;
-    --ui-bg-inset: #0f0f12;
-
-    --ui-border-weak: rgba(255, 255, 255, .07);
-    --ui-border-mid: rgba(255, 255, 255, .13);
-    --ui-border-str: rgba(255, 255, 255, .24);
-    --ui-border-input: #646466;
-
-    --ui-txt-primary: #f0efe8;
-    --ui-txt-sec: #b8b6b0;
-    --ui-txt-muted: #9e9e9a;
-    --ui-txt-disabled: #6a6866;
-
-    --ui-accent: #f0b84a;
-    --ui-accent-dim: rgba(240, 184, 74, .14);
-    --ui-accent-glow: rgba(240, 184, 74, .07);
-    --ui-accent-hover: #f5c96a;
-
-    --ui-focus: #60a5fa;
-
-    --ui-ok: #5ccb8a;
-    --ui-ok-dim: rgba(92, 203, 138, .12);
-    --ui-ok-border: rgba(92, 203, 138, .30);
-    --ui-warn: #f0b84a;
-    --ui-err: #f07070;
-    --ui-err-dim: rgba(240, 112, 112, .12);
-    --ui-err-border: rgba(240, 112, 112, .30);
-
-    --ui-shadow-sm: 0 1px 16px rgba(0, 0, 0, .30), 0 0 0 1px rgba(255, 255, 255, .04);
-    --ui-shadow-md: 0 8px 40px rgba(0, 0, 0, .45);
-    --ui-shadow-lg: 0 24px 80px rgba(0, 0, 0, .60);
-    --ui-shadow-sidebar: 4px 0 24px rgba(0, 0, 0, .35);
-    --ui-shadow-sheet: 0 -4px 24px rgba(0, 0, 0, .30);
-    --ui-overlay: rgba(0, 0, 0, .55);
-    --ui-overlay-lg: rgba(0, 0, 0, .80);
-    --ui-overlay-mob: rgba(0, 0, 0, .50);
-
-    --ui-toast-bg: #1a2030;
-    --ui-toast-color: #f0efe8;
-    --ui-toast-border: rgba(255, 255, 255, .14);
-    --ui-pif-bg: #1a1a1e;
-    --ui-placeholder: #9e9e9a;
-
-    /* Blocs PDF — toujours fond blanc / texte sombre (représentent un vrai document) */
-    --ui-fb-bg: #ffffff;
-    --ui-fb-text: #1a1a18;
-    --ui-fb-placeholder: #767676;
-    --ui-fb-border: #c5c8d0;
-    --ui-fb-bar-bg: #1e1e24;
-    --ui-fb-bar-color: #b8b6b0;
-    --ui-fb-bar-border: #3a3a50;
-    --ui-fb-sel-border: #93c5fd;
-    --ui-fb-row-odd: #f6f6f6;
-    --ui-del-bg: rgba(239, 68, 68, .12);
-    --ui-del-border: rgba(239, 68, 68, .30);
-    --ui-del-color: #f87171;
-    --ui-link: #60a5fa;
-    --ui-fb-hover-border: #60a5fa;
-
-    --ico-h-bg: #1a2744;
-    --ico-h-fg: #93bbf7;
-    --ico-p-bg: #152a1e;
-    --ico-p-fg: #6dd898;
-    --ico-l-bg: #2a2010;
-    --ico-l-fg: #d4a855;
-    --ico-img-bg: #2a1525;
-    --ico-img-fg: #e08ac0;
-    --ico-lnk-bg: #122520;
-    --ico-lnk-fg: #5dd4b8;
-    --ico-tbl-bg: #1e1530;
-    --ico-tbl-fg: #b090f0;
-    --ico-ch-bg: #28240a;
-    --ico-ch-fg: #e0c840;
-    --ico-qt-bg: #12161e;
-    --ico-qt-fg: #7896d8;
-    --ico-hr-bg: #1e2028;
-    --ico-hr-fg: #8892aa;
-    --ico-as-bg: #0e2420;
-    --ico-as-fg: #5acea8;
-    --ico-cd-bg: #0e1320;
-    --ico-cd-fg: #7dd3fc;
-    --ico-fm-bg: #1a1030;
-    --ico-fm-fg: #b080e8;
-    --ico-sh-bg: #1a1828;
-    --ico-sh-fg: #c0a8e8;
-
-    --u-h-bg: #1a2744;
-    --u-h-fg: #93bbf7;
-    --u-p-bg: #152a1e;
-    --u-p-fg: #6dd898;
-    --u-l-bg: #2a2010;
-    --u-l-fg: #d4a855;
-    --u-i-bg: #2a1525;
-    --u-i-fg: #e08ac0;
-    --u-d-bg: #1e2028;
-    --u-d-fg: #8892aa;
-    --u-k-bg: #122520;
-    --u-k-fg: #5dd4b8;
-    --u-t-bg: #1e1530;
-    --u-t-fg: #b090f0;
-    --u-q-bg: #12161e;
-    --u-q-fg: #7896d8;
-    --u-n-bg: #1a1028;
-    --u-n-fg: #c080e8;
-    --u-sep-bg: #1e2028;
-    --u-sep-fg: #8892aa;
-    --u-as-bg: #0e2420;
-    --u-as-fg: #5acea8;
-    --u-cd-bg: #0e1320;
-    --u-cd-fg: #7dd3fc;
-    --u-ch-bg: #28240a;
-    --u-ch-fg: #e0c840;
-    --u-sh-bg: #1a1828;
-    --u-sh-fg: #c0a8e8;
-    --u-f-bg: #1a1030;
-    --u-f-fg: #b080e8;
-  }
+  /* ── Éléments spécifiques à light-dark() ── */
+  --ui-sel-chevron-svg: light-dark(url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b67'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7874'/%3E%3C/svg%3E"));
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -419,6 +300,16 @@ body {
   display: contents;
 }
 
+#topbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+#topbar::-webkit-scrollbar {
+  display: none;
+}
+
 .tb-brand {
   display: flex;
   align-items: center;
@@ -497,7 +388,6 @@ body {
 .tb-btn:focus-visible {
   outline: 2px solid var(--ui-focus);
   outline-offset: 2px;
-  /* background: var(--ui-bg-hover); */
 }
 
 .tb-btn .ico-sm {
@@ -534,6 +424,8 @@ body {
   cursor: pointer;
   transition: all .15s;
   line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 #tb-ua-status:hover {
@@ -1034,7 +926,8 @@ body {
 }
 
 .fb-del {
-  background: var(--ui-del-color);
+  background: var(--ui-del-bg);
+  color: var(--ui-del-color);
 }
 
 .fb-del:hover {
@@ -1299,16 +1192,43 @@ body {
   margin: 0;
 }
 
-/* Badges utag (tags structurels inline dans les blocs) */
+/* Badges utag (tags structurels inline dans les blocs)
+   Intégrés dans la fb-bar, à droite du label de type.
+   La fb-bar est en flexbox, le utag s'y insère naturellement. */
 .utag {
   font-size: 9px;
   padding: 1px 4px;
   border-radius: 3px;
   font-weight: 600;
-  margin-left: 4px;
-  vertical-align: middle;
-  display: inline-block;
   pointer-events: none;
+  flex-shrink: 0;
+  align-self: center;
+  margin: auto 4px;
+  opacity: 0;
+  transition: opacity .1s;
+}
+
+.fb:hover .utag,
+.fb.sel .utag {
+  opacity: 1;
+}
+
+/* ── Mode auto-hauteur (blocs texte) ─────────────────────────────────────
+   Pour h1-h6, p, ul, ol, quote, aside, note, link, code :
+   le wrapper .fb prend height:auto et .fb-ct passe en position relative.
+────────────────────────────────────────────────────────────────────────── */
+.fb.fb-auto-h {
+  height: auto !important;
+  min-height: 28px;
+  overflow: visible;
+}
+
+.fb.fb-auto-h .fb-ct {
+  position: relative;
+  inset: auto;
+  padding: 4px 6px;
+  overflow: visible;
+  height: auto;
 }
 
 /* Couleurs des utags via les mêmes tokens que les nœuds d'arbre */
@@ -1509,7 +1429,7 @@ body {
 
 .fmt-btn.active {
   background: var(--ui-focus);
-  color: #fff;
+  color: contrast-color(var(--ui-focus));
 }
 
 .fmt-btn:focus-visible {
@@ -1588,7 +1508,7 @@ body {
 
 .link-modal-row button.primary {
   background: var(--ui-focus);
-  color: #fff;
+  color: contrast-color(var(--ui-focus));
   border-color: var(--ui-focus);
 }
 
@@ -1761,17 +1681,11 @@ textarea:focus {
 }
 
 select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b6b67'/%3E%3C/svg%3E");
+  background-image: var(--ui-sel-chevron-svg);
   background-repeat: no-repeat;
   background-position: right 8px center;
   padding-right: 26px;
   cursor: pointer;
-}
-
-@media (prefers-color-scheme: dark) {
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7874'/%3E%3C/svg%3E");
-  }
 }
 
 textarea {
@@ -1928,10 +1842,6 @@ fieldset legend {
   color: var(--ui-err);
 }
 
-.ua-err {
-  color: var(--ui-err);
-}
-
 .ua-warn {
   color: var(--ui-warn);
 }
@@ -1987,18 +1897,12 @@ fieldset legend {
 }
 
 .tn .tg {
-  color: var(--ui-focus);
+  color: light-dark(var(--ui-focus), var(--ui-link));
   font-weight: 700;
 }
 
 .tn .tc {
   color: var(--ui-txt-muted);
-}
-
-@media (prefers-color-scheme: dark) {
-  .tn .tg {
-    color: var(--ui-link);
-  }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2015,7 +1919,6 @@ dialog.modal {
 dialog.modal::backdrop {
   background: var(--ui-overlay);
   backdrop-filter: blur(2px);
-  /* Touche moderne optionnelle */
 }
 
 /* Modale PDF/UA (Positionnée comme un panneau à droite) */
@@ -2311,18 +2214,10 @@ dialog.modal::backdrop {
     font-size: 14px;
   }
 
-  #btn-prev,
-  #btn-exp {
-    display: none;
-  }
-
-  .tb-sep:nth-of-type(3) {
-    display: none;
-  }
-
   #tb-ua-status {
     padding: 4px 8px;
     font-size: 10.5px;
+    white-space: nowrap;
   }
 
   /* Sidebar en drawer */
@@ -2574,9 +2469,7 @@ dialog.modal::backdrop {
     color: LinkText;
   }
 
-  /* Checklist items — les symboles (✓ ✕ !) restent visibles en HCM.
-     On s'assure que les couleurs utilisent les couleurs système. */
-
+  /* Checklist items */
   .ua-ok {
     color: Highlight;
   }
@@ -2623,17 +2516,6 @@ dialog.modal::backdrop {
     background: Canvas;
     color: CanvasText;
     forced-color-adjust: none;
-  }
-
-  /* ── Dark mode + mobile : ombres renforcées ── */
-  @media (prefers-color-scheme: dark) {
-    #sidebar.mobile-open {
-      box-shadow: var(--ui-shadow-sidebar-dark);
-    }
-
-    #panel {
-      box-shadow: var(--ui-shadow-sheet-dark);
-    }
   }
 
   /* ── Écrans tactiles — zones 44×44px (WCAG 2.5.5) ── */
@@ -2721,7 +2603,6 @@ dialog.modal::backdrop {
    CLASSES EXTERNALISÉES — anciennement styles inline
 ══════════════════════════════════════════════════════════════ */
 
-/* ── Utilitaires display/layout ── */
 .hidden {
   display: none;
 }
@@ -2738,7 +2619,6 @@ dialog.modal::backdrop {
   align-items: center;
 }
 
-/* ── Espacement (margin / padding) ── */
 .mt-5 {
   margin-top: 5px;
 }
@@ -2751,34 +2631,28 @@ dialog.modal::backdrop {
   margin-top: 8px;
 }
 
-/* ── Listes sans puce (sb-grid) ── */
 .sb-grid {
   list-style: none;
 }
 
-/* ── Champ de saisie étroit (taille de police) ── */
 #bfontsize {
   width: 70px;
 }
 
-/* ── Bouton pleine largeur ── */
 .sb-full {
   width: 100%;
 }
 
-/* ── Rangée de boutons avec espacement ── */
 .sb-full-mt {
   width: 100%;
   margin-top: 8px;
 }
 
-/* ── Bouton « Ajouter série » graphique ── */
 #bchartadd {
   width: 100%;
   margin-top: 4px;
 }
 
-/* ── Panneau freeform : rangée fill/closed ── */
 .bp-ff-row {
   display: flex;
   gap: 12px;
@@ -2789,7 +2663,6 @@ dialog.modal::backdrop {
   margin: 0;
 }
 
-/* ── Panneau shape : titre de section secondaire ── */
 .ps-subtitle {
   font-size: 9px;
   font-weight: 600;
@@ -2802,12 +2675,10 @@ dialog.modal::backdrop {
   line-height: inherit;
 }
 
-/* ── Panneau shape : rangée checkbox avec marge ── */
 .ck-row-spaced {
   margin: 6px 0;
 }
 
-/* ── Nœud kbd dans l'arbre UA ── */
 .ua-tree-hint {
   margin-bottom: 8px;
   font-size: 11px;
@@ -2822,42 +2693,28 @@ dialog.modal::backdrop {
   font-family: var(--ui-font-mono);
 }
 
-/* ── À propos dans la modale UA ── */
 .ua-about {
   font-size: 11px;
 }
 
-/* ── TdM : rangée checkbox avec marge ── */
 .toc-mt {
   margin-top: 8px;
 }
 
-/* ── field-hint display:inline ── */
 .field-hint-inline {
   font-size: 10px;
   color: var(--ui-txt-muted);
 }
 
-
 /* ══════════════════════════════════════════════════════════════
    ÉDITEUR DE SÉRIES GRAPHIQUES (chart rows)
-   Anciennement tout en style inline dans _chartRebuildRows()
 ══════════════════════════════════════════════════════════════ */
 
-/* Token dark-mode pour les chart rows */
 :root {
-  --ui-chart-row-bg: #f9fafb;
-  --ui-chart-row-border: #f0f0ea;
+  --ui-chart-row-bg: light-dark(#f9fafb, var(--ui-bg-raised));
+  --ui-chart-row-border: light-dark(#f0f0ea, var(--ui-border-weak));
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ui-chart-row-bg: var(--ui-bg-raised);
-    --ui-chart-row-border: var(--ui-border-weak);
-  }
-}
-
-/* Conteneur d'une ligne de série */
 .chart-row {
   display: flex;
   flex-direction: column;
@@ -2869,7 +2726,6 @@ dialog.modal::backdrop {
   margin-bottom: 2px;
 }
 
-/* Ligne 1 : couleur + motif + supprimer */
 .chart-row-line1 {
   display: flex;
   gap: 4px;
@@ -2877,7 +2733,6 @@ dialog.modal::backdrop {
   width: 100%;
 }
 
-/* Ligne 2 : label + valeur */
 .chart-row-line2 {
   display: flex;
   gap: 4px;
@@ -2885,35 +2740,28 @@ dialog.modal::backdrop {
   width: 100%;
 }
 
-/* Enveloppe du sélecteur de couleur */
 .chart-color-wrap {
   flex: 1;
   min-width: 0;
 }
 
-/* Sélecteur de motif */
 .chart-pat-sel {
   width: 70px;
   font-size: 9px;
   flex-shrink: 0;
-  /* hérite border/border-radius/background de select global */
 }
 
-/* Champ label de série */
 .chart-label-input {
   flex: 1;
   font-size: 10px;
   min-width: 6rem;
-  /* hérite border/border-radius/background de input global */
 }
 
-/* Champ valeur de série */
 .chart-val-input {
   width: 40px;
   font-size: 10px;
 }
 
-/* Bouton supprimer série */
 .chart-del-btn {
   width: 18px;
   height: 18px;
@@ -2935,7 +2783,6 @@ dialog.modal::backdrop {
   opacity: .85;
 }
 
-/* ── Sélecteur de couleur ── */
 .color-select-wrap {
   display: flex;
   align-items: center;
@@ -2960,24 +2807,18 @@ dialog.modal::backdrop {
   border: 2px solid var(--ui-border-mid);
 }
 
-/* ── Overlay canvas grille magnétique ── */
 .grid-overlay-canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
   opacity: 0.45;
-  /* width/height appliquées par JS (dépendent de l'orientation de la page) */
 }
 
 /* ══════════════════════════════════════════════════════════════
    BLOCS CANVAS — ÉLÉMENTS CRÉÉS DYNAMIQUEMENT EN JS
-   (anciennement style inline dans blocks.js / editor-ui.js)
 ══════════════════════════════════════════════════════════════ */
 
-/* ── Divs contenteditable "rich" (_mkRichDiv) ──
-   Propriétés communes factorisées ; font-size/font-family restent
-   définies en JS (dynamiques : taille de police du bloc, police du document). */
 .fb-rich-flow {
   outline: none;
   line-height: 1.6;
@@ -3005,7 +2846,6 @@ dialog.modal::backdrop {
   color: #1a1a1a;
 }
 
-/* ── Conteneurs de champs de formulaire ── */
 .fb-form-ct {
   display: flex;
   flex-direction: column;
@@ -3027,7 +2867,6 @@ dialog.modal::backdrop {
   padding: 2px 0;
 }
 
-/* ── Libellés dans les blocs formulaire ── */
 .fb-form-lbl {
   font-size: 10px;
   font-weight: 700;
@@ -3044,7 +2883,6 @@ dialog.modal::backdrop {
   line-height: 1.5;
 }
 
-/* ── Champs texte / textarea dans les blocs ── */
 .fb-ct .fb-form-input,
 .fb-ct .fb-form-textarea {
   font-size: 10px;
@@ -3071,7 +2909,6 @@ dialog.modal::backdrop {
   min-height: 40px;
 }
 
-/* ── Case à cocher ── */
 .fb-checkbox-box {
   flex-shrink: 0;
   width: 24px;
@@ -3090,7 +2927,6 @@ dialog.modal::backdrop {
   background: #000091;
 }
 
-/* ── Cercle radio ── */
 .fb-radio-circle {
   flex-shrink: 0;
   width: 24px;
@@ -3101,7 +2937,6 @@ dialog.modal::backdrop {
   box-sizing: border-box;
 }
 
-/* ── Ligne radio (label + cercle) ── */
 .fb-radio-row {
   display: flex;
   align-items: center;
@@ -3112,7 +2947,6 @@ dialog.modal::backdrop {
   line-height: 1.5;
 }
 
-/* ── Select (wrapper + zones) ── */
 .fb-select-wrap {
   position: relative;
   width: 100%;
@@ -3155,7 +2989,6 @@ dialog.modal::backdrop {
   box-sizing: border-box;
 }
 
-/* ── Image : bouton de choix ── */
 .fb-img-choose {
   background: none;
   border: none;
@@ -3166,7 +2999,6 @@ dialog.modal::backdrop {
   inset: 0;
 }
 
-/* ── Image : badge lien ── */
 .fb-img-link-badge {
   position: absolute;
   top: 3px;
@@ -3180,7 +3012,6 @@ dialog.modal::backdrop {
   z-index: 2;
 }
 
-/* ── Image : texte alt / lien ── */
 .fb-img-alt {
   font-size: 9px;
   margin-top: 2px;
@@ -3197,7 +3028,6 @@ dialog.modal::backdrop {
   color: #1d4ed8;
 }
 
-/* ── Lien hypertexte ── */
 .fb-link-preview {
   font-size: 12px;
   color: #1d4ed8;
@@ -3207,7 +3037,6 @@ dialog.modal::backdrop {
   white-space: nowrap;
 }
 
-/* ── Tableau ── */
 .fb-table-el {
   width: 100%;
   border-collapse: collapse;
@@ -3283,7 +3112,6 @@ dialog.modal::backdrop {
   padding: 4px 8px;
 }
 
-/* ── Citation ── */
 .fb-quote-wrap {
   border-left: 3px solid #6366f1;
   padding-left: 8px;
@@ -3302,7 +3130,6 @@ dialog.modal::backdrop {
   text-overflow: ellipsis;
 }
 
-/* ── Note ── */
 .fb-note-wrap {
   display: flex;
   gap: 5px;
@@ -3313,7 +3140,6 @@ dialog.modal::backdrop {
   font-size: 8px;
   flex-shrink: 0;
   font-weight: 700;
-  /* color appliquée par JS (LINK_COLOR) */
 }
 
 .fb-note-anchor-hint {
@@ -3323,7 +3149,6 @@ dialog.modal::backdrop {
   cursor: pointer;
 }
 
-/* ── Encadré (aside) — base + 4 variantes ── */
 .fb-aside-wrap {
   padding: 6px 8px;
   height: 100%;
@@ -3375,7 +3200,6 @@ dialog.modal::backdrop {
   color: #6b7280;
 }
 
-/* ── Séparateur ── */
 .fb-hr-line {
   width: 100%;
   height: 1px;
@@ -3383,7 +3207,6 @@ dialog.modal::backdrop {
   margin-top: calc(50% - 1px);
 }
 
-/* ── Code ── */
 .fb-code-pre {
   height: 100%;
   overflow: hidden;
@@ -3394,17 +3217,13 @@ dialog.modal::backdrop {
   outline: none;
   white-space: pre-wrap;
   display: block;
-  /* font-size appliquée par JS (FS.code) */
 }
 
-/* ── Appel de note (sup inline) ── */
 .note-anchor {
   cursor: pointer;
   font-size: 0.65em;
-  /* color appliquée par JS (LINK_COLOR) */
 }
 
-/* ── SVG graphique / freeform dans le bloc ── */
 .fb-chart-svg {
   display: block;
   overflow: visible;
@@ -3415,7 +3234,6 @@ dialog.modal::backdrop {
   overflow: visible;
 }
 
-/* ── Overlay tracé freeform ── */
 .ff-overlay {
   position: absolute;
   inset: 0;
@@ -3424,7 +3242,6 @@ dialog.modal::backdrop {
   background: rgba(59, 130, 246, 0.03);
 }
 
-/* ── SVG de prévisualisation freeform ── */
 .ff-preview-svg {
   position: absolute;
   inset: 0;
@@ -3433,7 +3250,6 @@ dialog.modal::backdrop {
   overflow: visible;
 }
 
-/* ── Barre zoom mobile ── */
 #mob-zoom-bar {
   position: fixed;
   bottom: 14px;
@@ -3472,7 +3288,6 @@ dialog.modal::backdrop {
   font-weight: 600;
 }
 
-/* ── Bannière info mobile (première visite) ── */
 #mob-info-banner {
   position: fixed;
   top: 0;
