@@ -1286,62 +1286,50 @@ const FILL_CT = {
 
   _list(ct, b) {
     const rootTag = b.type;
-
     const lst = document.createElement(rootTag);
     lst.className = 'list-preview fb-rich';
     lst.setAttribute('aria-label', (rootTag === 'ul' ? 'Liste à puces' : 'Liste numérotée') + ' — utilisez les boutons Indenter / Désindenter de la barre de mise en forme pour gérer les niveaux');
 
-    /* DOM imbriqué → tableau plat [{ html, depth }] */
-    function _domToFlat() {
+    /* ── Modèle plat ↔ DOM imbriqué ──────────────────────────────────────
+       En interne, la liste est manipulée comme un tableau plat
+       [{ html, depth }] (bien plus simple à indenter/dédenter/insérer/
+       supprimer qu'une arborescence), puis reconstruite en <ul>/<ol>
+       imbriqués. Règle commune (comme Word) : la profondeur d'un item ne
+       peut jamais dépasser "profondeur du précédent + 1". ── */
+
+    const flatten = () => {
       const items = [];
-      const walk = (listEl, depth) => {
+      (function walk(listEl, depth) {
         for (const li of listEl.children) {
           if (li.tagName !== 'LI') continue;
           const clone = li.cloneNode(true);
-          const subLists = [...clone.children].filter(c => c.tagName === 'UL' || c.tagName === 'OL');
-          subLists.forEach(s => s.remove());
+          clone.querySelectorAll('ul, ol').forEach(s => s.remove());
           items.push({ html: clone.innerHTML || '<br>', depth });
-          for (const sub of li.children) {
-            if (sub.tagName === 'UL' || sub.tagName === 'OL') walk(sub, depth + 1);
-          }
+          for (const sub of li.children) if (sub.tagName === 'UL' || sub.tagName === 'OL') walk(sub, depth + 1);
         }
-      };
-      walk(lst, 0);
+      })(lst, 0);
       return items;
-    }
+    };
 
-    /* Tableau plat → DOM imbriqué, retourne le nouveau <li> à l'index donné */
-    function _flatToDom(items) {
+    const rebuild = items => {
       lst.innerHTML = '';
-      /* Pile de listes ouvertes : stack[d] = élément <ul>/<ol> au niveau d */
-      const stack = [lst];
-      const liRefs = [];
-      items.forEach(item => {
-        /* Clamper la profondeur : jamais plus d'un niveau de plus que le précédent,
-           et toujours 0 pour le tout premier élément. */
-        const safeDepth = liRefs.length === 0 ? 0 : Math.min(item.depth, stack.length);
-
-        while (stack.length > safeDepth + 1) stack.pop();
-        if (stack.length === safeDepth) {
-          /* Besoin d'une nouvelle sous-liste sous le dernier <li> ouvert */
-          const parentLi = liRefs[liRefs.length - 1];
-          const sub = document.createElement(rootTag);
-          parentLi.appendChild(sub);
-          stack.push(sub);
-        }
-
+      const stack = [lst], refs = [];
+      items.forEach((item, i) => {
+        const depth = i === 0 ? 0 : Math.min(item.depth, stack.length);
+        while (stack.length > depth + 1) stack.pop();
+        if (stack.length === depth) { const sub = document.createElement(rootTag); refs[i - 1].appendChild(sub); stack.push(sub); }
         const li = document.createElement('li');
         li.contentEditable = 'true';
         li.innerHTML = item.html || '<br>';
-        _attachLi(li);
+        attachLi(li);
         stack[stack.length - 1].appendChild(li);
-        liRefs.push(li);
+        refs.push(li);
       });
-      return liRefs;
-    }
+      return refs;
+    };
 
     /* Place le curseur en fin (ou début) de texte d'un <li> */
-    const _focusLi = (li, toEnd = true) => {
+    const focusLi = (li, toEnd = true) => {
       if (!li) return;
       const textNode = [...li.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
       const range = document.createRange();
@@ -1354,85 +1342,53 @@ const FILL_CT = {
       li.focus();
     };
 
-    const _syncContent = () => {
+    const syncContent = () => {
       b.richContent = lst.outerHTML;
-      b.content = [...lst.querySelectorAll('li')]
-        .map(li => {
-          const clone = li.cloneNode(true);
-          clone.querySelectorAll('ul, ol').forEach(s => s.remove());
-          return clone.textContent;
-        }).join('\n');
+      b.content = [...lst.querySelectorAll('li')].map(li => {
+        const clone = li.cloneNode(true);
+        clone.querySelectorAll('ul, ol').forEach(s => s.remove());
+        return clone.textContent;
+      }).join('\n');
       _syncAutoHeight(b);
       if (typeof saveSession === 'function') saveSession();
     };
 
-    /* Index du <li> dans l'ordre de lecture (profondeur confondue) */
-    const _indexOf = li => [...lst.querySelectorAll('li')].indexOf(li);
+    const indexOf = li => [...lst.querySelectorAll('li')].indexOf(li);
 
-    /* ── INDENT ── Le tout premier item (index 0) ne peut jamais être indenté
-       (il n'a pas de précédent pour devenir son parent). */
-    const _doIndent = li => {
-      const items = _domToFlat();
-      const i = _indexOf(li);
-      if (i <= 0) return false; // premier élément : rien à faire
-      const maxAllowed = items[i - 1].depth + 1;
-      if (items[i].depth >= maxAllowed) return false; // déjà au niveau max possible
-      items[i].depth += 1;
-      const refs = _flatToDom(items);
-      _focusLi(refs[i]);
-      _syncContent();
+    /* Applique une transformation au modèle plat pour le <li> ciblé, puis
+       reconstruit le DOM et repositionne le curseur.
+       fn(items, i) peut renvoyer explicitement `false` pour annuler (rien
+       n'est changé). focusAt(i) donne l'index à refocaliser après coup. */
+    const mutate = (li, fn, focusAt = i => i, toEnd = true) => {
+      const items = flatten();
+      const i = indexOf(li);
+      if (i < 0 || fn(items, i) === false) return false;
+      const refs = rebuild(items);
+      focusLi(refs[focusAt(i)], toEnd);
+      syncContent();
       return true;
     };
 
-    /* ── DEDENT ── */
-    const _doDedent = li => {
-      const items = _domToFlat();
-      const i = _indexOf(li);
-      if (i < 0 || items[i].depth === 0) return false; // déjà racine
-      items[i].depth -= 1;
-      const refs = _flatToDom(items);
-      _focusLi(refs[i]);
-      _syncContent();
-      return true;
-    };
+    /* ── Indenter/dédenter — exposés sur lst pour la barre de mise en forme ── */
+    lst._doIndent = li => mutate(li, (items, i) =>
+      (i === 0 || items[i].depth >= items[i - 1].depth + 1) ? false : void items[i].depth++);
+    lst._doDedent = li => mutate(li, (items, i) =>
+      items[i].depth === 0 ? false : void items[i].depth--);
+    lst._canIndent = li => { const items = flatten(), i = indexOf(li); return i > 0 && items[i].depth < items[i - 1].depth + 1; };
+    lst._canDedent = li => { const items = flatten(), i = indexOf(li); return i >= 0 && items[i].depth > 0; };
 
-    /* Exposer sur lst pour que _listIndentFromFmtBar puisse y accéder */
-    lst._doIndent = _doIndent;
-    lst._doDedent = _doDedent;
-
-    /* ── Calcul d'activation des boutons ↑/← (barre de mise en forme) ──
-       DOIT utiliser exactement la même source de vérité (modèle plat
-       _domToFlat + règle "profondeur ≤ profondeur du précédent + 1") que
-       _doIndent/_doDedent ci-dessus. Les anciennes heuristiques DOM
-       (previousElementSibling, comparaison à la liste racine uniquement)
-       divergeaient de cette règle dès qu'une sous-liste contenait plus
-       d'un niveau d'imbrication, ce qui désactivait les boutons à tort. */
-    lst._canIndent = li => {
-      const items = _domToFlat();
-      const i = _indexOf(li);
-      if (i <= 0) return false;
-      return items[i].depth < items[i - 1].depth + 1;
-    };
-    lst._canDedent = li => {
-      const items = _domToFlat();
-      const i = _indexOf(li);
-      return i >= 0 && items[i].depth > 0;
-    };
-
-    /* ── Attacher les handlers à un li ────────────────────────────────── */
-    const _attachLi = li => {
+    const attachLi = li => {
       li.onmousedown = e => e.stopPropagation();
-      li.oninput = _syncContent;
+      li.oninput = syncContent;
       li.onkeydown = e => {
-
-        /* Tab et Shift+Tab sont réservés à la navigation clavier (WCAG 2.1.1).
-           L'indent/dedent passe exclusivement par les boutons → / ← de la
-           barre de mise en forme. */
+        /* Tab/Shift+Tab volontairement inutilisés (WCAG 2.1.1 — pas de piège
+           clavier) : le retrait passe exclusivement par les boutons → / ←
+           de la barre de mise en forme. */
 
         if (e.key === 'Enter' && e.shiftKey) {
           e.preventDefault();
           const sel = window.getSelection();
-          if (!sel || !sel.rangeCount) return;
+          if (!sel?.rangeCount) return;
           const range = sel.getRangeAt(0);
           range.deleteContents();
           const br = document.createElement('br');
@@ -1440,20 +1396,14 @@ const FILL_CT = {
           const after = document.createRange();
           after.setStartAfter(br); after.collapse(true);
           sel.removeAllRanges(); sel.addRange(after);
-          _syncContent();
+          syncContent();
           return;
         }
 
         if (e.key === 'Enter') {
           e.preventDefault();
-          const items = _domToFlat();
-          const i = _indexOf(li);
-          if (i < 0) return;
           /* Le nouvel item hérite de la profondeur du <li> courant */
-          items.splice(i + 1, 0, { html: '<br>', depth: items[i].depth });
-          const refs = _flatToDom(items);
-          _focusLi(refs[i + 1], false);
-          _syncContent();
+          mutate(li, (items, i) => { items.splice(i + 1, 0, { html: '<br>', depth: items[i].depth }); }, i => i + 1, false);
           return;
         }
 
@@ -1461,31 +1411,16 @@ const FILL_CT = {
           const isEmpty = li.textContent.trim() === '' && !li.querySelector('sup') && !li.querySelector('ul, ol');
           if (!isEmpty) return;
           e.preventDefault();
-          const items = _domToFlat();
-          const i = _indexOf(li);
-          if (i < 0) return;
-
-          if (items[i].depth > 0) {
-            /* Élément vide indenté → dedent plutôt que suppression */
-            items[i].depth -= 1;
-            const refs = _flatToDom(items);
-            _focusLi(refs[i]);
-            _syncContent();
-          } else if (items.length > 1) {
-            /* Élément vide à la racine → suppression, focus sur le précédent.
-               Si l'item suivant était plus profond que ce que permet le nouveau
-               contexte, _flatToDom le clampera automatiquement. */
-            items.splice(i, 1);
-            const refs = _flatToDom(items);
-            _focusLi(refs[Math.max(0, i - 1)], false);
-            _syncContent();
-          }
+          mutate(li, (items, i) => {
+            if (items[i].depth > 0) { items[i].depth--; return; }      // item vide indenté → dédenter
+            if (items.length <= 1) return false;                       // dernier item : rien à faire
+            items.splice(i, 1);                                        // item vide à la racine → supprimer
+          }, i => Math.max(0, i - 1), false);
         }
       };
     };
 
-    const _rebuildLi = () => {
-      lst.innerHTML = '';
+    const rebuildLi = () => {
       if (b.richContent) {
         const tmp = document.createElement('div');
         tmp.innerHTML = b.richContent;
@@ -1494,27 +1429,21 @@ const FILL_CT = {
           lst.innerHTML = srcList.innerHTML;
           /* Normaliser via le modèle plat : corrige toute incohérence de
              profondeur héritée d'un ancien contenu (ou d'un bug antérieur). */
-          const items = _domToFlat();
-          /* Garantir item[0].depth === 0 et pas de saut > 1 niveau */
+          const items = flatten();
           let prevDepth = -1;
-          items.forEach(it => {
-            it.depth = Math.max(0, Math.min(it.depth, prevDepth + 1));
-            prevDepth = it.depth;
-          });
-          _flatToDom(items);
+          items.forEach(it => { it.depth = Math.max(0, Math.min(it.depth, prevDepth + 1)); prevDepth = it.depth; });
+          rebuild(items);
           return;
         }
       }
       const lines = (b.content || '').split('\n').filter(l => l.trim() !== '');
-      const items = (lines.length ? lines : ['']).map(line => ({ html: line || '<br>', depth: 0 }));
-      _flatToDom(items);
+      rebuild((lines.length ? lines : ['']).map(line => ({ html: line || '<br>', depth: 0 })));
     };
 
-    _rebuildLi();
+    rebuildLi();
     lst.style.fontSize = (b.fontSize || FS.list) + 'px';
     lst.style.fontFamily = docFont();
-    if (b.listNoBullet) lst.classList.add('list-no-bullet');
-    else lst.classList.remove('list-no-bullet');
+    lst.classList.toggle('list-no-bullet', !!b.listNoBullet);
     ct.appendChild(lst);
   },
 
