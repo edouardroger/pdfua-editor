@@ -389,6 +389,11 @@ function _validateImportedBlock(b) {
   return clean;
 }
 
+function updateDocumentTitle(title) {
+  const baseTitle = "Éditeur PDFUA";
+  document.title = title ? `${title.slice(0, 100)} - ${baseTitle}` : baseTitle;
+}
+
 /* Debounce interne : évite les sauvegardes multiples sur oninput rapides */
 let _saveTimer = null;
 /* Cache de la dernière sérialisation : évite sort+map+JSON.stringify si rien n'a changé */
@@ -450,6 +455,7 @@ function loadSession() {
       ['title', 'author', 'subject', 'lang'].forEach(k => {
         const e = document.getElementById('m-' + k);
         if (e && saved.meta[k] && typeof saved.meta[k] === 'string') e.value = saved.meta[k].slice(0, 500);
+        if (k === 'title') updateDocumentTitle(saved.meta[k]);
       });
       /* Restaurer la marge — valeur numérique entre 10 et 120 */
       if (saved.meta.margin) {
@@ -957,6 +963,7 @@ async function openProject(input) {
       ['title', 'author', 'subject', 'lang', 'font'].forEach(k => {
         const e = document.getElementById('m-' + k);
         if (e && project.meta[k] && typeof project.meta[k] === 'string') e.value = project.meta[k].slice(0, 500);
+        if (k === 'title') updateDocumentTitle(project.meta[k]);
       });
       /* Restaurer la marge */
       if (project.meta.margin) {
