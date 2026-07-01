@@ -3,27 +3,13 @@
 /* Namespace SVG — déclaré en tête pour éviter tout risque de TDZ */
 const _SVG_NS = 'http://www.w3.org/2000/svg';
 
-/* ══════════════════════════════════════════════════════════════════
-   FORME LIBRE — Rendu final + Outil plume avec aperçu Bézier réel
-   ══════════════════════════════════════════════════════════════════
+/* FORME LIBRE — Rendu final + Outil plume avec aperçu Bézier réel
+   Modèle de point : { x, y } = ancrage ligne droite ; +cp1 = handle sortant ;
+   +cp2 = handle entrant ; +cp1 et cp2 = ancrage lisse (courbe des deux côtés).
+   Commande SVG entre deux points : C si cp1(prev) et cp2(cur), Q si un seul, L sinon. */
 
-   Modèle de point :
-     { x, y }                       → point d'ancrage (ligne droite)
-     { x, y, cp1:{x,y} }            → ancrage + handle sortant
-     { x, y, cp2:{x,y} }            → ancrage + handle entrant
-     { x, y, cp1:{x,y}, cp2:{x,y} } → ancrage + deux handles (lisse)
-
-   La commande SVG entre pts[i-1] et pts[i] :
-     - C  si pts[i-1].cp1 ET pts[i].cp2
-     - Q  si l'un des deux seulement
-     - L  sinon
-   ══════════════════════════════════════════════════════════════════ */
-
-/* ══════════════════════════════════════════════════════════════════
-   GRAPHIQUES — Rendu WYSIWYG SVG + Éditeur de données inline
-   Types : pie, donut, bar, line
-   Stockage dans b.chartData : [{ label, value, color, pattern }, …]
-   ══════════════════════════════════════════════════════════════════ */
+/* GRAPHIQUES — Rendu WYSIWYG SVG (pie/donut/bar/line), édition inline des séries.
+   Stockage : b.chartData = [{ label, value, color, pattern }, …] */
 
 const CHART_PALETTE = ['#000091', '#e1000f', '#00a95f', '#fcc63a', '#009099', '#e06a8c', '#465f9d', '#68a51a'];
 
@@ -668,17 +654,7 @@ function _ffKeyDown(e) {
 }
 
 
-/* ══════════════════════════════════════════════════════════════════
-   DESSIN DU PREVIEW — la partie clé
-   On dessine :
-   1. Le chemin déjà tracé (pts validés)
-   2. Le segment fantôme vers la souris :
-      - simple ligne si pas de glisser en cours
-      - courbe de Bézier cubique live si glisser actif
-   3. Les poignées Bézier du dernier point et du point en cours
-   4. Les ancres de tous les points
-   5. Le cadre du bloc
-   ══════════════════════════════════════════════════════════════════ */
+/* DESSIN DU PREVIEW — la partie clé */
 
 function _ffRedraw() {
   if (!_ffDraw) return;
@@ -1042,10 +1018,6 @@ function attachRot(handle, el, b) {
   });
 }
 
-
-/* ── MODALE PRÉVISUALISATION ── */
-/* ── CLAVIER GLOBAL ── */
-/* Géré dans le listener unifié ci-dessous avec openModal/closeModal. */
 
 /* Clic sur le fond de la page = désélection */
 pageWrap.addEventListener('mousedown', e => { if (e.target === pageWrap) desel(); });
