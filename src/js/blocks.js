@@ -1,11 +1,7 @@
 // blocks.js — Manipulation des blocs : création, sélection, propriétés, panneaux
 
-/* ══════════════════════════════════════════════════════════════
-   MISE EN FORME INLINE — gras, italique, lien hypertexte
-   Blocs concernés : p, quote, aside, note
-   Stockage : b.richContent (HTML sérialisé)
-              b.content     (texte brut — fallback + blocs non-rich)
-   ══════════════════════════════════════════════════════════════ */
+/* MISE EN FORME INLINE (gras/italique/lien) — blocs p, quote, aside, note, ul, ol.
+   Stockage : richContent (HTML) + content (texte brut, fallback) */
 
 const RICH_TYPES = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'quote', 'aside', 'note', 'ul', 'ol']);
 
@@ -514,15 +510,9 @@ function confirmLink() {
   syncRichContent();
 }
 
-/* ══════════════════════════════════════════════════════════════
-   NOTES DE BAS DE PAGE — insertion façon Word
-   ─────────────────────────────────────────────────────────────
-   insertNoteAnchor() :
-     1. Calcule le prochain numéro de note dans le document
-     2. Insère un <sup data-note-id="…"> dans le bloc rich actif
-     3. Crée un bloc note positionné en bas de la page courante
-        avec anchorBlockId pointant vers le bloc parent
-   ══════════════════════════════════════════════════════════════ */
+/* NOTES DE BAS DE PAGE (façon Word) : insertNoteAnchor() calcule le n° suivant,
+   insère <sup data-note-id> dans le bloc actif, crée un bloc note en bas de page
+   lié via anchorBlockId */
 function insertNoteAnchor() {
   const targetSid = _noteSavedSid !== null ? _noteSavedSid : sid;
   const savedRange = _noteSavedRange;
@@ -821,10 +811,7 @@ function setupPageDrop(pg, pageIdx) {
 })();
 
 
-/* ══════════════════════════════
-   ONGLETS — motif ARIA Tabs
-   Navigation flèches + Home/End
-   ══════════════════════════════ */
+/* ONGLETS — motif ARIA Tabs, navigation clavier flèches + Home/End */
 const tabBtns = [...document.querySelectorAll('.rtab')];
 const tabNames = tabBtns.map(b => b.dataset.tab);
 
@@ -1065,24 +1052,14 @@ function buildEl(b) {
   return wrapper;
 }
 
-/* ══════════════════════════════════════════════════════════
-   CONSTANTES DE RENDU WYSIWYG↔PDF
-   Toutes les tailles sont en points (pt).
-   1pt CSS = 1pt PDF — la page canvas fait 794×1123 CSS px
-   qui correspondent à 794×1123 PDF pts (A4 @72dpi).
-   BAR_H  : hauteur de la barre de titre du bloc (px = pt)
-   CT_PAD : padding horizontal de .fb-ct (px = pt)
-   ══════════════════════════════════════════════════════════ */
+/* CONSTANTES DE RENDU WYSIWYG↔PDF (pt) : 1pt CSS = 1pt PDF, page 794×1123 (A4@72dpi).
+   BAR_H = barre de titre du bloc, CT_PAD = padding horizontal de .fb-ct */
 
 /* ── CONTENU DES BLOCS — table de dispatch IHM ── */
 /* Note : ASIDE_STYLES est défini dans constants.js */
 
 /* ── Helper : crée un div contenteditable rich avec oninput → richContent ── */
-/* ══════════════════════════════════════════════════════════════════════
-   AUTO-HAUTEUR — les blocs texte ont une hauteur qui suit leur contenu.
-   C'est le comportement par défaut ; l'utilisateur peut forcer une hauteur
-   fixe en tirant la poignée de resize (b.manualHeight = true).
-   ══════════════════════════════════════════════════════════════════════ */
+/* AUTO-HAUTEUR : les blocs texte suivent leur contenu, sauf resize manuel (b.manualHeight) */
 const AUTO_HEIGHT_TYPES = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'quote', 'aside', 'note', 'link', 'code']);
 
 function _syncAutoHeight(b) {
@@ -1757,12 +1734,8 @@ function desel() {
 }
 
 
-/* ══════════════════════════════════════════════════════════════
-   RENUMÉROTATION DES NOTES
-   Parcourt les blocs riches dans l'ordre de lecture (page, Y),
-   puis les <sup> dans l'ordre DOM, et renuméote les blocs note
-   correspondants + met à jour les sup + les titres.
-   ══════════════════════════════════════════════════════════════ */
+/* RENUMÉROTATION DES NOTES : parcourt les blocs riches en ordre de lecture puis
+   les <sup> DOM, renumérote les blocs note et met à jour sup + titres */
 function renumberNotes() {
   /* ── 1. Numéroter dans l'ordre de lecture — réutilise ordB() (déjà trié) ── */
   const readOrder = ordB();
@@ -2041,14 +2014,7 @@ function syncOrderToPosition() {
   announce('Ordre de lecture synchronisé sur la position des blocs.');
 }
 
-/* ══════════════════════════════════════════════════════════════
-   PANEL_BINDINGS — table déclarative des panneaux conditionnels
-   Chaque entrée : {
-     panel   : id du div à afficher/masquer
-     types   : liste des types qui activent ce panneau
-     fill(b) : remplit les champs quand le panneau est visible
-   }
-   ══════════════════════════════════════════════════════════════ */
+/* PANEL_BINDINGS — table déclarative des panneaux conditionnels : { panel, types, fill(b) } */
 const PANEL_BINDINGS = [
   {
     panel: 'bp-alt',
@@ -2396,26 +2362,10 @@ function _updTreeCached() {
 updUA = () => { clearTimeout(_uaTimer); _uaTimer = setTimeout(_updUA, 150); };
 updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCached, 150); };
 
-/* ══════════════════════════════════════════════════════════════
-   ADAPTATIONS TACTILES — touch events, zoom canvas, sidebar tap
-   Activées sur tous écrans ≤ 1100px ou pointer:coarse.
-   Intégrées directement ici pour éviter un fichier supplémentaire.
-   ══════════════════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════════════════
-   BOTTOM SHEET — panneau droit en tiroir bas (≤ 640px)
-   ──────────────────────────────────────────────────────────────
-   Piloté par un MediaQueryList dynamique : fonctionne aussi lors
-   d'un redimensionnement en cours de session (DevTools mobile,
-   rotation d'écran) et ne dépend pas d'un flag figé au chargement.
-
-   Interactions :
-     • Tap ou clic sur .ptabs (poignée/onglets) → toggle
-     • Swipe vers le bas ≥ 60 px sur .ptabs     → fermeture
-     • switchTab()                               → ouverture auto
-     • sel() d'un bloc                          → ouverture auto
-     • Clic / tap sur fond du canvas            → fermeture
-     • Resize > 640px                           → fermeture + nettoyage
-══════════════════════════════════════════════════════════════ */
+/* ADAPTATIONS TACTILES — touch events, zoom canvas, tiroir mobile (≤1100px ou pointer:coarse) */
+/* BOTTOM SHEET (≤640px), piloté par innerWidth (pas matchMedia, pour DevTools mobile) :
+   tap/swipe bas sur .ptabs bascule ; switchTab()/sel() ouvrent ; clic fond canvas
+   ou resize > 640px ferment */
 (function initBottomSheet() {
   const _panel = document.getElementById('panel');
   const _ptabs = document.querySelector('.ptabs');
@@ -2781,14 +2731,8 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
 
 })(); /* fin initMobile */
 
-/* ══════════════════════════════════════════════════════════════
-   INIT PANEL LISTENERS
-   Branche tous les listeners du panneau droit (onglet Bloc,
-   Méta, Export, Grille). Appelée depuis init.js après le
-   démarrage, quand le DOM est disponible.
-   Regroupée ici car toutes les fonctions cibles (bprop, rr,
-   updUA, toggleGrid, etc.) sont définies dans blocks.js.
-   ══════════════════════════════════════════════════════════════ */
+/* INIT PANEL LISTENERS — branche les listeners du panneau droit (Bloc/Méta/Export/Grille),
+   appelée depuis init.js une fois le DOM prêt */
 function initPanelListeners() {
   const g = id => document.getElementById(id);
   const on = (id, evt, fn) => g(id)?.addEventListener(evt, fn);
