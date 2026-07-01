@@ -181,6 +181,20 @@ function getRichEditEl(blockId) {
   }
   return ct.querySelector('[contenteditable="true"]');
 }
+/* Suivi du <li> actif et de sa liste racine — capturé au mousedown/focus,
+   indépendant de document.activeElement (qui peut changer avant le clic
+   sur les boutons Indenter/Désindenter, notamment juste après un retrait
+   qui recrée le <li> dans le DOM). */
+let _activeListLi = null, _activeListRoot = null;
+
+/* Remonte du <li> jusqu'à la liste racine (seule à exposer _doIndent/_doDedent —
+   les sous-listes créées dynamiquement par _flatToDom n'ont pas ces méthodes). */
+function _findListRoot(li) {
+  let lst = li?.parentElement;
+  while (lst && !lst._doIndent) lst = lst.parentElement;
+  return lst || null;
+}
+
 let fmtBar = null, linkModal = null;
 let _savedRange = null;      // Range sauvegardée avant ouverture de la modale lien
 let _linkModalTrigger = null; // Élément déclencheur pour restaurer le focus à la fermeture
@@ -221,16 +235,17 @@ function initFmtBar() {
   const indentSep = sep();
   indentSep.id = 'fmt-indent-sep';
   fmtBar.appendChild(indentSep);
-  const indentBtn = mkBtn('indent', 'Augmenter le retrait (liste)', '→', null);
+  const indentBtn = mkBtn('indent', 'Augmenter le retrait', '→', null);
   indentBtn.id = 'fmt-indent';
-  /* pointerdown e.preventDefault() empêche le transfert de focus au bouton,
-     le <li> garde le focus → _listIndentFromFmtBar peut l'utiliser via activeElement. */
-  indentBtn.addEventListener('pointerdown', e => e.preventDefault());
+  /* Capture le <li> actif dès le pointerdown — avant toute perte de focus
+     possible sur le bouton — plutôt que de dépendre de document.activeElement
+     au moment du click, plus fragile (cf. _captureNoteState, même pattern). */
+  indentBtn.addEventListener('pointerdown', _captureListState);
   indentBtn.onclick = e => { e.preventDefault(); e.stopPropagation(); _listIndentFromFmtBar(true); };
   fmtBar.appendChild(indentBtn);
-  const dedentBtn = mkBtn('dedent', 'Diminuer le retrait (liste)', '←', null);
+  const dedentBtn = mkBtn('dedent', 'Diminuer le retrait', '←', null);
   dedentBtn.id = 'fmt-dedent';
-  dedentBtn.addEventListener('pointerdown', e => e.preventDefault());
+  dedentBtn.addEventListener('pointerdown', _captureListState);
   dedentBtn.onclick = e => { e.preventDefault(); e.stopPropagation(); _listIndentFromFmtBar(false); };
   fmtBar.appendChild(dedentBtn);
   fmtBar.appendChild(sep());
@@ -292,40 +307,30 @@ function initFmtBar() {
 }
 
 /* ── Indent/dedent depuis la barre de format ──────────────────────────
-   Appelée par les boutons → et ← de la fmt-bar.
-   Retrouve le <li> actuellement focalisé et simule l'événement
-   Ctrl+→ / Ctrl+← que _attachLi gère déjà nativement.
+   Le <li> perd potentiellement le focus au clic sur le bouton (mousedown
+   → blur possible selon navigateur). Solution : _captureListState capture
+   le <li> actif et sa liste racine dès le pointerdown sur les boutons
+   Indenter/Désindenter — premier événement de l'interaction, avant toute
+   perte de focus — puis _listIndentFromFmtBar réutilise cette capture et
+   appelle directement lst._doIndent / lst._doDedent (fonctions de la
+   closure de la liste), sans dispatchEvent ni dépendance à activeElement.
 ──────────────────────────────────────────────────────────────────────── */
-/* ── Indent/dedent depuis la barre de format ──────────────────────────
-   Problème clé : au moment du click sur le bouton, le <li> a déjà perdu
-   le focus (mousedown → blur → focus sur le bouton).
-   Solution :
-     1. pointerdown sur les boutons appelle e.preventDefault() → empêche
-        le transfert de focus (le <li> garde le focus).
-     2. lst._lastFocusedLi stocke le dernier <li> focalisé via onfocus,
-        disponible même après le mousedown du bouton.
-     3. On appelle directement lst._doIndent / lst._doDedent (fonctions
-        de la closure) sans passer par dispatchEvent.
-──────────────────────────────────────────────────────────────────────── */
+/* Capture le <li> actif et sa liste racine dès le pointerdown sur les boutons
+   Indenter/Désindenter — au tout premier événement, la sélection/le focus
+   sont encore garantis sur le <li>, avant toute action par défaut du bouton. */
+function _captureListState(e) {
+  e.preventDefault();
+  const s = window.getSelection();
+  const node = s?.rangeCount ? s.getRangeAt(0).commonAncestorContainer : null;
+  const el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  const li = el?.closest?.('li[contenteditable]') || document.activeElement?.closest?.('li[contenteditable]');
+  if (li) { _activeListLi = li; _activeListRoot = _findListRoot(li); }
+}
+
 function _listIndentFromFmtBar(indent) {
-  /* Chercher le <li> cible : activeElement si encore focalisé, sinon _lastFocusedLi */
-  const active = document.activeElement;
-  let li = active?.closest('li[contenteditable]');
-
-  if (!li) {
-    /* Le focus a peut-être déjà bougé — chercher via _lastFocusedLi sur toutes les listes */
-    const allLists = document.querySelectorAll('.list-preview.fb-rich');
-    for (const lst of allLists) {
-      if (lst._lastFocusedLi) { li = lst._lastFocusedLi; break; }
-    }
-  }
-  if (!li) return;
-
-  /* Remonter jusqu'à la liste racine pour accéder aux fonctions */
-  let lst = li.parentElement;
-  while (lst && !lst._doIndent) lst = lst.parentElement;
-  if (!lst) return;
-
+  const li = _activeListLi;
+  const lst = _activeListRoot;
+  if (!li || !lst || !lst._doIndent) return;
   indent ? lst._doIndent(li) : lst._doDedent(li);
 }
 
@@ -420,13 +425,16 @@ function positionFmtBar() {
     document.getElementById('fmt-link').setAttribute('aria-pressed', String(linkActive));
   }
 
-  /* État des boutons indent */
+  /* État des boutons indent — calculé depuis le modèle plat de la liste racine
+     (lst._canIndent / lst._canDedent), seule source de vérité partagée avec
+     _doIndent/_doDedent. Évite toute désynchronisation au-delà d'un niveau
+     d'imbrication (les anciennes heuristiques DOM — previousElementSibling,
+     comparaison de parentList au 1er niveau — divergeaient du modèle réel
+     dès le 2e niveau de sous-liste). */
   if (activeLi) {
-    const parentList = activeLi.parentElement;
-    const ct = activeLi.closest('.fb-ct');
-    const rootList = ct?.querySelector('ul, ol');
-    const canDedent = parentList !== rootList;
-    const canIndent = !!activeLi.previousElementSibling;
+    const lst = _findListRoot(activeLi);
+    const canIndent = lst?._canIndent ? lst._canIndent(activeLi) : false;
+    const canDedent = lst?._canDedent ? lst._canDedent(activeLi) : false;
     document.getElementById('fmt-indent').disabled = !canIndent;
     document.getElementById('fmt-dedent').disabled = !canDedent;
   }
@@ -757,7 +765,7 @@ function uid() { return 'b' + (++cnt); }
 function labelForType(type) { return LABELS[type] || type; }
 function getCanvasPage(pageIdx) { return document.getElementById('cpage-' + pageIdx); }
 function docFont() { return (window.FONTS && window.FONTS.cssFamily) || "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"; }
-function refreshBlockFonts() { blocks.forEach(b => { const ct = document.getElementById('el-' + b.id)?.querySelector('.fb-ct'); if (ct) fillCt(ct, b); }); }
+function refreshBlockFonts() { blocks.forEach(b => { const ct = document.getElementById('el-' + b.id)?.querySelector('.fb-ct'); if (ct) { fillCt(ct, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); } }); }
 /* ── Construit le DOM d'une page (label + div) sans l'attacher ni annoncer ── */
 function _createCanvasPage(pageIdx) {
   if (!pageOrientations[pageIdx]) pageOrientations[pageIdx] = 'portrait';
@@ -974,9 +982,10 @@ function _updateBlockAriaLabel(b) {
 function buildEl(b) {
   const label = labelForType(b.type), localY = b.y % PH;
   const isDecorative = b.type === 'shape' || b.type === 'freeform';
+  const isAutoH = AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight;
   const wrapper = el('div', {
-    cls: 'fb' + (isDecorative ? ' shape-block' : ''),
-    style: `left:${b.x}px;top:${localY}px;width:${b.w}px;height:${b.h}px;z-index:${b.zIndex || 0}`,
+    cls: 'fb' + (isDecorative ? ' shape-block' : '') + (isAutoH ? ' fb-auto-h' : ''),
+    style: `left:${b.x}px;top:${localY}px;width:${b.w}px;${isAutoH ? `min-height:${b.h || 28}px` : `height:${b.h}px`};z-index:${b.zIndex || 0}`,
     attrs: {
       id: 'el-' + b.id,
       tabindex: '0',
@@ -986,8 +995,10 @@ function buildEl(b) {
     },
   });
   const bar = el('div', { cls: 'fb-bar' });
+  const utagInfo = _utagForBlock(b);
   bar.append(
     el('span', { cls: 'fb-bar-lbl', text: label }),
+    ...(utagInfo ? [utag(utagInfo[0], utagInfo[1])] : []),
     el('button', { cls: 'fb-dup', html: '<span aria-hidden="true">⧉</span>', attrs: { type: 'button', 'aria-label': 'Dupliquer le bloc ' + label }, on: { click: e => { e.stopPropagation(); dupB(b.id); } } }),
     el('button', { cls: 'fb-del', html: '<span aria-hidden="true">×</span>', attrs: { type: 'button', 'aria-label': 'Supprimer le bloc ' + label }, on: { click: e => { e.stopPropagation(); rmB(b.id); } } })
   );
@@ -1001,6 +1012,8 @@ function buildEl(b) {
     const rot = el('div', { cls: 'fb-rot', attrs: { 'aria-hidden': 'true', title: 'Faire glisser pour pivoter' } });
     attachRot(rot, wrapper, b); wrapper.appendChild(rot);
   }
+  /* Synchroniser la hauteur après insertion dans le DOM */
+  if (isAutoH) requestAnimationFrame(() => _syncAutoHeight(b));
   wrapper.addEventListener('mousedown', e => { if (e.target.closest('.fb-bar') || e.target === rsz) return; sel(b.id); });
 
   /* Clavier : focus sur le wrapper = sélection + déplacement aux flèches */
@@ -1065,6 +1078,27 @@ function buildEl(b) {
 /* Note : ASIDE_STYLES est défini dans constants.js */
 
 /* ── Helper : crée un div contenteditable rich avec oninput → richContent ── */
+/* ══════════════════════════════════════════════════════════════════════
+   AUTO-HAUTEUR — les blocs texte ont une hauteur qui suit leur contenu.
+   C'est le comportement par défaut ; l'utilisateur peut forcer une hauteur
+   fixe en tirant la poignée de resize (b.manualHeight = true).
+   ══════════════════════════════════════════════════════════════════════ */
+const AUTO_HEIGHT_TYPES = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'quote', 'aside', 'note', 'link', 'code']);
+
+function _syncAutoHeight(b) {
+  if (!AUTO_HEIGHT_TYPES.has(b.type) || b.manualHeight) return;
+  const wrapper = document.getElementById('el-' + b.id);
+  if (!wrapper) return;
+  const h = wrapper.offsetHeight;
+  if (h > 0 && h !== b.h) {
+    b.h = h;
+    if (sid === b.id) {
+      const bhEl = document.getElementById('bh');
+      if (bhEl) bhEl.value = Math.round(h);
+    }
+  }
+}
+
 function _mkRichDiv(b, ariaLabel, style, className) {
   const t = document.createElement('div');
   t.contentEditable = 'true';
@@ -1085,17 +1119,46 @@ function _mkRichDiv(b, ariaLabel, style, className) {
     invalidateHtmlToRunsCache(b.richContent);
     b.richContent = t.innerHTML;
     b.content = htmlToPlain(t.innerHTML);
-    /* Mettre à jour aria-placeholder selon la vacuité du contenu */
     if (t.textContent.trim() === '') {
-      if (!t.getAttribute('aria-placeholder')) {
-        t.setAttribute('aria-placeholder', 'Saisir du texte');
-      }
+      if (!t.getAttribute('aria-placeholder')) t.setAttribute('aria-placeholder', 'Saisir du texte');
     } else {
       t.removeAttribute('aria-placeholder');
     }
+    _syncAutoHeight(b);
   };
   t.onmousedown = e => e.stopPropagation();
   return t;
+}
+
+/* ── Table de correspondance type → badge utag ─────────────────────────
+   Utilisée par buildEl pour insérer le badge dans la fb-bar.
+   Le cas 'img' est dynamique (dépend de b.alt / b.imgLinkUrl) : calculé
+   dans _utagForBlock(). */
+const _UTAG_MAP = {
+  h1: ['H1', 'u-h'], h2: ['H2', 'u-h'], h3: ['H3', 'u-h'],
+  h4: ['H4', 'u-h'], h5: ['H5', 'u-h'], h6: ['H6', 'u-h'],
+  p: ['P', 'u-p'],
+  ul: ['UL', 'u-l'], ol: ['OL', 'u-l'],
+  link: ['LINK', 'u-k'],
+  table: ['TABLE', 'u-t'],
+  quote: ['QUOTE', 'u-q'],
+  note: ['NOTE', 'u-n'],
+  hr: ['HR', 'u-sep'],
+  aside: ['ASIDE', 'u-as'],
+  code: ['CODE', 'u-cd'],
+  shape: ['FORME', 'u-sh'], freeform: ['LIBRE', 'u-sh'], chart: ['GRAPHIQUE', 'u-ch'],
+  'form-text': ['FORM', 'u-f'], 'form-textarea': ['FORM', 'u-f'],
+  'form-checkbox': ['FORM', 'u-f'], 'form-radio': ['FORM', 'u-f'],
+  'form-select': ['FORM', 'u-f'],
+};
+
+function _utagForBlock(b) {
+  if (b.type === 'img') {
+    if (b.imgLinkUrl) return ['LINK', 'u-k'];
+    if (b.alt) return ['IMG', 'u-i'];
+    return ['DECO', 'u-d'];
+  }
+  return _UTAG_MAP[b.type] || null;
 }
 
 const FILL_CT = {
@@ -1116,7 +1179,7 @@ const FILL_CT = {
     inp.className = 'fb-form-input';
     inp.style.fontFamily = docFont();
     if (b.formReadonly) inp.dataset.readonly = 'true';
-    ct.append(lbl, inp); ct.appendChild(utag('Form', 'u-f'));
+    ct.append(lbl, inp);
   },
 
   'form-textarea'(ct, b) {
@@ -1133,7 +1196,7 @@ const FILL_CT = {
     ta.className = 'fb-form-textarea';
     ta.style.fontFamily = docFont();
     if (b.formReadonly) ta.dataset.readonly = 'true';
-    ct.append(lbl, ta); ct.appendChild(utag('Form', 'u-f'));
+    ct.append(lbl, ta);
   },
 
   'form-checkbox'(ct, b) {
@@ -1145,7 +1208,7 @@ const FILL_CT = {
     lbl.className = 'fb-form-lbl--light';
     lbl.style.fontFamily = docFont();
     lbl.textContent = (b.formLabel || 'Case à cocher') + (b.formRequired ? ' *' : '');
-    ct.append(box, lbl); ct.appendChild(utag('Form', 'u-f'));
+    ct.append(box, lbl);
   },
 
   'form-radio'(ct, b) {
@@ -1164,7 +1227,7 @@ const FILL_CT = {
       row.append(circ, document.createTextNode(opt.trim()));
       ct.appendChild(row);
     });
-    ct.appendChild(utag('Form', 'u-f'));
+
   },
 
   'form-select'(ct, b) {
@@ -1195,7 +1258,7 @@ const FILL_CT = {
 
     wrap.append(textZone, chevZone);
     ct.append(lbl, wrap);
-    ct.appendChild(utag('Form', 'u-f'));
+
   },
 
 
@@ -1208,7 +1271,7 @@ const FILL_CT = {
       `font-size:${b.fontSize || FS[b.type]}px;font-family:${docFont()}`,
       'fb-rich-heading'
     ));
-    ct.appendChild(utag(b.type.toUpperCase(), 'u-h'));
+
   },
 
   p(ct, b) {
@@ -1218,7 +1281,7 @@ const FILL_CT = {
       `font-size:${b.fontSize || FS.p}px;font-family:${docFont()};${indent}`,
       'fb-rich-flow'
     ));
-    ct.appendChild(utag('P', 'u-p'));
+
   },
 
   _list(ct, b) {
@@ -1226,55 +1289,109 @@ const FILL_CT = {
 
     const lst = document.createElement(rootTag);
     lst.className = 'list-preview fb-rich';
-    lst.setAttribute('aria-label', (rootTag === 'ul' ? 'Liste à puces' : 'Liste numérotée') + ' — utilisez les boutons → ← de la barre de mise en forme pour imbriquer');
-    lst._lastFocusedLi = null;
+    lst.setAttribute('aria-label', (rootTag === 'ul' ? 'Liste à puces' : 'Liste numérotée') + ' — utilisez les boutons Indenter / Désindenter de la barre de mise en forme pour gérer les niveaux');
 
-    const _subTag = () => rootTag;
+    /* DOM imbriqué → tableau plat [{ html, depth }] */
+    function _domToFlat() {
+      const items = [];
+      const walk = (listEl, depth) => {
+        for (const li of listEl.children) {
+          if (li.tagName !== 'LI') continue;
+          const clone = li.cloneNode(true);
+          const subLists = [...clone.children].filter(c => c.tagName === 'UL' || c.tagName === 'OL');
+          subLists.forEach(s => s.remove());
+          items.push({ html: clone.innerHTML || '<br>', depth });
+          for (const sub of li.children) {
+            if (sub.tagName === 'UL' || sub.tagName === 'OL') walk(sub, depth + 1);
+          }
+        }
+      };
+      walk(lst, 0);
+      return items;
+    }
 
-    /* ── _focusLi avant _doIndent/_doDedent car utilisé par les deux ── */
+    /* Tableau plat → DOM imbriqué, retourne le nouveau <li> à l'index donné */
+    function _flatToDom(items) {
+      lst.innerHTML = '';
+      /* Pile de listes ouvertes : stack[d] = élément <ul>/<ol> au niveau d */
+      const stack = [lst];
+      const liRefs = [];
+      items.forEach(item => {
+        /* Clamper la profondeur : jamais plus d'un niveau de plus que le précédent,
+           et toujours 0 pour le tout premier élément. */
+        const safeDepth = liRefs.length === 0 ? 0 : Math.min(item.depth, stack.length);
+
+        while (stack.length > safeDepth + 1) stack.pop();
+        if (stack.length === safeDepth) {
+          /* Besoin d'une nouvelle sous-liste sous le dernier <li> ouvert */
+          const parentLi = liRefs[liRefs.length - 1];
+          const sub = document.createElement(rootTag);
+          parentLi.appendChild(sub);
+          stack.push(sub);
+        }
+
+        const li = document.createElement('li');
+        li.contentEditable = 'true';
+        li.innerHTML = item.html || '<br>';
+        _attachLi(li);
+        stack[stack.length - 1].appendChild(li);
+        liRefs.push(li);
+      });
+      return liRefs;
+    }
+
+    /* Place le curseur en fin (ou début) de texte d'un <li> */
     const _focusLi = (li, toEnd = true) => {
-      const textNode = [...li.childNodes].find(n => n.nodeType === Node.TEXT_NODE || n.nodeName === 'BR');
+      if (!li) return;
+      const textNode = [...li.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
       const range = document.createRange();
-      if (toEnd && textNode && textNode.nodeType === Node.TEXT_NODE) {
-        range.setStart(textNode, textNode.length);
-      } else {
-        range.setStart(li, 0);
-      }
+      if (toEnd && textNode) range.setStart(textNode, textNode.length);
+      else range.setStart(li, 0);
       range.collapse(true);
-      window.getSelection().removeAllRanges();
-      window.getSelection().addRange(range);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
       li.focus();
-      lst._lastFocusedLi = li;
     };
 
     const _syncContent = () => {
       b.richContent = lst.outerHTML;
       b.content = [...lst.querySelectorAll('li')]
-        .map(li => li.childNodes[0]?.textContent || '').join('\n');
+        .map(li => {
+          const clone = li.cloneNode(true);
+          clone.querySelectorAll('ul, ol').forEach(s => s.remove());
+          return clone.textContent;
+        }).join('\n');
+      _syncAutoHeight(b);
       if (typeof saveSession === 'function') saveSession();
     };
 
-    /* ── Fonctions d'indent/dedent autonomes — appellables depuis IHM ── */
+    /* Index du <li> dans l'ordre de lecture (profondeur confondue) */
+    const _indexOf = li => [...lst.querySelectorAll('li')].indexOf(li);
+
+    /* ── INDENT ── Le tout premier item (index 0) ne peut jamais être indenté
+       (il n'a pas de précédent pour devenir son parent). */
     const _doIndent = li => {
-      const prev = li.previousElementSibling;
-      if (!prev) return false;
-      let subList = prev.querySelector(':scope > ul, :scope > ol');
-      if (!subList) { subList = document.createElement(_subTag()); prev.appendChild(subList); }
-      subList.appendChild(li);
-      _focusLi(li);
+      const items = _domToFlat();
+      const i = _indexOf(li);
+      if (i <= 0) return false; // premier élément : rien à faire
+      const maxAllowed = items[i - 1].depth + 1;
+      if (items[i].depth >= maxAllowed) return false; // déjà au niveau max possible
+      items[i].depth += 1;
+      const refs = _flatToDom(items);
+      _focusLi(refs[i]);
       _syncContent();
       return true;
     };
 
+    /* ── DEDENT ── */
     const _doDedent = li => {
-      const parentList = li.parentElement;
-      if (parentList === lst) return false;
-      const parentLi = parentList.parentElement;
-      if (!parentLi) return false;
-      const grandParentList = parentLi.parentElement;
-      grandParentList.insertBefore(li, parentLi.nextElementSibling);
-      if (!parentList.children.length) parentList.remove();
-      _focusLi(li);
+      const items = _domToFlat();
+      const i = _indexOf(li);
+      if (i < 0 || items[i].depth === 0) return false; // déjà racine
+      items[i].depth -= 1;
+      const refs = _flatToDom(items);
+      _focusLi(refs[i]);
       _syncContent();
       return true;
     };
@@ -1283,17 +1400,34 @@ const FILL_CT = {
     lst._doIndent = _doIndent;
     lst._doDedent = _doDedent;
 
+    /* ── Calcul d'activation des boutons ↑/← (barre de mise en forme) ──
+       DOIT utiliser exactement la même source de vérité (modèle plat
+       _domToFlat + règle "profondeur ≤ profondeur du précédent + 1") que
+       _doIndent/_doDedent ci-dessus. Les anciennes heuristiques DOM
+       (previousElementSibling, comparaison à la liste racine uniquement)
+       divergeaient de cette règle dès qu'une sous-liste contenait plus
+       d'un niveau d'imbrication, ce qui désactivait les boutons à tort. */
+    lst._canIndent = li => {
+      const items = _domToFlat();
+      const i = _indexOf(li);
+      if (i <= 0) return false;
+      return items[i].depth < items[i - 1].depth + 1;
+    };
+    lst._canDedent = li => {
+      const items = _domToFlat();
+      const i = _indexOf(li);
+      return i >= 0 && items[i].depth > 0;
+    };
+
+    /* ── Attacher les handlers à un li ────────────────────────────────── */
     const _attachLi = li => {
       li.onmousedown = e => e.stopPropagation();
       li.oninput = _syncContent;
-      li.onfocus = () => { lst._lastFocusedLi = li; };
       li.onkeydown = e => {
 
-        /* Tab / Shift+Tab : bloquer le comportement natif (pas de raccourci indent ici) */
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          return;
-        }
+        /* Tab et Shift+Tab sont réservés à la navigation clavier (WCAG 2.1.1).
+           L'indent/dedent passe exclusivement par les boutons → / ← de la
+           barre de mise en forme. */
 
         if (e.key === 'Enter' && e.shiftKey) {
           e.preventDefault();
@@ -1312,12 +1446,13 @@ const FILL_CT = {
 
         if (e.key === 'Enter') {
           e.preventDefault();
-          const newLi = document.createElement('li');
-          newLi.contentEditable = 'true';
-          newLi.innerHTML = '<br>';
-          _attachLi(newLi);
-          li.insertAdjacentElement('afterend', newLi);
-          _focusLi(newLi);
+          const items = _domToFlat();
+          const i = _indexOf(li);
+          if (i < 0) return;
+          /* Le nouvel item hérite de la profondeur du <li> courant */
+          items.splice(i + 1, 0, { html: '<br>', depth: items[i].depth });
+          const refs = _flatToDom(items);
+          _focusLi(refs[i + 1], false);
           _syncContent();
           return;
         }
@@ -1326,23 +1461,27 @@ const FILL_CT = {
           const isEmpty = li.textContent.trim() === '' && !li.querySelector('sup') && !li.querySelector('ul, ol');
           if (!isEmpty) return;
           e.preventDefault();
-          if (li.parentElement !== lst) {
-            _doDedent(li);
-          } else if (lst.children.length > 1) {
-            const prev = li.previousElementSibling;
-            li.remove();
-            if (prev) _focusLi(prev, false);
+          const items = _domToFlat();
+          const i = _indexOf(li);
+          if (i < 0) return;
+
+          if (items[i].depth > 0) {
+            /* Élément vide indenté → dedent plutôt que suppression */
+            items[i].depth -= 1;
+            const refs = _flatToDom(items);
+            _focusLi(refs[i]);
+            _syncContent();
+          } else if (items.length > 1) {
+            /* Élément vide à la racine → suppression, focus sur le précédent.
+               Si l'item suivant était plus profond que ce que permet le nouveau
+               contexte, _flatToDom le clampera automatiquement. */
+            items.splice(i, 1);
+            const refs = _flatToDom(items);
+            _focusLi(refs[Math.max(0, i - 1)], false);
             _syncContent();
           }
         }
       };
-    };
-
-    const _attachAll = node => {
-      [...node.children].forEach(child => {
-        if (child.tagName === 'LI') { child.contentEditable = 'true'; _attachLi(child); _attachAll(child); }
-        else if (child.tagName === 'UL' || child.tagName === 'OL') { _attachAll(child); }
-      });
     };
 
     const _rebuildLi = () => {
@@ -1351,16 +1490,24 @@ const FILL_CT = {
         const tmp = document.createElement('div');
         tmp.innerHTML = b.richContent;
         const srcList = tmp.querySelector('ul, ol');
-        if (srcList && srcList.children.length) { lst.innerHTML = srcList.innerHTML; _attachAll(lst); return; }
+        if (srcList && srcList.children.length) {
+          lst.innerHTML = srcList.innerHTML;
+          /* Normaliser via le modèle plat : corrige toute incohérence de
+             profondeur héritée d'un ancien contenu (ou d'un bug antérieur). */
+          const items = _domToFlat();
+          /* Garantir item[0].depth === 0 et pas de saut > 1 niveau */
+          let prevDepth = -1;
+          items.forEach(it => {
+            it.depth = Math.max(0, Math.min(it.depth, prevDepth + 1));
+            prevDepth = it.depth;
+          });
+          _flatToDom(items);
+          return;
+        }
       }
       const lines = (b.content || '').split('\n').filter(l => l.trim() !== '');
-      (lines.length ? lines : ['']).forEach(line => {
-        const li = document.createElement('li');
-        li.contentEditable = 'true';
-        li.innerHTML = line || '<br>';
-        _attachLi(li);
-        lst.appendChild(li);
-      });
+      const items = (lines.length ? lines : ['']).map(line => ({ html: line || '<br>', depth: 0 }));
+      _flatToDom(items);
     };
 
     _rebuildLi();
@@ -1369,7 +1516,6 @@ const FILL_CT = {
     if (b.listNoBullet) lst.classList.add('list-no-bullet');
     else lst.classList.remove('list-no-bullet');
     ct.appendChild(lst);
-    ct.appendChild(utag(b.type.toUpperCase(), 'u-l'));
   },
 
   img(ct, b) {
@@ -1413,7 +1559,6 @@ const FILL_CT = {
     /* Tag structurel : Link>Figure si lien, Figure si alt, Artifact sinon */
     const imgTag = b.imgLinkUrl ? 'LINK' : (b.alt ? 'IMG' : 'DECO');
     const imgCls = b.imgLinkUrl ? 'u-k' : (b.alt ? 'u-i' : 'u-d');
-    ct.appendChild(utag(imgTag, imgCls));
     if (b.alt || b.imgLinkUrl) {
       const ad = document.createElement('p');
       const hasAlt = !!b.alt;
@@ -1429,7 +1574,7 @@ const FILL_CT = {
     a.className = 'fb-link-preview';
     a.setAttribute('aria-label', 'Lien : ' + (b.linkText || b.linkUrl || 'sans texte'));
     ct.appendChild(a);
-    ct.appendChild(utag('LINK', 'u-k'));
+
   },
 
   table(ct, b) {
@@ -1499,7 +1644,7 @@ const FILL_CT = {
     btnWrap.className = 'fb-table-btns';
     btnWrap.append(addRowBtn, addColBtn);
     ct.appendChild(tbl); ct.appendChild(btnWrap);
-    ct.appendChild(utag('TABLE', 'u-t'));
+
 
     /* Attacher les poignées de redimensionnement de colonnes */
     _attachColResizers(tbl, b);
@@ -1527,7 +1672,7 @@ const FILL_CT = {
     src.onmousedown = e => e.stopPropagation();
 
     wrap.appendChild(txt); wrap.appendChild(src);
-    ct.appendChild(wrap); ct.appendChild(utag('QUOTE', 'u-q'));
+    ct.appendChild(wrap);
   },
 
   note(ct, b) {
@@ -1554,7 +1699,7 @@ const FILL_CT = {
       anchorHint.onclick = e => { e.stopPropagation(); sel(b.anchorBlockId); switchTab('bloc'); };
       ct.appendChild(anchorHint);
     }
-    ct.appendChild(utag('NOTE', 'u-n'));
+
   },
 
   hr(ct) {
@@ -1562,7 +1707,7 @@ const FILL_CT = {
     line.className = 'fb-hr-line';
     line.setAttribute('aria-hidden', 'true');
     ct.appendChild(line);
-    ct.appendChild(utag('HR', 'u-sep'));
+
   },
 
   aside(ct, b) {
@@ -1580,7 +1725,7 @@ const FILL_CT = {
       'fb-rich-flow fb-rich-aside'
     );
     wrap.appendChild(icon); wrap.appendChild(txt);
-    ct.appendChild(wrap); ct.appendChild(utag('ASIDE', 'u-as'));
+    ct.appendChild(wrap);
   },
 
   code(ct, b) {
@@ -1594,12 +1739,12 @@ const FILL_CT = {
     code.style.fontSize = FS.code + 'px';
 
     code.textContent = b.content || '';
-    code.oninput = () => { b.content = code.textContent; };
+    code.oninput = () => { b.content = code.textContent; _syncAutoHeight(b); };
     code.onmousedown = e => e.stopPropagation();
 
     pre.appendChild(code);
     ct.appendChild(pre);
-    ct.appendChild(utag('CODE', 'u-cd'));
+
   },
 
   shape(ct, b) {
@@ -1631,7 +1776,7 @@ const FILL_CT = {
       }
     });
 
-    ct.appendChild(svg); ct.appendChild(utag('FORME', 'u-sh'));
+    ct.appendChild(svg);
   },
 
   freeform(ct, b) {
@@ -1865,7 +2010,18 @@ function bprop(k, v) {
   updUA(); saveSession();
 }
 
-function rr(id) { const b = blockById(id); if (!b) return; const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); }
+function rr(id) {
+  const b = blockById(id); if (!b) return;
+  const c = document.getElementById('ct-' + b.id);
+  if (c) { fillCt(c, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); }
+  /* Mettre à jour le badge utag dans la barre (tag peut changer pour img) */
+  const wrapper = document.getElementById('el-' + b.id);
+  if (wrapper) {
+    const existing = wrapper.querySelector('.fb-bar .utag');
+    const info = _utagForBlock(b);
+    if (existing && info) { existing.textContent = info[0]; existing.className = 'utag ' + info[1]; }
+  }
+}
 
 function applyPos() {
   const b = blockById(sid); if (!b) return;
