@@ -3294,7 +3294,7 @@ dialog.modal::backdrop {
   left: 0;
   right: 0;
   background: var(--ui-toast-bg);
-  color: var(--ui-toast-color);
+  color: var(--ui-fb-bg);
   padding: 9px 42px 9px 12px;
   font-size: 11px;
   line-height: 1.5;
