@@ -18,20 +18,20 @@ function _blockMap_reset() { _blockMap.clear(); blocks.forEach(b => _blockMap.se
 /** Lookup O(1) par id — remplace blocks.find(x => x.id === id) partout dans le code. */
 function blockById(id) { return _blockMap.get(id); }
 
-/* ── Cache du tri ordB — invalidé via _ordVersion à chaque mutation de blocks ──
-   ordB() est appelé très fréquemment (updBP, updTree, _prepareBlocks, etc.).
+/* ── Cache du tri readingOrderBlocks — invalidé via _ordVersion à chaque mutation de blocks ──
+   readingOrderBlocks() est appelé très fréquemment (updatePropertiesPanel, updateStructureTree, _prepareBlocks, etc.).
    Un compteur de version remplace l'ancienne clé O(n) basée sur map+join. */
 let _ordCache = null;
 let _ordVersion = 0;
 let _ordCachedVersion = -1;
-function ordB() {
+function readingOrderBlocks() {
   if (_ordVersion !== _ordCachedVersion) {
     _ordCache = [...blocks].sort((a, b) => a.order - b.order);
     _ordCachedVersion = _ordVersion;
   }
   return _ordCache;
 }
-/** Invalider le cache ordB — à appeler après tout push/splice/modification d'order sur blocks. */
+/** Invalider le cache readingOrderBlocks — à appeler après tout push/splice/modification d'order sur blocks. */
 function _invalidateOrdCache() { _ordVersion++; }
 
 
@@ -127,8 +127,8 @@ const History = {
     _blockMap_reset();
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
-    blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
-    sid = null; desel(); updUA(); updTree(); saveSession();
+    blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildBlockElement(b)); });
+    sid = null; deselectBlock(); updateAccessibilityChecklist(); updateStructureTree(); saveSession();
     this._lock = false;
     announce('Action annulée.');
   },
@@ -398,7 +398,7 @@ function updateDocumentTitle(title) {
 let _saveTimer = null;
 /* Cache de la dernière sérialisation : évite sort+map+JSON.stringify si rien n'a changé */
 let _saveLastJson = '';
-let _saveVersion = 0; // incrémenté par snapshotState/addBlock/rmB/dupB
+let _saveVersion = 0; // incrémenté par snapshotState/addBlock/removeBlock/duplicateBlock
 
 function _bumpSaveVersion() { _saveVersion++; }
 
@@ -409,7 +409,7 @@ function saveSession() {
       const meta = _collectMeta();
       /* Construire uniquement si l'état a évolué depuis la dernière sauvegarde */
       const currentVersion = _saveVersion;
-      const sorted = ordB(); // réutilise le cache ordB sans re-trier
+      const sorted = readingOrderBlocks(); // réutilise le cache readingOrderBlocks sans re-trier
       const payload = JSON.stringify({
         v: PROJECT_VERSION,
         blocks: sorted.map(_serializeBlock),
@@ -476,7 +476,7 @@ function restoreSessionBlocks() {
   const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
   while (numPages <= maxPage) addCanvasPage();
   _restorePages();
-  blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
+  blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildBlockElement(b)); });
   _reattachNoteAnchors();
 }
 
@@ -494,7 +494,7 @@ function _reattachNoteAnchors() {
       const noteId = sup.dataset.noteId;
       sup.className = 'note-anchor';
       sup.style.color = LINK_COLOR;
-      sup.onclick = e => { e.stopPropagation(); sel(noteId); switchTab('bloc'); };
+      sup.onclick = e => { e.stopPropagation(); selectBlock(noteId); switchTab('bloc'); };
       const noteBlock = blockById(noteId);
       if (noteBlock) sup.title = 'Note ' + (noteBlock.noteRef || '') + ' — cliquer pour sélectionner';
     });
@@ -868,7 +868,7 @@ function _projectSnapshot() {
     v: PROJECT_VERSION,
     meta: _collectMeta(),
     /* Sérialisation par liste blanche : champs canoniques uniquement */
-    blocks: ordB().map(_serializeBlock),
+    blocks: readingOrderBlocks().map(_serializeBlock),
     /* cnt est omis volontairement — recalculé à l'import depuis les ids */
     grid: { enabled: gridEnabled, visible: gridVisible, size: gridSize },
     /* Borner pageOrientations à MAX_PAGES par sécurité */
@@ -999,7 +999,7 @@ async function openProject(input) {
       .map((b, i) => { b.order = i; return b; }); // recalculer order depuis la position
 
     /* Recalculer cnt depuis les ids existants — ne pas le restaurer depuis le fichier (point 3).
-       uid() génère 'b' + (++cnt), donc cnt = max des suffixes numériques des ids. */
+       generateBlockId() génère 'b' + (++cnt), donc cnt = max des suffixes numériques des ids. */
     cnt = blocks.reduce((max, b) => {
       const n = parseInt(String(b.id).replace(/^b/, ''), 10);
       return Number.isFinite(n) ? Math.max(max, n) : max;
@@ -1010,9 +1010,9 @@ async function openProject(input) {
     const maxPage = blocks.reduce((m, b) => Math.max(m, Math.floor(b.y / PH)), 0);
     while (numPages <= maxPage) addCanvasPage();
     _restorePages();
-    blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildEl(b)); });
+    blocks.forEach(b => { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(buildBlockElement(b)); });
 
-    desel(); updUA(); updTree(); saveSession();
+    deselectBlock(); updateAccessibilityChecklist(); updateStructureTree(); saveSession();
     announce('Projet ouvert — ' + (typeof project.meta?.title === 'string' ? project.meta.title.slice(0, 200) : file.name));
   } catch (e) { announce('Erreur lors de l\'ouverture : ' + e.message); console.error(e); }
 }

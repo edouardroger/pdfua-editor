@@ -1,13 +1,7 @@
 // pdf-builder.js — Orchestration PDF/UA : PDFBuilder, genPDF, prevPDF
 
-/* ══════════════════════════════════════════════════════════════════════
-   PDFBuilder
-   ──────────────────────────────────────────────────────────────────────
-   Encapsule toute la logique d'orchestration de la génération PDF/UA.
-   Usage :
-     const builder = new PDFBuilder();
-     const doc = await builder.build();
-   ══════════════════════════════════════════════════════════════════════ */
+/* PDFBuilder — orchestration de la génération PDF/UA.
+   Usage : const doc = await new PDFBuilder().build(); */
 class PDFBuilder {
   constructor() {
     // Paramètres lus depuis l'IHM au moment du build
@@ -85,7 +79,7 @@ class PDFBuilder {
   // ─────────────────────────────────────────────────────────────────────
 
   _prepareBlocks() {
-    this.sortedBlocks = ordB().slice();
+    this.sortedBlocks = readingOrderBlocks().slice();
 
     this.blocksByPage = new Map();
     for (const b of this.sortedBlocks) {
@@ -164,9 +158,9 @@ class PDFBuilder {
   }
 
   _collectDocInfo() {
-    const g = id => document.getElementById(id).value.trim();
+    const getFieldValue = id => document.getElementById(id).value.trim();
     const info = { Creator: CREATOR, Producer: PRODUCER };
-    const t = g('m-title'), a = g('m-author'), s = g('m-subject');
+    const t = getFieldValue('m-title'), a = getFieldValue('m-author'), s = getFieldValue('m-subject');
     if (t) info.Title = t;
     if (a) info.Author = a;
     if (s) info.Subject = s;

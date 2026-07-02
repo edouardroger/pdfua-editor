@@ -16,7 +16,7 @@ const CHART_PALETTE = ['#000091', '#e1000f', '#00a95f', '#fcc63a', '#009099', '#
 /* ── Générateurs de <pattern> SVG ──
    Principe : fond coloré plein + motif blanc semi-transparent par-dessus.
    chartSize = Math.min(w, h) du graphique — l'espacement est proportionnel. */
-function _mkPat(svg, id, size, bgColor, motifContent) {
+function _defineSvgPattern(svg, id, size, bgColor, motifContent) {
   let defs = svg.querySelector('defs');
   if (!defs) {
     defs = document.createElementNS(_SVG_NS, 'defs');
@@ -34,20 +34,20 @@ function _mkPat(svg, id, size, bgColor, motifContent) {
   return `url(#${id})`;
 }
 /* Espacement proportionnel : ~1/6 de la plus petite dimension, clampé 4–12px */
-function _patStep(chartSize) { return Math.max(4, Math.min(chartSize / 6, 12)); }
-function _mkLineW(x1, y1, x2, y2, sw) {
+function _patternSpacing(chartSize) { return Math.max(4, Math.min(chartSize / 6, 12)); }
+function _patternLine(x1, y1, x2, y2, sw) {
   return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="${sw}" stroke-opacity="0.35"/>`;
 }
 
 /* Générateurs de motifs SVG — chaque fn(svg, uid, color, cs) → fill string */
 const _PAT_FNS = {
-  hlines(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s / 2, s, s / 2, sw)); },
-  vlines(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(s / 2, 0, s / 2, s, sw)); },
-  diag1(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s, s, 0, sw) + _mkLineW(-s * 0.1, s * 0.1, s * 0.1, -s * 0.1, sw) + _mkLineW(s * 0.9, s * 1.1, s * 1.1, s * 0.9, sw)); },
-  diag2(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, 0, s, s, sw) + _mkLineW(-s * 0.1, s * 0.9, s * 0.1, s * 1.1, sw) + _mkLineW(s * 0.9, -s * 0.1, s * 1.1, s * 0.1, sw)); },
-  cross(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18); return _mkPat(svg, uid, s, color, _mkLineW(0, s / 2, s, s / 2, sw) + _mkLineW(s / 2, 0, s / 2, s, sw)); },
-  dots(svg, uid, color, cs) { const s = _patStep(cs), r = Math.max(0.7, s * 0.22); return _mkPat(svg, uid, s, color, `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="white" fill-opacity="0.35"/>`); },
-  dashes(svg, uid, color, cs) { const s = _patStep(cs), sw = Math.max(0.6, s * 0.18), dl = s * 0.6; return _mkPat(svg, uid, s, color, `<line x1="0" y1="${s / 2}" x2="${dl}" y2="${s / 2}" stroke="white" stroke-width="${sw}" stroke-opacity="0.35"/>`); },
+  hlines(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18); return _defineSvgPattern(svg, uid, s, color, _patternLine(0, s / 2, s, s / 2, sw)); },
+  vlines(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18); return _defineSvgPattern(svg, uid, s, color, _patternLine(s / 2, 0, s / 2, s, sw)); },
+  diag1(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18); return _defineSvgPattern(svg, uid, s, color, _patternLine(0, s, s, 0, sw) + _patternLine(-s * 0.1, s * 0.1, s * 0.1, -s * 0.1, sw) + _patternLine(s * 0.9, s * 1.1, s * 1.1, s * 0.9, sw)); },
+  diag2(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18); return _defineSvgPattern(svg, uid, s, color, _patternLine(0, 0, s, s, sw) + _patternLine(-s * 0.1, s * 0.9, s * 0.1, s * 1.1, sw) + _patternLine(s * 0.9, -s * 0.1, s * 1.1, s * 0.1, sw)); },
+  cross(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18); return _defineSvgPattern(svg, uid, s, color, _patternLine(0, s / 2, s, s / 2, sw) + _patternLine(s / 2, 0, s / 2, s, sw)); },
+  dots(svg, uid, color, cs) { const s = _patternSpacing(cs), r = Math.max(0.7, s * 0.22); return _defineSvgPattern(svg, uid, s, color, `<circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="white" fill-opacity="0.35"/>`); },
+  dashes(svg, uid, color, cs) { const s = _patternSpacing(cs), sw = Math.max(0.6, s * 0.18), dl = s * 0.6; return _defineSvgPattern(svg, uid, s, color, `<line x1="0" y1="${s / 2}" x2="${dl}" y2="${s / 2}" stroke="white" stroke-width="${sw}" stroke-opacity="0.35"/>`); },
 };
 
 /* ── Motifs de hachure disponibles — svgFn référence directement _PAT_FNS ── */
@@ -84,7 +84,7 @@ function renderChartInCt(ct, b) {
   svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('class', 'fb-chart-svg');
-  /* defs injecté dynamiquement par _mkPat */
+  /* defs injecté dynamiquement par _defineSvgPattern */
   svg.style.fontFamily = window.FONTS?.cssFamily || 'sans-serif';
 
   const titleH = b.chartTitle ? 14 : 0;
@@ -358,7 +358,7 @@ function _chartRebuildRows(b) {
     const colorWidget = makeColorSelect(
       `chartcolor-${i}`,
       d.color || CHART_PALETTE[i % CHART_PALETTE.length],
-      hex => { d.color = hex; rr(sid); saveSession(); }
+      hex => { d.color = hex; refreshBlock(sid); saveSession(); }
     );
     colorWrap.appendChild(colorWidget);
 
@@ -373,7 +373,7 @@ function _chartRebuildRows(b) {
       if (p.id === (d.pattern || 'solid')) opt.selected = true;
       patSel.appendChild(opt);
     });
-    patSel.onchange = () => { d.pattern = patSel.value; rr(sid); saveSession(); };
+    patSel.onchange = () => { d.pattern = patSel.value; refreshBlock(sid); saveSession(); };
     patSel.onmousedown = e => e.stopPropagation();
 
     /* Label */
@@ -383,7 +383,7 @@ function _chartRebuildRows(b) {
     labelIn.value = d.label || '';
     labelIn.placeholder = 'Étiquette';
     labelIn.setAttribute('aria-label', 'Étiquette série ' + (i + 1));
-    labelIn.oninput = () => { d.label = labelIn.value; rr(sid); saveSession(); };
+    labelIn.oninput = () => { d.label = labelIn.value; refreshBlock(sid); saveSession(); };
     labelIn.onmousedown = e => e.stopPropagation();
 
     /* Valeur */
@@ -393,7 +393,7 @@ function _chartRebuildRows(b) {
     valIn.value = d.value ?? 0;
     valIn.min = '0';
     valIn.setAttribute('aria-label', 'Valeur série ' + (i + 1));
-    valIn.oninput = () => { d.value = parseFloat(valIn.value) || 0; rr(sid); saveSession(); };
+    valIn.oninput = () => { d.value = parseFloat(valIn.value) || 0; refreshBlock(sid); saveSession(); };
     valIn.onmousedown = e => e.stopPropagation();
 
     /* Supprimer */
@@ -408,7 +408,7 @@ function _chartRebuildRows(b) {
       if (!blk) return;
       blk.chartData.splice(i, 1);
       _chartRebuildRows(blk);
-      rr(sid); saveSession();
+      refreshBlock(sid); saveSession();
     };
 
     /* Ligne 1 : couleur + motif + supprimer */
@@ -439,7 +439,7 @@ function chartAddRow() {
     pattern: CHART_PATTERNS[i % CHART_PATTERNS.length].id,
   });
   _chartRebuildRows(b);
-  rr(sid); saveSession();
+  refreshBlock(sid); saveSession();
 }
 
 function freeformPathD(pts, closed) {
@@ -654,7 +654,9 @@ function _ffKeyDown(e) {
 }
 
 
-/* DESSIN DU PREVIEW — la partie clé */
+/* DESSIN DU PREVIEW (outil plume) — dessine, dans l'ordre : 1) le chemin déjà
+   tracé, 2) le segment fantôme vers la souris (ligne ou courbe live si glisser),
+   3) les poignées Bézier, 4) les ancres de chaque point, 5) le cadre du bloc */
 
 function _ffRedraw() {
   if (!_ffDraw) return;
@@ -800,7 +802,7 @@ function finalizeFreeformDraw(cancelled) {
   if (!cancelled && pts.length >= 2) {
     snapshotState();
     const b = blockById(blockId);
-    if (b) { b.pathPoints = pts; const ct = document.getElementById('ct-' + b.id); if (ct) fillCt(ct, b); sel(b.id); switchTab('bloc'); }
+    if (b) { b.pathPoints = pts; const ct = document.getElementById('ct-' + b.id); if (ct) fillBlockContent(ct, b); selectBlock(b.id); switchTab('bloc'); }
     saveSession();
     announce('Forme libre tracée — ' + pts.length + ' points. Ctrl+Z pour annuler.');
   } else { announce('Tracé annulé.'); }
@@ -812,7 +814,7 @@ function editFreeformPath(id) {
   if (!b || b.type !== 'freeform') return;
   b.pathPoints = [];
   const ct = document.getElementById('ct-' + b.id);
-  if (ct) fillCt(ct, b);
+  if (ct) fillBlockContent(ct, b);
   startFreeformDraw(id);
 }
 
@@ -825,7 +827,7 @@ function utag(txt, cls) {
 }
 
 /* ── DÉPLACEMENT AU CLAVIER ─────────────────────────────────────────────
-   Appelée depuis le listener keydown du wrapper .fb (blocks.js : buildEl)
+   Appelée depuis le listener keydown du wrapper .fb (blocks.js : buildBlockElement)
    et depuis le listener keydown unifié (ci-dessous).
 
    Pas de modificateur     → pas (ou grille si activée)
@@ -904,9 +906,9 @@ function moveBlockByKey(id, key, shift, resize) {
   /* Mettre à jour le aria-label du wrapper */
   if (typeof _updateBlockAriaLabel === 'function') _updateBlockAriaLabel(b);
 
-  updBP(); // léger grâce au cache _bpKey — toujours immédiat
+  updatePropertiesPanel(); // léger grâce au cache _bpKey — toujours immédiat
 
-  /* updTree et saveSession sont debouncés : inutile de les appeler à chaque
+  /* updateStructureTree et saveSession sont debouncés : inutile de les appeler à chaque
      répétition auto (typiquement 30-60 Hz). On déclenche en fin de frappe. */
   clearTimeout(_keyMoveTreeTimer);
   clearTimeout(_keyMoveSaveTimer);
@@ -916,7 +918,7 @@ function moveBlockByKey(id, key, shift, resize) {
 
   _keyMoveTreeTimer = setTimeout(() => {
     if (hasNoteAnchors || b.type === 'note') renumberNotes();
-    updTree();
+    updateStructureTree();
     _keyMoveActive = false; // fin de séquence → prochain appui = nouveau snapshot
   }, 200);
 
@@ -955,7 +957,7 @@ function useDrag(handle, { onStart, onMove, onEnd, guard } = {}) {
 function attachDrag(bar, el, b) {
   useDrag(bar, {
     guard: e => !!e.target.closest('.fb-del'),
-    onStart: e => { sel(b.id); snapshotState(); el.classList.add('moving'); return { startX: e.clientX, startY: e.clientY, origX: b.x, origY: b.y }; },
+    onStart: e => { selectBlock(b.id); snapshotState(); el.classList.add('moving'); return { startX: e.clientX, startY: e.clientY, origX: b.x, origY: b.y }; },
     onMove: (e, { startX, startY, origX, origY }) => {
       const pageIdx = Math.floor(b.y / PH);
       const isDecorative = b.type === 'shape' || b.type === 'freeform' || b.type === 'hr';
@@ -967,13 +969,13 @@ function attachDrag(bar, el, b) {
       b.y = snapVal(Math.max(minY, newY));
       el.style.left = b.x + 'px'; el.style.top = (b.y % PH) + 'px';
       if (Math.floor(b.y / PH) !== pageIdx) { const pg = getCanvasPage(Math.floor(b.y / PH)); if (pg) pg.appendChild(el); }
-      updBP();
+      updatePropertiesPanel();
     },
     onEnd: () => {
       el.classList.remove('moving');
       const hasNoteAnchors = b.type !== 'note' && RICH_TYPES.has(b.type) && document.getElementById('ct-' + b.id)?.querySelector('sup[data-note-id]');
       if (hasNoteAnchors || b.type === 'note') renumberNotes();
-      updTree(); saveSession();
+      updateStructureTree(); saveSession();
     },
   });
 }
@@ -996,7 +998,7 @@ function attachRsz(rsz, el, b) {
         el.classList.remove('fb-auto-h');
         el.style.minHeight = '';
       }
-      el.style.width = b.w + 'px'; el.style.height = b.h + 'px'; updBP();
+      el.style.width = b.w + 'px'; el.style.height = b.h + 'px'; updatePropertiesPanel();
     },
     onEnd: () => saveSession(),
   });
@@ -1012,7 +1014,7 @@ function attachRot(handle, el, b) {
     },
     onMove: (e, { cx, cy, startAngle, startRot }) => {
       b.shapeRotation = ((Math.round(startRot + Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI - startAngle) % 360) + 360) % 360;
-      const ct = document.getElementById('ct-' + b.id); if (ct) fillCt(ct, b); updBP();
+      const ct = document.getElementById('ct-' + b.id); if (ct) fillBlockContent(ct, b); updatePropertiesPanel();
     },
     onEnd: () => saveSession(),
   });
@@ -1020,9 +1022,9 @@ function attachRot(handle, el, b) {
 
 
 /* Clic sur le fond de la page = désélection */
-pageWrap.addEventListener('mousedown', e => { if (e.target === pageWrap) desel(); });
+pageWrap.addEventListener('mousedown', e => { if (e.target === pageWrap) deselectBlock(); });
 /* Touch : tap sur le fond = désélection */
-pageWrap.addEventListener('touchend', e => { if (e.target === pageWrap && e.changedTouches.length === 1) desel(); }, { passive: true });
+pageWrap.addEventListener('touchend', e => { if (e.target === pageWrap && e.changedTouches.length === 1) deselectBlock(); }, { passive: true });
 
 /* ── RÉGION LIVE — ANNONCES AT ── */
 function announce(msg, priority) {
@@ -1179,7 +1181,7 @@ document.addEventListener('keydown', e => {
           return;
         }
         currentRow.remove();
-        if (typeof updTree === 'function') updTree();
+        if (typeof updateStructureTree === 'function') updateStructureTree();
       }
       return;
     }
@@ -1197,11 +1199,11 @@ document.addEventListener('keydown', e => {
 
     if ((e.key === 'Delete' || e.key === 'Backspace') && typeof sid !== 'undefined' && sid && !isEditing) {
       e.preventDefault();
-      if (typeof rmB === 'function') rmB(sid);
+      if (typeof removeBlock === 'function') removeBlock(sid);
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'd' && typeof sid !== 'undefined' && sid && !isEditing) {
       e.preventDefault();
-      if (typeof dupB === 'function') dupB(sid);
+      if (typeof duplicateBlock === 'function') duplicateBlock(sid);
     }
     /* Flèches : déplacer (ou Ctrl+flèche = redimensionner) le bloc sélectionné */
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) &&
@@ -1212,7 +1214,7 @@ document.addEventListener('keydown', e => {
       }
     }
     if (e.key === 'Escape' && typeof sid !== 'undefined' && sid) {
-      if (typeof desel === 'function') desel();
+      if (typeof deselectBlock === 'function') deselectBlock();
     }
   }
 });

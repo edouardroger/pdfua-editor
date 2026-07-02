@@ -10,8 +10,8 @@ if (sessionRestored && blocks.length > 0) {
   requestAnimationFrame(() => {
     restoreSessionBlocks();
     refreshBlockFonts();
-    updUA();
-    updTree();
+    updateAccessibilityChecklist();
+    updateStructureTree();
     /* Mettre à jour la prévisualisation de la marge */
     const _mprev = document.getElementById('m-margin-preview');
     const _minp = document.getElementById('m-margin');
@@ -28,15 +28,15 @@ if (sessionRestored && blocks.length > 0) {
 requestAnimationFrame(() => {
   refreshBlockFonts();
   requestAnimationFrame(() => {
-    updUA();
-    updTree();
+    updateAccessibilityChecklist();
+    updateStructureTree();
     /* Guides de marge — premier affichage (les pages existent à ce stade) */
     rebuildMarginGuides();
   });
 });
 
 /* ── Listeners panneau droit, méta, grille ──
-   Définis dans blocks.js (qui possède bprop, rr, updUA, etc.). */
+   Définis dans blocks.js (qui possède bprop, refreshBlock, updateAccessibilityChecklist, etc.). */
 initPanelListeners();
 
 /* ── Sauvegarde session ── */
@@ -65,7 +65,7 @@ document.addEventListener('input', e => {
 });
 
 /* ── Badge PDF/UA dans la topbar ──
-   Appelé depuis updUA() après chaque vérification de conformité. */
+   Appelé depuis updateAccessibilityChecklist() après chaque vérification de conformité. */
 window._patchUABadge = function () {
   const badge = document.getElementById('tb-ua-status');
   const label = document.getElementById('tb-ua-label');

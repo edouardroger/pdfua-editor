@@ -18,7 +18,7 @@ function htmlToRuns(html) {
   if (!html) return [];
 
   /* Cache LRU léger — évite de recréer un div + parser le HTML à chaque rendu
-     de bloc (updTree, refreshBlockFonts, PDF build, export-code appellent tous
+     de bloc (updateStructureTree, refreshBlockFonts, PDF build, export-code appellent tous
      htmlToRuns sur le même richContent sans le modifier).
      32 entrées couvrent largement un document typique. */
   if (!htmlToRuns._cache) {
@@ -587,7 +587,7 @@ function insertNoteAnchor() {
   sup.className = 'note-anchor';
   sup.style.color = LINK_COLOR;
   sup.title = 'Note ' + noteRef + ' — cliquer pour sélectionner';
-  sup.onclick = e => { e.stopPropagation(); sel(noteId); switchTab('bloc'); };
+  sup.onclick = e => { e.stopPropagation(); selectBlock(noteId); switchTab('bloc'); };
 
   const liveRange = insertRange ? window.getSelection()?.getRangeAt(0) : null;
   if (liveRange) {
@@ -606,10 +606,10 @@ function insertNoteAnchor() {
   _syncRichFromDOM(b);
   /* Renuméroter toutes les notes selon l'ordre de lecture */
   renumberNotes();
-  updUA(); updTree();
+  updateAccessibilityChecklist(); updateStructureTree();
 
   /* Re-sélectionner le bloc note pour que l'utilisateur puisse saisir son texte */
-  setTimeout(() => { sel(noteId); switchTab('bloc'); }, 50);
+  setTimeout(() => { selectBlock(noteId); switchTab('bloc'); }, 50);
   announce('Note ' + noteRef + ' insérée. Rédigez le texte dans le bloc Note créé en bas de page.');
 }
 
@@ -751,11 +751,11 @@ document.addEventListener('keydown', e => {
 
 /* ── FONCTIONS SIMPLES — Pas d'abstraction ── */
 
-function uid() { return 'b' + (++cnt); }
+function generateBlockId() { return 'b' + (++cnt); }
 function labelForType(type) { return LABELS[type] || type; }
 function getCanvasPage(pageIdx) { return document.getElementById('cpage-' + pageIdx); }
 function docFont() { return (window.FONTS && window.FONTS.cssFamily) || "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"; }
-function refreshBlockFonts() { blocks.forEach(b => { const ct = document.getElementById('el-' + b.id)?.querySelector('.fb-ct'); if (ct) { fillCt(ct, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); } }); }
+function refreshBlockFonts() { blocks.forEach(b => { const ct = document.getElementById('el-' + b.id)?.querySelector('.fb-ct'); if (ct) { fillBlockContent(ct, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); } }); }
 /* ── Construit le DOM d'une page (label + div) sans l'attacher ni annoncer ── */
 function _createCanvasPage(pageIdx) {
   if (!pageOrientations[pageIdx]) pageOrientations[pageIdx] = 'portrait';
@@ -793,11 +793,11 @@ function setupPageDrop(pg, pageIdx) {
     }
   });
   pg.addEventListener('mousedown', e => {
-    if (e.target === pg) desel();
+    if (e.target === pg) deselectBlock();
   });
   /* Touch : tap sur le fond de la page = désélection */
   pg.addEventListener('touchend', e => {
-    if (e.target === pg && e.changedTouches.length === 1) desel();
+    if (e.target === pg && e.changedTouches.length === 1) deselectBlock();
   }, { passive: true });
 }
 
@@ -817,7 +817,7 @@ const tabNames = tabBtns.map(b => b.dataset.tab);
 
 /* Effets de bord par onglet — évite les if séparés dans switchTab */
 /* Effets de bord par onglet */
-const TAB_EFFECTS = { ua: () => { updUA(); updTree(); }, bloc: updBP };
+const TAB_EFFECTS = { ua: () => { updateAccessibilityChecklist(); updateStructureTree(); }, bloc: updatePropertiesPanel };
 
 function switchTab(name) {
   const idx = tabNames.indexOf(name); if (idx === -1) return;
@@ -931,13 +931,13 @@ document.querySelectorAll('.bsrc').forEach(btn => {
 function addBlock(type, x, y, extraProps, { noFocus = true, noSelect = false } = {}) {
   snapshotState();
   const d = BLOCK_META[type] || { w: 200, h: 60 };
-  const b = Object.assign(structuredClone(d), { id: uid(), type, x: Math.round(x), y: Math.round(y), order: blocks.length, content: d.content || '' }, extraProps || {});
+  const b = Object.assign(structuredClone(d), { id: generateBlockId(), type, x: Math.round(x), y: Math.round(y), order: blocks.length, content: d.content || '' }, extraProps || {});
   blocks.push(b);
   _blockMap_set(b);
   _invalidateOrdCache();
-  getCanvasPage(Math.floor(b.y / PH))?.appendChild(buildEl(b));
-  if (!noSelect) { sel(b.id, noFocus); switchTab('bloc'); }
-  updUA(); updTree(); saveSession();
+  getCanvasPage(Math.floor(b.y / PH))?.appendChild(buildBlockElement(b));
+  if (!noSelect) { selectBlock(b.id, noFocus); switchTab('bloc'); }
+  updateAccessibilityChecklist(); updateStructureTree(); saveSession();
   return b.id;
 }
 
@@ -966,7 +966,7 @@ function _updateBlockAriaLabel(b) {
   if (w) w.setAttribute('aria-label', _blockAriaLabel(b));
 }
 
-function buildEl(b) {
+function buildBlockElement(b) {
   const label = labelForType(b.type), localY = b.y % PH;
   const isDecorative = b.type === 'shape' || b.type === 'freeform';
   const isAutoH = AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight;
@@ -986,12 +986,12 @@ function buildEl(b) {
   bar.append(
     el('span', { cls: 'fb-bar-lbl', text: label }),
     ...(utagInfo ? [utag(utagInfo[0], utagInfo[1])] : []),
-    el('button', { cls: 'fb-dup', html: '<span aria-hidden="true">⧉</span>', attrs: { type: 'button', 'aria-label': 'Dupliquer le bloc ' + label }, on: { click: e => { e.stopPropagation(); dupB(b.id); } } }),
-    el('button', { cls: 'fb-del', html: '<span aria-hidden="true">×</span>', attrs: { type: 'button', 'aria-label': 'Supprimer le bloc ' + label }, on: { click: e => { e.stopPropagation(); rmB(b.id); } } })
+    el('button', { cls: 'fb-dup', html: '<span aria-hidden="true">⧉</span>', attrs: { type: 'button', 'aria-label': 'Dupliquer le bloc ' + label }, on: { click: e => { e.stopPropagation(); duplicateBlock(b.id); } } }),
+    el('button', { cls: 'fb-del', html: '<span aria-hidden="true">×</span>', attrs: { type: 'button', 'aria-label': 'Supprimer le bloc ' + label }, on: { click: e => { e.stopPropagation(); removeBlock(b.id); } } })
   );
   attachDrag(bar, wrapper, b);
   const ct = el('div', { cls: 'fb-ct', attrs: { id: 'ct-' + b.id } });
-  fillCt(ct, b);
+  fillBlockContent(ct, b);
   const rsz = el('div', { cls: 'fb-rsz', attrs: { 'aria-hidden': 'true' } });
   attachRsz(rsz, wrapper, b);
   wrapper.append(bar, ct, rsz);
@@ -1001,7 +1001,7 @@ function buildEl(b) {
   }
   /* Synchroniser la hauteur après insertion dans le DOM */
   if (isAutoH) requestAnimationFrame(() => _syncAutoHeight(b));
-  wrapper.addEventListener('mousedown', e => { if (e.target.closest('.fb-bar') || e.target === rsz) return; sel(b.id); });
+  wrapper.addEventListener('mousedown', e => { if (e.target.closest('.fb-bar') || e.target === rsz) return; selectBlock(b.id); });
 
   /* Clavier : focus sur le wrapper = sélection + déplacement aux flèches */
   wrapper.addEventListener('keydown', e => {
@@ -1021,7 +1021,7 @@ function buildEl(b) {
     if (e.key === 'Enter' || e.key === ' ') {
       if (active && active.closest('.fb-dup, .fb-del')) return;
       e.preventDefault();
-      sel(b.id);
+      selectBlock(b.id);
       if (typeof switchTab === 'function') switchTab('bloc');
       return;
     }
@@ -1045,7 +1045,7 @@ function buildEl(b) {
     wrapper.addEventListener('touchend', e => {
       if (_tMoved) return;
       if (e.target.closest('.fb-del, .fb-dup, .fb-bar, .fb-rsz, .fb-rot')) return;
-      sel(b.id);
+      selectBlock(b.id);
     }, { passive: true });
   })();
 
@@ -1108,7 +1108,7 @@ function _mkRichDiv(b, ariaLabel, style, className) {
 }
 
 /* ── Table de correspondance type → badge utag ─────────────────────────
-   Utilisée par buildEl pour insérer le badge dans la fb-bar.
+   Utilisée par buildBlockElement pour insérer le badge dans la fb-bar.
    Le cas 'img' est dynamique (dépend de b.alt / b.imgLinkUrl) : calculé
    dans _utagForBlock(). */
 const _UTAG_MAP = {
@@ -1442,7 +1442,7 @@ const FILL_CT = {
     fi.onchange = e => {
       const f = e.target.files[0]; if (!f) return;
       const reader = new FileReader();
-      reader.onload = ev => { b.imgData = ev.target.result; const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); updUA(); announce('Image chargée.'); };
+      reader.onload = ev => { b.imgData = ev.target.result; const c = document.getElementById('ct-' + b.id); if (c) fillBlockContent(c, b); updateAccessibilityChecklist(); announce('Image chargée.'); };
       reader.readAsDataURL(f);
     };
     const chooseBtn = document.createElement('button');
@@ -1533,7 +1533,7 @@ const FILL_CT = {
       btn.className = 'sb fb-table-btn';
       btn.textContent = label;
       btn.setAttribute('aria-label', ariaLabel);
-      btn.onclick = e => { e.stopPropagation(); onClick(); const c = document.getElementById('ct-' + b.id); if (c) fillCt(c, b); };
+      btn.onclick = e => { e.stopPropagation(); onClick(); const c = document.getElementById('ct-' + b.id); if (c) fillBlockContent(c, b); };
       return btn;
     };
     const addRowBtn = mkTableBtn('+ Ligne', 'Ajouter une ligne au tableau', () => {
@@ -1602,7 +1602,7 @@ const FILL_CT = {
       anchorHint.className = 'fb-note-anchor-hint';
       anchorHint.textContent = '\u2191 Aller \u00e0 l\u2019ancre dans le texte';
       anchorHint.title = 'Cliquer pour sélectionner le bloc texte parent';
-      anchorHint.onclick = e => { e.stopPropagation(); sel(b.anchorBlockId); switchTab('bloc'); };
+      anchorHint.onclick = e => { e.stopPropagation(); selectBlock(b.anchorBlockId); switchTab('bloc'); };
       ct.appendChild(anchorHint);
     }
 
@@ -1698,10 +1698,10 @@ const FILL_CT = {
 ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].forEach(t => { FILL_CT[t] = FILL_CT._heading; });
 ['ul', 'ol'].forEach(t => { FILL_CT[t] = FILL_CT._list; });
 
-function fillCt(ct, b) { ct.innerHTML = ''; const fn = FILL_CT[b.type]; if (fn) fn(ct, b); }
+function fillBlockContent(ct, b) { ct.innerHTML = ''; const fn = FILL_CT[b.type]; if (fn) fn(ct, b); }
 
 /* ── SÉLECTION ── */
-function sel(id, noFocus = false) {
+function selectBlock(id, noFocus = false) {
   /* Retirer la sélection du bloc précédent sans querySelectorAll global */
   if (sid && sid !== id) {
     const prevWrapper = document.getElementById('el-' + sid);
@@ -1718,10 +1718,10 @@ function sel(id, noFocus = false) {
   if (!noFocus && wrapper && !wrapper.contains(document.activeElement)) {
     wrapper.focus({ preventScroll: true });
   }
-  updBP();
+  updatePropertiesPanel();
 }
 
-function desel() {
+function deselectBlock() {
   if (sid) {
     const prevWrapper = document.getElementById('el-' + sid);
     prevWrapper?.classList.remove('sel');
@@ -1729,16 +1729,16 @@ function desel() {
   }
   sid = null;
   _updBP_lastSid = null; _updBP_lastKey = '';
-  $('bp-none').style.display = 'block';
-  $('bp-fields').style.display = 'none';
+  getEl('bp-none').style.display = 'block';
+  getEl('bp-fields').style.display = 'none';
 }
 
 
 /* RENUMÉROTATION DES NOTES : parcourt les blocs riches en ordre de lecture puis
    les <sup> DOM, renumérote les blocs note et met à jour sup + titres */
 function renumberNotes() {
-  /* ── 1. Numéroter dans l'ordre de lecture — réutilise ordB() (déjà trié) ── */
-  const readOrder = ordB();
+  /* ── 1. Numéroter dans l'ordre de lecture — réutilise readingOrderBlocks() (déjà trié) ── */
+  const readOrder = readingOrderBlocks();
 
   let counter = 0;
   readOrder.forEach(b => {
@@ -1848,8 +1848,8 @@ function deletePage(idx) {
     _pageLabelCache[i] = ''; // invalider le cache label pour les pages réindexées
     _updatePageLabel(i);
   }
-  if (sid && !blockById(sid)) desel();
-  rebuildGridOverlays(); updUA(); updTree(); saveSession();
+  if (sid && !blockById(sid)) deselectBlock();
+  rebuildGridOverlays(); updateAccessibilityChecklist(); updateStructureTree(); saveSession();
   announce('Page ' + (idx + 1) + ' supprimée. Ctrl+Z pour annuler.');
 }
 /* ── Helper : retire le <sup> d'ancre dans le bloc parent d'une note ── */
@@ -1860,7 +1860,7 @@ function _removeNoteAnchor(b) {
   _syncRichFromDOM(parent);
 }
 
-function rmB(id) {
+function removeBlock(id) {
   snapshotState();
   const b = blockById(id);
   if (b) _removeNoteAnchor(b);
@@ -1868,36 +1868,36 @@ function rmB(id) {
   _blockMap_delete(id);
   _invalidateOrdCache();
   document.getElementById('el-' + id)?.remove();
-  if (sid === id) desel();
+  if (sid === id) deselectBlock();
   /* Recalculer la numérotation dès qu'il reste des notes (ou qu'on vient d'en supprimer une) */
   if (blocks.some(x => x.type === 'note') || b?.type === 'note') renumberNotes();
   else _repositionNotes();
-  updUA(); updTree(); saveSession();
+  updateAccessibilityChecklist(); updateStructureTree(); saveSession();
   announce('Bloc ' + (b ? labelForType(b.type) : 'bloc') + ' supprimé. Ctrl+Z pour annuler.');
 }
 
-function dupB(id) {
+function duplicateBlock(id) {
   snapshotState();
   const orig = blockById(id); if (!orig) return;
   const copy = JSON.parse(JSON.stringify({ ...orig, _bmNode: undefined }));
-  copy.id = uid(); copy.x = orig.x + 16; copy.y = orig.y + 16; copy.order = blocks.length;
+  copy.id = generateBlockId(); copy.x = orig.x + 16; copy.y = orig.y + 16; copy.order = blocks.length;
   blocks.push(copy);
   _blockMap_set(copy);
   _invalidateOrdCache();
-  getCanvasPage(Math.floor(copy.y / PH))?.appendChild(buildEl(copy));
-  sel(copy.id); updUA(); updTree(); saveSession();
+  getCanvasPage(Math.floor(copy.y / PH))?.appendChild(buildBlockElement(copy));
+  selectBlock(copy.id); updateAccessibilityChecklist(); updateStructureTree(); saveSession();
   announce('Bloc dupliqué.');
 }
 
-function bprop(k, v) {
+function setBlockProp(key, value) {
   const b = blockById(sid); if (!b) return;
-  b[k] = v;
+  b[key] = value;
   b._v = (b._v || 0) + 1; // invalide le cache _bpKey en O(1)
-  _updBP_lastKey = '';     // forcer le re-fill au prochain updBP
-  if (k === 'alt' || k === 'linkText') rr(b.id);
+  _updBP_lastKey = '';     // forcer le re-fill au prochain updatePropertiesPanel
+  if (key === 'alt' || key === 'linkText') refreshBlock(b.id);
   /* Quand le type change (ex. h1→h2), mettre à jour le label visible dans la barre du bloc */
-  if (k === 'type') {
-    const newLabel = labelForType(v);
+  if (key === 'type') {
+    const newLabel = labelForType(value);
     const wrapper = document.getElementById('el-' + b.id);
     if (wrapper) {
       const lbl = wrapper.querySelector('.fb-bar-lbl');
@@ -1909,13 +1909,13 @@ function bprop(k, v) {
       if (del) del.setAttribute('aria-label', 'Supprimer le bloc ' + newLabel);
     }
   }
-  updUA(); saveSession();
+  updateAccessibilityChecklist(); saveSession();
 }
 
-function rr(id) {
+function refreshBlock(id) {
   const b = blockById(id); if (!b) return;
   const c = document.getElementById('ct-' + b.id);
-  if (c) { fillCt(c, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); }
+  if (c) { fillBlockContent(c, b); if (AUTO_HEIGHT_TYPES.has(b.type) && !b.manualHeight) requestAnimationFrame(() => _syncAutoHeight(b)); }
   /* Mettre à jour le badge utag dans la barre (tag peut changer pour img) */
   const wrapper = document.getElementById('el-' + b.id);
   if (wrapper) {
@@ -1958,25 +1958,25 @@ function applySz() {
   if (domEl) { domEl.style.width = b.w + 'px'; domEl.style.height = b.h + 'px'; }
 }
 
-function qa(d) {
+function alignBlock(direction) {
   const b = blockById(sid); if (!b) return;
   const pageIdx = Math.floor(b.y / PH), pw = pageW(pageIdx);
   const ALIGN = { l: () => ({ x: MAR }), r: () => ({ x: pw - MAR - b.w }), c: () => ({ x: Math.round((pw - b.w) / 2) }), t: () => ({ y: pageIdx * PH + MAR }) };
-  Object.assign(b, ALIGN[d]?.());
+  Object.assign(b, ALIGN[direction]?.());
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) { domEl.style.left = b.x + 'px'; domEl.style.top = (b.y % PH) + 'px'; }
-  updBP();
+  updatePropertiesPanel();
 }
 
 /* Gestion des calques (z-index visuel, indépendant de l'ordre de lecture PDF) */
-function chZ(d) {
+function changeLayer(delta) {
   const b = blockById(sid); if (!b) return;
   snapshotState();
-  const next = (b.zIndex || 0) + d;
+  const next = (b.zIndex || 0) + delta;
   b.zIndex = Math.max(-1, next);
   const domEl = document.getElementById('el-' + b.id);
   if (domEl) domEl.style.zIndex = b.zIndex;
-  updBP(); saveSession();
+  updatePropertiesPanel(); saveSession();
   announce('Calque : niveau ' + b.zIndex);
 }
 
@@ -1985,16 +1985,16 @@ function getZLabel(z) {
   return (z > 0 ? 'Au-dessus' : 'En dessous') + ' (' + (z > 0 ? '+' : '') + z + ')';
 }
 
-function chOrd(d) {
+function changeReadOrder(delta) {
   const b = blockById(sid); if (!b) return;
   snapshotState();
-  const sorted = ordB();
+  const sorted = readingOrderBlocks();
   const i = sorted.findIndex(x => x.id === sid);
-  const j = i + d; if (j < 0 || j >= sorted.length) return;
-  const o = sorted[j];
-  const tmp = b.order; b.order = o.order; o.order = tmp;
+  const j = i + delta; if (j < 0 || j >= sorted.length) return;
+  const target = sorted[j];
+  const tmp = b.order; b.order = target.order; target.order = tmp;
   _invalidateOrdCache();
-  updTree(); updBP();
+  updateStructureTree(); updatePropertiesPanel();
   saveSession();
 }
 
@@ -2010,7 +2010,7 @@ function syncOrderToPosition() {
     })
     .forEach((b, i) => { b.order = i; });
   _invalidateOrdCache();
-  updTree(); updBP(); saveSession();
+  updateStructureTree(); updatePropertiesPanel(); saveSession();
   announce('Ordre de lecture synchronisé sur la position des blocs.');
 }
 
@@ -2020,15 +2020,15 @@ const PANEL_BINDINGS = [
     panel: 'bp-alt',
     types: ['img'],
     fill: b => {
-      $('bav').value = b.alt || '';
-      $('bimglink').value = b.imgLinkUrl || '';
+      getEl('bav').value = b.alt || '';
+      getEl('bimglink').value = b.imgLinkUrl || '';
     },
   },
   {
     panel: 'bp-fontsize',
     types: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'quote', 'note', 'aside'],
     fill: b => {
-      const inp = $('bfontsize');
+      const inp = getEl('bfontsize');
       if (inp) inp.value = b.fontSize != null ? b.fontSize : '';
     },
   },
@@ -2036,39 +2036,39 @@ const PANEL_BINDINGS = [
     panel: 'bp-indent',
     types: ['p'],
     fill: b => {
-      const inp = $('btextindent');
+      const inp = getEl('btextindent');
       if (inp) inp.value = b.textIndent != null ? b.textIndent : 0;
-      const lbl = $('btextindent-val');
+      const lbl = getEl('btextindent-val');
       if (lbl) lbl.textContent = (b.textIndent || 0) + ' pt';
     },
   },
   {
     panel: 'bp-lnk',
     types: ['link'],
-    fill: b => { $('blt').value = b.linkText || ''; $('blu').value = b.linkUrl || ''; },
+    fill: b => { getEl('blt').value = b.linkText || ''; getEl('blu').value = b.linkUrl || ''; },
   },
   {
     panel: 'bp-hlv',
     types: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    fill: b => { $('bhlv').value = b.type; },
+    fill: b => { getEl('bhlv').value = b.type; },
   },
   {
     panel: 'bp-bookmark',
     types: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    fill: b => { $('bbookmark').checked = (b.bookmark !== false); },
+    fill: b => { getEl('bbookmark').checked = (b.bookmark !== false); },
   },
   {
     panel: 'bp-quote',
     types: ['quote'],
-    fill: b => { $('bqsrc').value = b.quoteSource || ''; },
+    fill: b => { getEl('bqsrc').value = b.quoteSource || ''; },
   },
   {
     panel: 'bp-note',
     types: ['note'],
     fill: b => {
-      $('bnref').value = b.noteRef || '';
+      getEl('bnref').value = b.noteRef || '';
       /* Désactiver la modification du numéro si la note est ancrée */
-      const inp = $('bnref');
+      const inp = getEl('bnref');
       if (inp) {
         inp.readOnly = !!b.anchorBlockId;
         inp.title = b.anchorBlockId ? 'Numéro géré automatiquement (note ancrée)' : '';
@@ -2080,13 +2080,13 @@ const PANEL_BINDINGS = [
     panel: 'bp-form',
     types: ['form-text', 'form-textarea', 'form-checkbox', 'form-radio', 'form-select'],
     fill: b => {
-      $('bform-label').value = b.formLabel || '';
-      $('bform-placeholder').value = b.formPlaceholder || '';
-      $('bform-default').value = b.formDefaultValue || '';
-      $('bform-required').checked = !!b.formRequired;
-      $('bform-readonly').checked = !!b.formReadonly;
-      $('bform-checked').checked = !!b.formChecked;
-      $('bform-options').value = b.formOptions || '';
+      getEl('bform-label').value = b.formLabel || '';
+      getEl('bform-placeholder').value = b.formPlaceholder || '';
+      getEl('bform-default').value = b.formDefaultValue || '';
+      getEl('bform-required').checked = !!b.formRequired;
+      getEl('bform-readonly').checked = !!b.formReadonly;
+      getEl('bform-checked').checked = !!b.formChecked;
+      getEl('bform-options').value = b.formOptions || '';
       const isCheckbox = b.type === 'form-checkbox';
       const isRadio = b.type === 'form-radio';
       const isSelect = b.type === 'form-select';
@@ -2104,21 +2104,21 @@ const PANEL_BINDINGS = [
   {
     panel: 'bp-aside',
     types: ['aside'],
-    fill: b => { $('basidestyle').value = b.asideStyle || 'info'; },
+    fill: b => { getEl('basidestyle').value = b.asideStyle || 'info'; },
   },
   {
     panel: 'bp-shape',
     types: ['shape'],
     fill: b => {
-      $('bshapekind').value = b.shapeKind || 'circle';
+      getEl('bshapekind').value = b.shapeKind || 'circle';
       /* Couleur de remplissage */
       _fillColorWrap('bshapecolor-wrap', 'bshapecolor', b.shapeColor || '#000091', 'shapeColor');
-      const transpChk = $('bshapetransparent');
+      const transpChk = getEl('bshapetransparent');
       if (transpChk) transpChk.checked = !!b.shapeFillNone;
       setSlider('bshapeopacity', b.shapeOpacity ?? 1, v => Math.round(v * 100) + '%');
       setSlider('bshaperotation', b.shapeRotation || 0, v => v + '°');
       /* Bordure */
-      const borderChk = $('bshapeborder');
+      const borderChk = getEl('bshapeborder');
       if (borderChk) borderChk.checked = !!b.shapeBorderEnabled;
       _fillColorWrap('bshapebordercolor-wrap', 'bshapebordercolor', b.shapeBorderColor || '#000091', 'shapeBorderColor');
       setSlider('bshapeborderwidth', b.shapeBorderWidth || 2, v => v + 'px');
@@ -2132,35 +2132,35 @@ const PANEL_BINDINGS = [
       setSlider('bffopacity', b.shapeOpacity ?? 1, v => Math.round(v * 100) + '%');
       setSlider('bffrotation', b.shapeRotation || 0, v => v + '°');
       setSlider('bffstroke', b.strokeWidth || 2, v => v + 'px');
-      const fill = $('bfffill'); if (fill) fill.checked = !!b.shapeFilled;
-      const closed = $('bffclosed'); if (closed) closed.checked = b.pathClosed !== false;
+      const fill = getEl('bfffill'); if (fill) fill.checked = !!b.shapeFilled;
+      const closed = getEl('bffclosed'); if (closed) closed.checked = b.pathClosed !== false;
     },
   },
   {
     panel: 'bp-list',
     types: ['ul', 'ol'],
-    fill: b => { const chk = $('blistnobullet'); if (chk) chk.checked = !!b.listNoBullet; },
+    fill: b => { const chk = getEl('blistnobullet'); if (chk) chk.checked = !!b.listNoBullet; },
   },
   {
     panel: 'bp-chart',
     types: ['chart'],
     fill: b => {
-      $('bchartkind').value = b.chartKind || 'pie';
-      $('bcharttitle').value = b.chartTitle || '';
-      $('bchartalt').value = b.alt || '';
+      getEl('bchartkind').value = b.chartKind || 'pie';
+      getEl('bcharttitle').value = b.chartTitle || '';
+      getEl('bchartalt').value = b.alt || '';
       _chartRebuildRows(b);
     },
   },
 ];
 
-/* Raccourcis internes à updBP */
-const $ = id => document.getElementById(id);
-const _show = (id, visible) => { const el = $(id); if (el) el.style.display = visible ? '' : 'none'; };
+/* Raccourcis internes à updatePropertiesPanel */
+const getEl = id => document.getElementById(id);
+const _show = (id, visible) => { const el = getEl(id); if (el) el.style.display = visible ? '' : 'none'; };
 
 function setSlider(id, value, fmt) {
-  const input = $(id); if (!input) return;
+  const input = getEl(id); if (!input) return;
   input.value = value;
-  const lbl = $(id + '-val'); if (lbl) lbl.textContent = fmt(value);
+  const lbl = getEl(id + '-val'); if (lbl) lbl.textContent = fmt(value);
 }
 
 /**
@@ -2168,65 +2168,65 @@ function setSlider(id, value, fmt) {
  * Si le sélecteur existe déjà (même id), met à jour sa valeur.
  */
 function _fillColorWrap(wrapperId, selectId, value, propKey) {
-  const wrap = $(wrapperId);
+  const wrap = getEl(wrapperId);
   if (!wrap) return;
-  let sel = $(selectId);
+  let sel = getEl(selectId);
   if (sel) {
     /* Mettre à jour la valeur existante */
     const resolved = paletteClosest(value);
     sel.value = resolved;
-    const swatch = $(selectId + '-swatch');
+    const swatch = getEl(selectId + '-swatch');
     if (swatch) swatch.style.background = resolved;
   } else {
     /* Créer le sélecteur la première fois */
     wrap.innerHTML = '';
     const widget = makeColorSelect(selectId, value, hex => {
-      bprop(propKey, hex);
-      rr(sid);
+      setBlockProp(propKey, hex);
+      refreshBlock(sid);
     });
     wrap.appendChild(widget);
   }
 }
 
-/* Cache pour updBP : on ne re-remplit les panneaux que si le bloc sélectionné ou ses
+/* Cache pour updatePropertiesPanel : on ne re-remplit les panneaux que si le bloc sélectionné ou ses
    données ont changé. La clé est un snapshot JSON léger des champs susceptibles de varier. */
 let _updBP_lastSid = null;
 let _updBP_lastKey = '';
 
 /* ── Cache invalidation du panneau de propriétés ──
-   Au lieu de concaténer ~35 champs en string à chaque updBP(),
-   on utilise un compteur de version b._v incrémenté dans bprop().
+   Au lieu de concaténer ~35 champs en string à chaque updatePropertiesPanel(),
+   on utilise un compteur de version b._v incrémenté dans setBlockProp().
    La clé devient "<id>|<_v>|<blocks.length>|<readPos>" — O(1) à construire. */
 function _bpKey(b) {
   if (!b) return '';
-  const readPos = ordB().findIndex(x => x.id === b.id);
+  const readPos = readingOrderBlocks().findIndex(x => x.id === b.id);
   return `${b.id}|${b._v ?? 0}|${blocks.length}|${readPos}`;
 }
 
-function updBP() {
+function updatePropertiesPanel() {
   const b = blockById(sid);
-  $('bp-none').style.display = b ? 'none' : 'block';
-  const _zLbl = $('z-level-lbl'); if (_zLbl && b) _zLbl.textContent = getZLabel(b.zIndex || 0);
-  $('bp-fields').style.display = b ? 'block' : 'none';
+  getEl('bp-none').style.display = b ? 'none' : 'block';
+  const _zLbl = getEl('z-level-lbl'); if (_zLbl && b) _zLbl.textContent = getZLabel(b.zIndex || 0);
+  getEl('bp-fields').style.display = b ? 'block' : 'none';
   if (!b) {
     /* Annoncer la désélection */
-    const sa = $('sel-announce');
+    const sa = getEl('sel-announce');
     if (sa) sa.textContent = '';
     _updBP_lastSid = null; _updBP_lastKey = '';
     return;
   }
 
   const pageNum = Math.floor(b.y / PH) + 1;
-  const readPos = ordB().findIndex(x => x.id === b.id) + 1;
+  const readPos = readingOrderBlocks().findIndex(x => x.id === b.id) + 1;
 
   /* Mise à jour légère toujours effectuée (géométrie + position lecture) */
-  $('bx').value = Math.round(b.x); $('by').value = Math.round(b.y);
-  $('bw').value = Math.round(b.w); $('bh').value = Math.round(b.h);
-  $('oi').textContent = `Page ${pageNum} — Position lecture : ${readPos} / ${blocks.length}`;
+  getEl('bx').value = Math.round(b.x); getEl('by').value = Math.round(b.y);
+  getEl('bw').value = Math.round(b.w); getEl('bh').value = Math.round(b.h);
+  getEl('oi').textContent = `Page ${pageNum} — Position lecture : ${readPos} / ${blocks.length}`;
 
   /* Annonce AT uniquement au changement de sélection */
   if (_updBP_lastSid !== sid) {
-    const sa = $('sel-announce');
+    const sa = getEl('sel-announce');
     if (sa) {
       const label = labelForType(b.type);
       const preview = b.content ? ' : ' + b.content.replace(/\n/g, ' ').slice(0, 40) : '';
@@ -2237,7 +2237,7 @@ function updBP() {
   /* Panneaux contextuels : re-remplir uniquement si la clé a changé */
   const currentKey = _bpKey(b);
   if (currentKey !== _updBP_lastKey) {
-    PANEL_BINDINGS.forEach(({ panel, types, fill }) => { const on = types.includes(b.type); $(panel).style.display = on ? 'block' : 'none'; if (on) fill(b); });
+    PANEL_BINDINGS.forEach(({ panel, types, fill }) => { const on = types.includes(b.type); getEl(panel).style.display = on ? 'block' : 'none'; if (on) fill(b); });
     _updBP_lastKey = currentKey;
   }
   _updBP_lastSid = sid;
@@ -2245,9 +2245,9 @@ function updBP() {
 
 /* ── CHECKLIST PDF/UA ── */
 let _updUA_lastKey = '';
-function updUA() {
+function updateAccessibilityChecklist() {
   const meta = _collectMeta();
-  const s = ordB();
+  const s = readingOrderBlocks();
 
   /* Fingerprint rapide — si l'état pertinent pour la checklist n'a pas changé,
      on évite de reconstruire le DOM (innerHTML + map = coûteux sur gros docs) */
@@ -2306,7 +2306,7 @@ Object.assign(TREE_LABELS, {
   chart: b => ({ tg: 'Figure', co: (b.chartKind || 'pie') + (b.chartTitle ? ' — ' + b.chartTitle.slice(0, 18) : '') }),
 });
 
-function updTree() {
+function updateStructureTree() {
   const tree = document.getElementById('tagt');
   /* Nœud racine et nœud de fermeture (statiques, pas de listeners) */
   const mkStatic = html => Object.assign(document.createElement('div'),
@@ -2317,7 +2317,7 @@ function updTree() {
   const frag = document.createDocumentFragment();
   frag.appendChild(root);
 
-  ordB().forEach((b, i) => {
+  readingOrderBlocks().forEach((b, i) => {
     const { tg, co } = TREE_LABELS[b.type]?.(b) ?? { tg: b.type, co: '' };
     const n = document.createElement('div');
     n.className = 'tn';
@@ -2325,8 +2325,8 @@ function updTree() {
     n.setAttribute('tabindex', '0');
     n.style.paddingLeft = '14px';
     n.setAttribute('aria-label', `Nœud ${i + 1} : ${labelForType(b.type)}${b.content ? ' — ' + b.content.slice(0, 30) : ''}`);
-    n.onclick = () => { sel(b.id); switchTab('bloc'); };
-    n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel(b.id); switchTab('bloc'); } };
+    n.onclick = () => { selectBlock(b.id); switchTab('bloc'); };
+    n.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectBlock(b.id); switchTab('bloc'); } };
     n.innerHTML = `<span aria-hidden="true" style="color:#9ca3af">${String(i + 1).padStart(2, '0')} </span><span class="tg" aria-hidden="true">&lt;${tg}&gt;</span> <span class="tc" aria-hidden="true">${_esc(co)}</span>`;
     frag.appendChild(n);
   });
@@ -2335,20 +2335,20 @@ function updTree() {
   tree.replaceChildren(frag);
 }
 
-/* ── Versions debounce de updUA et updTree ─────────────────────────────────
+/* ── Versions debounce de updateAccessibilityChecklist et updateStructureTree ─────────────────────────────────
    Ces fonctions reconstruisent tout l'arbre et recalculent tous les checks
    PDF/UA. Sur un document dense ou lors d'une frappe rapide, les appeler en
    rafale est coûteux. Un debounce de 150 ms regroupe les appels successifs
    en un seul rendu, sans impacter la réactivité perçue. */
 let _uaTimer = null, _treeTimer = null;
-const _updUA = updUA;
-const _updTree = updTree;
+const _updUA = updateAccessibilityChecklist;
+const _updTree = updateStructureTree;
 
-/* Cache fingerprint pour updTree : on ne reconstruit l'arbre DOM que si la
+/* Cache fingerprint pour updateStructureTree : on ne reconstruit l'arbre DOM que si la
    structure du document a changé (types, contenu, ordre, nombre de blocs). */
 let _treeLastKey = '';
 function _updTreeCached() {
-  const s = ordB();
+  const s = readingOrderBlocks();
   const key = s.map(b =>
     `${b.id}:${b.type}:${(b.content || '').slice(0, 20)}:${b.alt ?? ''}:` +
     `${b.linkText ?? ''}:${b.noteRef ?? ''}:${b.asideStyle ?? ''}:` +
@@ -2359,12 +2359,12 @@ function _updTreeCached() {
   _updTree();
 }
 
-updUA = () => { clearTimeout(_uaTimer); _uaTimer = setTimeout(_updUA, 150); };
-updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCached, 150); };
+updateAccessibilityChecklist = () => { clearTimeout(_uaTimer); _uaTimer = setTimeout(_updUA, 150); };
+updateStructureTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCached, 150); };
 
 /* ADAPTATIONS TACTILES — touch events, zoom canvas, tiroir mobile (≤1100px ou pointer:coarse) */
 /* BOTTOM SHEET (≤640px), piloté par innerWidth (pas matchMedia, pour DevTools mobile) :
-   tap/swipe bas sur .ptabs bascule ; switchTab()/sel() ouvrent ; clic fond canvas
+   tap/swipe bas sur .ptabs bascule ; switchTab()/selectBlock() ouvrent ; clic fond canvas
    ou resize > 640px ferment */
 (function initBottomSheet() {
   const _panel = document.getElementById('panel');
@@ -2441,10 +2441,10 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
     openSheet();
   };
 
-  /* ── Patch sel() : ouvre le panneau à chaque sélection de bloc ── */
-  const _origSel = sel;
-  sel = function (id, noFocus) {
-    _origSel(id, noFocus);
+  /* ── Patch selectBlock() : ouvre le panneau à chaque sélection de bloc ── */
+  const _origSelectBlock = selectBlock;
+  selectBlock = function (id, noFocus) {
+    _origSelectBlock(id, noFocus);
     openSheet();
   };
 
@@ -2515,7 +2515,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
     const bar = fbEl.querySelector('.fb-bar');
     if (bar) _addTouchToHandle(bar, {
       guard: e => !!e.target?.closest?.('.fb-del, .fb-dup'),
-      onStart: e => { const b = getB(); if (!b) return null; sel(b.id); snapshotState(); fbEl.classList.add('moving'); return { sx: e.clientX, sy: e.clientY, ox: b.x, oy: b.y, b }; },
+      onStart: e => { const b = getB(); if (!b) return null; selectBlock(b.id); snapshotState(); fbEl.classList.add('moving'); return { sx: e.clientX, sy: e.clientY, ox: b.x, oy: b.y, b }; },
       onMove: (e, ctx) => {
         if (!ctx?.b) return; const { sx, sy, ox, oy, b } = ctx;
         const pi = Math.floor(b.y / PH);
@@ -2528,7 +2528,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
         fbEl.style.left = b.x + 'px'; fbEl.style.top = (b.y % PH) + 'px';
         const ni = Math.floor(b.y / PH);
         if (ni !== pi) { const pg = getCanvasPage(ni); if (pg) pg.appendChild(fbEl); }
-        updBP();
+        updatePropertiesPanel();
       },
       onEnd: (e, ctx) => {
         if (!ctx?.b) return;
@@ -2536,7 +2536,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
         const { b } = ctx;
         const hasAnchors = b.type !== 'note' && RICH_TYPES.has(b.type) && document.getElementById('ct-' + b.id)?.querySelector('sup[data-note-id]');
         if (hasAnchors || b.type === 'note') renumberNotes();
-        updTree(); saveSession();
+        updateStructureTree(); saveSession();
       },
     });
 
@@ -2552,7 +2552,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
         const minH = isDecorative ? 1 : 28;
         b.w = Math.max(minW, Math.min(pageW(Math.floor(b.y / PH)) - mar - b.x, snapVal(sw + (e.clientX - sx))));
         b.h = Math.max(minH, snapVal(sh + (e.clientY - sy)));
-        fbEl.style.width = b.w + 'px'; fbEl.style.height = b.h + 'px'; updBP();
+        fbEl.style.width = b.w + 'px'; fbEl.style.height = b.h + 'px'; updatePropertiesPanel();
       },
       onEnd: () => saveSession(),
     });
@@ -2569,7 +2569,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
       onMove: (e, { cx, cy, sa, sr, b }) => {
         if (!b) return;
         b.shapeRotation = ((Math.round(sr + Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI - sa) % 360) + 360) % 360;
-        const ct = document.getElementById('ct-' + b.id); if (ct) fillCt(ct, b); updBP();
+        const ct = document.getElementById('ct-' + b.id); if (ct) fillBlockContent(ct, b); updatePropertiesPanel();
       },
       onEnd: () => saveSession(),
     });
@@ -2607,7 +2607,7 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
 
   /* ── 3. SCROLL AUTOMATIQUE vers le bloc sélectionné ──
 
-  /* L'arbre de tags utilise n.onclick → on le surcharge dans updTree.
+  /* L'arbre de tags utilise n.onclick → on le surcharge dans updateStructureTree.
      On réécrit la partie onclick après chaque reconstruction de l'arbre
      via un MutationObserver sur #tagt. */
   const tagt = document.getElementById('tagt');
@@ -2719,9 +2719,8 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
 
   /* ── 6. BANNIÈRE INFO — première visite sur mobile ── */
   if (IS_TOUCH && window.matchMedia('(max-width: 768px)').matches && !sessionStorage.getItem('mob_ok')) {
-    const ban = document.createElement('div');
+    const ban = document.createElement('p');
     ban.id = 'mob-info-banner';
-    ban.setAttribute('role', 'alert');
     ban.innerHTML = '📱 <strong>Mode mobile</strong> — tapez un bloc dans la barre latérale pour l\'ajouter. Pincez le canvas pour zoomer.';
     const cls = document.createElement('button');
     cls.type = 'button'; cls.className = 'mob-info-banner-close'; cls.setAttribute('aria-label', 'Fermer'); cls.textContent = '×';
@@ -2734,145 +2733,145 @@ updTree = () => { clearTimeout(_treeTimer); _treeTimer = setTimeout(_updTreeCach
 /* INIT PANEL LISTENERS — branche les listeners du panneau droit (Bloc/Méta/Export/Grille),
    appelée depuis init.js une fois le DOM prêt */
 function initPanelListeners() {
-  const g = id => document.getElementById(id);
-  const on = (id, evt, fn) => g(id)?.addEventListener(evt, fn);
+  const byId = id => document.getElementById(id);
+  const bind = (id, evt, fn) => byId(id)?.addEventListener(evt, fn);
 
   /* ── Méta ── */
-  on('m-title', 'input', () => updUA());
-  on('m-lang', 'change', () => updUA());
-  on('m-font', 'change', function () { window.loadFont(this.value).catch(err => console.error(err)); });
+  bind('m-title', 'input', () => updateAccessibilityChecklist());
+  bind('m-lang', 'change', () => updateAccessibilityChecklist());
+  bind('m-font', 'change', function () { window.loadFont(this.value).catch(err => console.error(err)); });
 
   /* ── Grille ── */
-  on('grid-snap', 'change', function () { toggleGrid(this.checked, undefined, undefined); });
-  on('grid-show', 'change', function () { toggleGrid(undefined, this.checked, undefined); });
-  on('grid-size', 'change', function () { toggleGrid(undefined, undefined, parseInt(this.value)); });
+  bind('grid-snap', 'change', function () { toggleGrid(this.checked, undefined, undefined); });
+  bind('grid-show', 'change', function () { toggleGrid(undefined, this.checked, undefined); });
+  bind('grid-size', 'change', function () { toggleGrid(undefined, undefined, parseInt(this.value)); });
 
   /* ── Géométrie ── */
-  on('bx', 'input', () => applyPos());
-  on('by', 'input', () => applyPos());
-  on('bw', 'input', () => applySz());
-  on('bh', 'input', () => applySz());
+  bind('bx', 'input', () => applyPos());
+  bind('by', 'input', () => applyPos());
+  bind('bw', 'input', () => applySz());
+  bind('bh', 'input', () => applySz());
 
   /* ── Typographie ── */
-  on('bfontsize', 'input', function () {
-    bprop('fontSize', this.value ? +this.value : undefined); rr(sid);
+  bind('bfontsize', 'input', function () {
+    setBlockProp('fontSize', this.value ? +this.value : undefined); refreshBlock(sid);
   });
   document.querySelector('#bp-fontsize .sb[title="Remettre la taille par défaut"]')
-    ?.addEventListener('click', () => { bprop('fontSize', undefined); g('bfontsize').value = ''; rr(sid); });
+    ?.addEventListener('click', () => { setBlockProp('fontSize', undefined); byId('bfontsize').value = ''; refreshBlock(sid); });
 
   /* ── Alignement ── */
-  const alignRow = g('lbl-align');
+  const alignRow = byId('lbl-align');
   if (alignRow) {
     const dirs = ['l', 'c', 'r', 't'];
-    [...alignRow.querySelectorAll('.sb')].forEach((btn, i) => btn.addEventListener('click', () => qa(dirs[i])));
+    [...alignRow.querySelectorAll('.sb')].forEach((btn, i) => btn.addEventListener('click', () => alignBlock(dirs[i])));
   }
 
   /* ── Ordre de lecture ── */
   (function () {
     /* Remonter depuis #oi jusqu'au .brow frère précédent */
-    const oiEl = g('oi');
+    const oiEl = byId('oi');
     const brow = oiEl?.closest('.ps')?.querySelector('.brow');
     if (brow) {
       const [btnUp, btnDown] = brow.querySelectorAll('.sb');
-      btnUp?.addEventListener('click', () => chOrd(-1));
-      btnDown?.addEventListener('click', () => chOrd(1));
+      btnUp?.addEventListener('click', () => changeReadOrder(-1));
+      btnDown?.addEventListener('click', () => changeReadOrder(1));
     }
-    on('btn-sync-order', 'click', () => syncOrderToPosition());
+    bind('btn-sync-order', 'click', () => syncOrderToPosition());
   })();
 
   /* ── Calque ── */
   (function () {
-    const zEl = g('z-level-lbl');
+    const zEl = byId('z-level-lbl');
     const brow = zEl?.closest('.ps')?.querySelector('.brow');
     if (brow) {
       const [btnUp, btnDown] = brow.querySelectorAll('.sb');
-      btnUp?.addEventListener('click', () => chZ(1));
-      btnDown?.addEventListener('click', () => chZ(-1));
+      btnUp?.addEventListener('click', () => changeLayer(1));
+      btnDown?.addEventListener('click', () => changeLayer(-1));
     }
   })();
 
   /* ── Image ── */
-  on('bav', 'input', function () { bprop('alt', this.value); });
-  on('bimglink', 'input', function () { bprop('imgLinkUrl', this.value); rr(sid); });
+  bind('bav', 'input', function () { setBlockProp('alt', this.value); });
+  bind('bimglink', 'input', function () { setBlockProp('imgLinkUrl', this.value); refreshBlock(sid); });
 
   /* ── Lien ── */
-  on('blt', 'input', function () { bprop('linkText', this.value); });
-  on('blu', 'input', function () { bprop('linkUrl', this.value); });
+  bind('blt', 'input', function () { setBlockProp('linkText', this.value); });
+  bind('blu', 'input', function () { setBlockProp('linkUrl', this.value); });
 
   /* ── Retrait de première ligne ── */
-  on('btextindent', 'input', function () {
-    g('btextindent-val').textContent = this.value + ' pt';
-    bprop('textIndent', parseInt(this.value)); rr(sid);
+  bind('btextindent', 'input', function () {
+    byId('btextindent-val').textContent = this.value + ' pt';
+    setBlockProp('textIndent', parseInt(this.value)); refreshBlock(sid);
   });
 
   /* ── Liste ── */
-  on('blistnobullet', 'change', function () { bprop('listNoBullet', this.checked); rr(sid); });
+  bind('blistnobullet', 'change', function () { setBlockProp('listNoBullet', this.checked); refreshBlock(sid); });
 
   /* ── Titre ── */
-  on('bhlv', 'change', function () { bprop('type', this.value); rr(sid); });
+  bind('bhlv', 'change', function () { setBlockProp('type', this.value); refreshBlock(sid); });
 
   /* ── Signet ── */
-  on('bbookmark', 'change', function () { bprop('bookmark', this.checked); });
+  bind('bbookmark', 'change', function () { setBlockProp('bookmark', this.checked); });
 
   /* ── Citation ── */
-  on('bqsrc', 'input', function () { bprop('quoteSource', this.value); });
+  bind('bqsrc', 'input', function () { setBlockProp('quoteSource', this.value); });
 
   /* ── Note ── */
-  on('bnref', 'input', function () { bprop('noteRef', this.value); });
+  bind('bnref', 'input', function () { setBlockProp('noteRef', this.value); });
 
   /* ── Formulaire ── */
-  on('bform-label', 'input', function () { bprop('formLabel', this.value); rr(sid); });
-  on('bform-placeholder', 'input', function () { bprop('formPlaceholder', this.value); rr(sid); });
-  on('bform-default', 'input', function () { bprop('formDefaultValue', this.value); rr(sid); });
-  on('bform-options', 'input', function () { bprop('formOptions', this.value); rr(sid); });
-  on('bform-checked', 'change', function () { bprop('formChecked', this.checked); rr(sid); });
-  on('bform-required', 'change', function () { bprop('formRequired', this.checked); rr(sid); });
-  on('bform-readonly', 'change', function () { bprop('formReadonly', this.checked); rr(sid); });
+  bind('bform-label', 'input', function () { setBlockProp('formLabel', this.value); refreshBlock(sid); });
+  bind('bform-placeholder', 'input', function () { setBlockProp('formPlaceholder', this.value); refreshBlock(sid); });
+  bind('bform-default', 'input', function () { setBlockProp('formDefaultValue', this.value); refreshBlock(sid); });
+  bind('bform-options', 'input', function () { setBlockProp('formOptions', this.value); refreshBlock(sid); });
+  bind('bform-checked', 'change', function () { setBlockProp('formChecked', this.checked); refreshBlock(sid); });
+  bind('bform-required', 'change', function () { setBlockProp('formRequired', this.checked); refreshBlock(sid); });
+  bind('bform-readonly', 'change', function () { setBlockProp('formReadonly', this.checked); refreshBlock(sid); });
 
   /* ── Encadré ── */
-  on('basidestyle', 'change', function () { bprop('asideStyle', this.value); rr(sid); });
+  bind('basidestyle', 'change', function () { setBlockProp('asideStyle', this.value); refreshBlock(sid); });
 
   /* ── Forme décorative ── */
-  on('bshapekind', 'change', function () { bprop('shapeKind', this.value); rr(sid); });
-  on('bshapetransparent', 'change', function () { bprop('shapeFillNone', this.checked); rr(sid); });
-  on('bshapeopacity', 'input', function () {
-    g('bshapeopacity-val').textContent = Math.round(this.value * 100) + '%';
-    bprop('shapeOpacity', parseFloat(this.value)); rr(sid);
+  bind('bshapekind', 'change', function () { setBlockProp('shapeKind', this.value); refreshBlock(sid); });
+  bind('bshapetransparent', 'change', function () { setBlockProp('shapeFillNone', this.checked); refreshBlock(sid); });
+  bind('bshapeopacity', 'input', function () {
+    byId('bshapeopacity-val').textContent = Math.round(this.value * 100) + '%';
+    setBlockProp('shapeOpacity', parseFloat(this.value)); refreshBlock(sid);
   });
-  on('bshaperotation', 'input', function () {
-    g('bshaperotation-val').textContent = this.value + '°';
-    bprop('shapeRotation', parseInt(this.value)); rr(sid);
+  bind('bshaperotation', 'input', function () {
+    byId('bshaperotation-val').textContent = this.value + '°';
+    setBlockProp('shapeRotation', parseInt(this.value)); refreshBlock(sid);
   });
-  on('bshapeborder', 'change', function () { bprop('shapeBorderEnabled', this.checked); rr(sid); });
-  on('bshapeborderwidth', 'input', function () {
-    g('bshapeborderwidth-val').textContent = this.value + 'px';
-    bprop('shapeBorderWidth', parseInt(this.value)); rr(sid);
+  bind('bshapeborder', 'change', function () { setBlockProp('shapeBorderEnabled', this.checked); refreshBlock(sid); });
+  bind('bshapeborderwidth', 'input', function () {
+    byId('bshapeborderwidth-val').textContent = this.value + 'px';
+    setBlockProp('shapeBorderWidth', parseInt(this.value)); refreshBlock(sid);
   });
 
   /* ── Forme libre ── */
-  on('bffopacity', 'input', function () {
-    g('bffopacity-val').textContent = Math.round(this.value * 100) + '%';
-    bprop('shapeOpacity', parseFloat(this.value)); rr(sid);
+  bind('bffopacity', 'input', function () {
+    byId('bffopacity-val').textContent = Math.round(this.value * 100) + '%';
+    setBlockProp('shapeOpacity', parseFloat(this.value)); refreshBlock(sid);
   });
-  on('bffrotation', 'input', function () {
-    g('bffrotation-val').textContent = this.value + '°';
-    bprop('shapeRotation', parseInt(this.value)); rr(sid);
+  bind('bffrotation', 'input', function () {
+    byId('bffrotation-val').textContent = this.value + '°';
+    setBlockProp('shapeRotation', parseInt(this.value)); refreshBlock(sid);
   });
-  on('bffstroke', 'input', function () {
-    g('bffstroke-val').textContent = this.value + 'px';
-    bprop('strokeWidth', parseInt(this.value)); rr(sid);
+  bind('bffstroke', 'input', function () {
+    byId('bffstroke-val').textContent = this.value + 'px';
+    setBlockProp('strokeWidth', parseInt(this.value)); refreshBlock(sid);
   });
-  on('bfffill', 'change', function () { bprop('shapeFilled', this.checked); rr(sid); });
-  on('bffclosed', 'change', function () { bprop('pathClosed', this.checked); rr(sid); });
+  bind('bfffill', 'change', function () { setBlockProp('shapeFilled', this.checked); refreshBlock(sid); });
+  bind('bffclosed', 'change', function () { setBlockProp('pathClosed', this.checked); refreshBlock(sid); });
   document.querySelector('#bp-freeform .sb-full')?.addEventListener('click', () => editFreeformPath(sid));
 
   /* ── Graphique ── */
-  on('bchartkind', 'change', function () { bprop('chartKind', this.value); rr(sid); });
-  on('bcharttitle', 'input', function () { bprop('chartTitle', this.value); rr(sid); });
-  on('bchartalt', 'input', function () { bprop('alt', this.value); });
-  on('bchartadd', 'click', () => chartAddRow());
+  bind('bchartkind', 'change', function () { setBlockProp('chartKind', this.value); refreshBlock(sid); });
+  bind('bcharttitle', 'input', function () { setBlockProp('chartTitle', this.value); refreshBlock(sid); });
+  bind('bchartalt', 'input', function () { setBlockProp('alt', this.value); });
+  bind('bchartadd', 'click', () => chartAddRow());
 
   /* ── Export ── */
-  on('pg-enabled', 'change', () => updUA());
-  on('toc-enabled', 'change', () => updUA());
+  bind('pg-enabled', 'change', () => updateAccessibilityChecklist());
+  bind('toc-enabled', 'change', () => updateAccessibilityChecklist());
 }
